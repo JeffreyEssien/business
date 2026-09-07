@@ -1,0 +1,13 @@
+.form {
+  gap: 30px;
+}
+.container {
+  max-width: 960px;
+}
+/* Keep the form readable on wide monitors without squeezing it on smaller screens. */
+.introduction {
+  margin: 0;
+  font-size: 13px;
+  color: #737b8c;
+  line-height: 1.7;
+}

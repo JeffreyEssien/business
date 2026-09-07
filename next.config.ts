@@ -1,8 +1,11 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactCompiler: true,
+  experimental: {
+    // Product images are validated at 5 MB; multipart encoding needs additional room.
+    serverActions: { bodySizeLimit: '6mb' },
+  },
 };
 
 export default nextConfig;
