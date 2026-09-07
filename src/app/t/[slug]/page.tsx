@@ -38,6 +38,9 @@ export default async function TenantWorkspacePage({
       </Panel>
       <p>
         <ButtonLink href={`/t/${slug}/catalog`}>Manage catalog</ButtonLink>{' '}
+        <ButtonLink href={`/t/${slug}/design`} variant="secondary">
+          Design storefront
+        </ButtonLink>{' '}
         <ButtonLink href="/workspace" variant="secondary">
           ← Your businesses
         </ButtonLink>

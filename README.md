@@ -50,7 +50,7 @@ Invitation links use NEXT_PUBLIC_APP_URL. A localhost address is suitable for te
 
 ## Catalog
 
-Tenant owners manage products and categories at `/t/{slug}/catalog`. Active products appear at `/store/{slug}` with product details at `/store/{slug}/products/{productSlug}`. Uploaded catalog images are limited to JPG, PNG, WebP, or GIF files up to 5 MB. Supabase `catalog-media` storage is currently interim; Cloudinary is the selected production image store and its integration is pending.
+Tenant owners manage products and categories at `/t/{slug}/catalog`. Active products appear at `/store/{slug}` with product details at `/store/{slug}/products/{productSlug}`. Catalog media is uploaded server-side to Cloudinary; its secure delivery URL, public ID, type, dimensions, format, and tenant ownership are stored in PostgreSQL. Supported files are JPG, PNG, WebP, GIF, MP4, and WebM up to 5 MB.
 
 The current public route is a local/platform-path storefront. Custom hostnames, explicit store publishing controls, theme/content editing, checkout, and payments remain later phases.
 
@@ -58,7 +58,9 @@ The current public route is a local/platform-path storefront. Custom hostnames, 
 
 With the production preview running on 127.0.0.1:3100, run `npm run test:integration`. This requires the development Supabase credentials and DATABASE_URL. The test creates uniquely named temporary Auth users and businesses, checks login and onboarding, then deletes only those fixtures. It sends no email and never uses the real owner's password. SQL suites under supabase/tests always roll their fixtures back.
 
-CI runs frontend checks and PostgreSQL migration/RLS tests with a minimal Auth schema fixture. Live Supabase Auth is verified separately by the integration script.
+CI runs frontend checks and PostgreSQL migration/RLS tests with a minimal Auth schema fixture. A gated post-push job runs the real Supabase Auth/integration and browser regression suites against the development environment.
+
+Development delivery targets the `develop` branch. See [docs/DEVOPS.md](docs/DEVOPS.md) for pipeline stages, GitHub environment secrets, live integration tests, and recommended branch protection.
 
 ## Code organization
 

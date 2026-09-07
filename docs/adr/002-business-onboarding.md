@@ -12,4 +12,4 @@ A store handle is reserved, but no DNS hostname is advertised as active. Storefr
 
 All live platform tables use server-side pagination. Sample commerce figures have been removed; unconnected metrics display an unavailable value.
 
-CI runs migrations and RLS suites against isolated PostgreSQL with a minimal Supabase Auth contract. Real Supabase integration verification remains a separate development check; the CI stub does not claim to test Auth token behavior.
+CI runs migrations and RLS suites against isolated PostgreSQL with a minimal Supabase Auth contract. A gated post-push development job performs real Supabase Auth integration verification; the PostgreSQL stub itself does not claim to test Auth token behavior.

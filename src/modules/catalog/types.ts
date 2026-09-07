@@ -22,8 +22,9 @@ export type Product = {
   track_inventory: boolean;
   status: CatalogStatus;
   primary_image_asset_id: string | null;
-  image_url?: string | null;
-  image_alt?: string | null;
+  media_url?: string | null;
+  media_alt?: string | null;
+  media_type?: 'image' | 'video' | null;
   category_ids: string[];
 };
 
@@ -37,12 +38,14 @@ export type PublicProduct = {
   currency: string;
   stockQuantity: number;
   trackInventory: boolean;
-  imageUrl: string | null;
-  imageAlt: string | null;
+  mediaUrl: string | null;
+  mediaAlt: string | null;
+  mediaType: 'image' | 'video' | null;
   categories: string[];
 };
 
 export type PublicStorefront = {
   tenant: { name: string; slug: string };
+  site: import('@/modules/content/types').SiteConfiguration | null;
   products: PublicProduct[];
 };

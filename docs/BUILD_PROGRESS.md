@@ -4,9 +4,9 @@ Last updated: 2026-09-06
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: catalog (Phase 2)
+## Current stage: theme and content (Phase 3)
 
-Status: implemented and verified against development Supabase. Ready for owner review and real catalog content. No real business or product was created by the agent; integration fixtures and uploaded test media were removed.
+Status: foundational vertical slice implemented and verified against development Supabase. Theme/content editing, shared preview/rendering, parallel site-media upload, and atomic publishing are ready for owner review. Secondary informational pages and free section reordering remain in this phase. No real business or product was created by the agent; integration fixtures and uploaded test media were removed.
 
 ## Completed
 
@@ -38,10 +38,22 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Tenant category create, update, list, and delete with draft/active/archived states.
 - Tenant product create, update, list, and delete with descriptions, SKU, NGN pricing, compare-at pricing, inventory tracking, multiple categories, and draft/active/archived states.
 - Product-limit enforcement resolves the tenant's configured plan feature inside the authorized database mutation.
-- Product image uploads use the public `catalog-media` Supabase Storage bucket, a tenant-prefixed object path, generated storage names, and MIME/size validation. Media metadata and editable alt text are tenant scoped.
+- Product image/video uploads use Cloudinary through trusted server code, generated tenant-prefixed public IDs, and MIME/size validation. Secure delivery URLs, provider IDs, type, format, dimensions, and editable alt text/captions are tenant scoped in PostgreSQL.
 - Public catalog and product-detail routes at `/store/{slug}`; only active products from an available resolved tenant are returned through a restricted public database projection.
 - Tenant catalog routes at `/t/{slug}/catalog`; owner/admin/manager mutations are server-authorized and direct table writes remain denied.
 - Migration file 202609060001_catalog.sql applied to development Supabase.
+- Cloudinary media migration 202609070001_cloudinary_media.sql applied to development Supabase.
+
+### Phase 3: theme and content foundation
+
+- Tenant design workspace at `/t/{slug}/design` with grouped business profile, theme tokens, announcement, hero, product section, navigation, and footer controls.
+- Four controlled theme presets and editable semantic color tokens; storefront components consume CSS variables rather than scattered tenant colors.
+- Logo and hero files upload to tenant-scoped Cloudinary paths concurrently inside one authorized Server Action. Partial provider success is cleaned before database mutation, and the request limit supports two validated 5 MB files plus multipart overhead.
+- Draft content remains private and editable. Publishing atomically archives the previous live version and creates a normalized immutable snapshot with an audit record.
+- Saved draft preview and public homepage share `StorefrontRenderer`; no separate fake preview implementation exists.
+- Anonymous storefront projection exposes the current published site snapshot plus active catalog products, without granting raw-table reads.
+- Responsive desktop/mobile storefront variants, business profile footer, header navigation, media, editable homepage copy, and section enable/disable are rendered from tenant data.
+- Migration file 202609070002_theme_content.sql applied to development Supabase.
 
 ## Validation
 
@@ -51,39 +63,46 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
 - PASS: all three migrations were skipped on the final rerun; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
-- PASS: real Auth integration covers two independently populated catalogs, an authenticated Supabase Storage upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
+- PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
+- PASS: browser media submission uploads to Cloudinary, renders from the stored secure URL, deletes product/media metadata, and confirms the remote asset is no longer found. Temporary Cloudinary and database fixtures were removed.
+- PASS: theme/content SQL suite covers cross-tenant draft/version isolation, outsider mutation denial, anonymous raw-table denial, draft/live separation, version history, and a single current published snapshot.
+- PASS: authenticated integration covers the design route, draft mutation, atomic publish, public tenant-controlled homepage content, and existing onboarding/catalog regression paths.
+- PASS: browser design flow uploads logo and hero media together, previews the saved draft through the production renderer, publishes version 1, preserves site media during product deletion, and cleans all database/Auth/Cloudinary fixtures.
+- PASS: visually inspected desktop editor plus desktop/mobile storefront screenshots; controls, hierarchy, responsive stacking, tenant theme, preview, footer, and overflow are acceptable.
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
 ## Current limitations
 
 - The `/store/{slug}` catalog is functional, but theme/content publishing controls and custom domains are later phases. Reserved handles are not active DNS domains.
-- Cloudinary is the owner-selected image/video store but is not connected yet. Files will live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata will live in PostgreSQL. The current Supabase `catalog-media` bucket is interim.
+- New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
 - Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
 - Preferred payment mode is recorded, not connected. Email/SMS remain disabled.
 - Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
-- Theme/content editors, SEO publishing, checkout, payment processing, and advanced operational controls remain future stages.
+- Additional content-page editors, SEO publishing, checkout, payment processing, and advanced operational controls remain future work.
+- Phase 3 still needs arbitrary approved-section reordering, additional homepage block types, and About/Contact/policy/custom page management before the phase is complete.
+- `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
 - Plain PostgreSQL CI emulates only the Auth schema contract; real Supabase Auth is covered by the separate development integration script.
 
 ## Remaining sequence
 
-| Stage | Spec phase | Status | Acceptance gate |
-| --- | --- | --- | --- |
-| Secure foundation | 0 | Implemented and verified | Auth and isolation tests passed; CI configured |
-| Super-admin onboarding | 1 | Implemented and verified | Atomic creation, owner acceptance, two isolated workspaces |
-| Catalog | 2 | Implemented and verified | Tenant-scoped products, categories, media, inventory |
-| Theme and content | 3 | Next | Editable content, reusable layouts, preview/publish |
-| SEO | 4 | Planned | Tenant-editable metadata and correct domain output |
-| Orders and checkout | 5 | Planned | Totals, inventory, snapshots, manual verification |
-| Paystack | 6 | Planned | Verified/idempotent payment processing |
-| Email | 7 | Planned | Branded delivery and logs |
-| SMS | 8 | Planned | Settings and entitlement enforcement |
-| Entitlements/plans | 9 | Planned | Central resolution and server enforcement |
-| SaaS billing | 10 | Planned | Subscriptions separate from merchant payments |
-| Domains | 11 | Planned | Verified hostname/TLS lifecycle |
-| Observability | 12 | Planned | Audited platform visibility/monitoring |
-| Hardening | 13 | Planned | Security, restore, performance, release checks |
+| Stage                  | Spec phase | Status                   | Acceptance gate                                            |
+| ---------------------- | ---------- | ------------------------ | ---------------------------------------------------------- |
+| Secure foundation      | 0          | Implemented and verified | Auth and isolation tests passed; CI configured             |
+| Super-admin onboarding | 1          | Implemented and verified | Atomic creation, owner acceptance, two isolated workspaces |
+| Catalog                | 2          | Implemented and verified | Tenant-scoped products, categories, media, inventory       |
+| Theme and content      | 3          | In progress              | Core editor/preview/publish verified; pages/reordering next |
+| SEO                    | 4          | Planned                  | Tenant-editable metadata and correct domain output         |
+| Orders and checkout    | 5          | Planned                  | Totals, inventory, snapshots, manual verification          |
+| Paystack               | 6          | Planned                  | Verified/idempotent payment processing                     |
+| Email                  | 7          | Planned                  | Branded delivery and logs                                  |
+| SMS                    | 8          | Planned                  | Settings and entitlement enforcement                       |
+| Entitlements/plans     | 9          | Planned                  | Central resolution and server enforcement                  |
+| SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
+| Domains                | 11         | Planned                  | Verified hostname/TLS lifecycle                            |
+| Observability          | 12         | Planned                  | Audited platform visibility/monitoring                     |
+| Hardening              | 13         | Planned                  | Security, restore, performance, release checks             |
 
 ## What the owner needs to provide next
 
@@ -91,7 +110,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Now: sample products, categories, prices, images, and inventory preferences for real catalog review.
 - Content stage: logos, branding, homepage/about/policy copy.
 - Commerce: delivery regions/rates, currency confirmation (NGN default), payment choices and test credentials.
-- Integrations: Cloudinary account credentials/configuration for the media migration; email/SMS providers and sender identities when those stages begin.
+- Integrations: email/SMS providers and sender identities when those stages begin.
 - Billing: plan prices/limits, trial length, grace policy.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.
 
@@ -102,6 +121,7 @@ Credentials stay in local environment files, never this tracker. No production d
 Owner requested reusable, understandable, explained code and provided a screenshot of an unusable creation form.
 
 Delivered:
+
 - Shared UI fields, buttons, panels, page headers, form sections/actions/errors, checklists, pagination, copy field, empty states, and metric cards.
 - Form styling owned by CSS Modules: visible bordered controls, explicit label spacing, helpful descriptions, 44px+ controls, two desktop columns and one mobile column.
 - Feature forms moved from route folders to components/auth and components/businesses. Business form split into reusable business, owner, and setup groups.
@@ -112,6 +132,7 @@ Delivered:
 - Server validation returns submitted business values so an error does not clear the form.
 
 Validation:
+
 - PASS: final production build and TypeScript compilation.
 - PASS: formatter check and diff whitespace check.
 - PASS: authenticated integration checks after moving query/authorization code; fixtures removed.

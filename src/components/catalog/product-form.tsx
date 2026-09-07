@@ -11,6 +11,7 @@ import {
   FormSection,
   FormStack,
 } from '@/components/ui/form-layout';
+import { CatalogMedia } from './catalog-media';
 import styles from './catalog.module.css';
 
 const initialState: CatalogActionState = { error: '' };
@@ -111,8 +112,8 @@ export function ProductForm({
         </FormGrid>
       </FormSection>
       <FormSection
-        title="Organization and image"
-        description="Images must be JPG, PNG, WebP, or GIF and no larger than 5 MB."
+        title="Organization and media"
+        description="Images or videos must be JPG, PNG, WebP, GIF, MP4, or WebM and no larger than 5 MB."
       >
         <FormGrid>
           <SelectField
@@ -125,22 +126,23 @@ export function ProductForm({
           />
           <TextField
             name="image"
-            label={product?.image_url ? 'Replace primary image' : 'Primary image'}
+            label={product?.media_url ? 'Replace primary media' : 'Primary media'}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
           />
           <TextField
             name="altText"
-            label="Image alt text"
+            label="Media alt text or caption"
             maxLength={240}
-            defaultValue={product?.image_alt ?? ''}
-            hint="Describe meaningful product imagery for accessibility."
+            defaultValue={product?.media_alt ?? ''}
+            hint="Describe meaningful media for accessibility."
           />
-          {product?.image_url && (
-            <img
+          {product?.media_url && (
+            <CatalogMedia
               className={styles.imagePreview}
-              src={product.image_url}
-              alt={product.image_alt || ''}
+              url={product.media_url}
+              type={product.media_type}
+              alt={product.media_alt || product.name}
             />
           )}
         </FormGrid>

@@ -1,20 +1,43 @@
-name: Frontend checks
-on: [push, pull_request]
+name: Develop CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: develop-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
 jobs:
-  frontend:
+  quality:
+    name: Format, types, build, and dependency audit
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run build -- --webpack
-  database:
+      - run: npm audit --omit=dev --audit-level=high
+
+  database-regression:
+    name: Migration and RLS regression tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17
@@ -34,10 +57,89 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci-auth.sql
-      - run: npm run db:migrate
-      - run: npm run db:migrate
-      - run: npm run db:test
+      - name: Create the CI Auth contract
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/ci-auth.sql
+      - name: Apply migrations
+        run: npm run db:migrate
+      - name: Prove migrations are idempotent
+        run: npm run db:migrate
+      - name: Run rollback-only regression and RLS suites
+        run: npm run db:test
+
+  dependency-review:
+    name: Pull request dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  live-integration:
+    name: Development Supabase and browser regression
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.RUN_LIVE_INTEGRATION == 'true')
+    needs: [quality, database-regression]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: development
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DEV_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.DEV_SUPABASE_SECRET_KEY }}
+      DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.DEV_CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.DEV_CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.DEV_CLOUDINARY_API_SECRET }}
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+      INTEGRATION_APP_URL: http://127.0.0.1:3100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Validate required development secrets
+        shell: bash
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+          test -n "$SUPABASE_SECRET_KEY"
+          test -n "$DATABASE_URL"
+          test -n "$CLOUDINARY_CLOUD_NAME"
+          test -n "$CLOUDINARY_API_KEY"
+          test -n "$CLOUDINARY_API_SECRET"
+      - name: Apply development migrations
+        run: npm run db:migrate
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build -- --webpack
+      - name: Start production preview
+        shell: bash
+        run: |
+          npm run start -- -H 127.0.0.1 -p 3100 > /tmp/businesscare-next.log 2>&1 &
+          echo $! > /tmp/businesscare-next.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3100/login > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/businesscare-next.log
+          exit 1
+      - run: npm run test:integration
+      - run: npm run test:ui
+      - name: Upload browser regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-regression-${{ github.run_id }}
+          path: artifacts/ui/
+          if-no-files-found: ignore
+          retention-days: 14

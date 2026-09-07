@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { getPublicStorefront } from '@/modules/catalog/queries';
 import styles from '@/components/catalog/catalog.module.css';
 
@@ -23,15 +24,11 @@ export default async function PublicProductPage({
       </header>
       <main className={styles.storeMain}>
         <div className={styles.productDetail}>
-          {product.imageUrl ? (
-            <img
-              className={styles.productImage}
-              src={product.imageUrl}
-              alt={product.imageAlt || product.name}
-            />
-          ) : (
-            <div className={styles.productPlaceholder}>No image</div>
-          )}
+          <CatalogMedia
+            url={product.mediaUrl}
+            type={product.mediaType}
+            alt={product.mediaAlt || product.name}
+          />
           <div>
             {!!product.categories.length && (
               <div className={styles.categoryTags}>

@@ -8,6 +8,9 @@
   --border: #e9ebef;
   --primary: #6655d7;
   --radius: 14px;
+  --success-surface: #edf8f0;
+  --success-border: #bddfc5;
+  --success-text: #356442;
 }
 @theme inline {
   --color-background: var(--background);

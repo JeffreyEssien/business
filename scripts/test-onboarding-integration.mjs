@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
+import { v2 as cloudinary } from 'cloudinary';
 import { database, reportError } from './database.mjs';
 const base = new URL(process.env.INTEGRATION_APP_URL ?? 'http://127.0.0.1:3100');
 if (!['localhost', '127.0.0.1'].includes(base.hostname))
@@ -14,7 +15,13 @@ const admin = createClient(url, process.env.SUPABASE_SECRET_KEY, {
 const sql = database(),
   users = [],
   slugs = [],
-  storageKeys = [];
+  cloudinaryAssets = [];
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
 const prefix = `bc-test-${randomUUID()}`;
 const password = randomBytes(24).toString('base64url');
 async function newUser(label) {
@@ -96,6 +103,7 @@ try {
   await page(`/t/${slugA}`, ownerSession, 'Welcome to your next chapter.');
   await page(`/t/${slugB}`, ownerSession, null, 404);
   await page(`/t/${slugA}/catalog`, ownerSession, 'Product catalog');
+  await page(`/t/${slugA}/design`, ownerSession, 'Design your storefront');
   await page('/businesses', ownerSession, null, 307);
   const leaked = await ownerSession.client
     .from('tenant_business_settings')
@@ -131,18 +139,23 @@ try {
     category_status: 'ACTIVE',
   });
   assert.ifError(categoryA.error);
-  const imageKey = `tenants/${a}/products/${randomUUID()}.png`;
+  const imageId = randomUUID();
   const imageBytes = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
     'base64',
   );
-  const upload = await ownerSession.client.storage
-    .from('catalog-media')
-    .upload(imageKey, imageBytes, { contentType: 'image/png' });
-  assert.ifError(upload.error);
-  storageKeys.push(imageKey);
-  const imageUrl = ownerSession.client.storage.from('catalog-media').getPublicUrl(imageKey)
-    .data.publicUrl;
+  const upload = await cloudinary.uploader.upload(
+    `data:image/png;base64,${imageBytes.toString('base64')}`,
+    {
+      folder: `businesscare/tenants/${a}/products`,
+      public_id: imageId,
+      resource_type: 'image',
+      overwrite: false,
+      unique_filename: false,
+      use_filename: false,
+    },
+  );
+  cloudinaryAssets.push({ publicId: upload.public_id, resourceType: 'image' });
   const productA = await ownerSession.client.rpc('save_product', {
     target_tenant: a,
     target_product: null,
@@ -157,12 +170,17 @@ try {
     product_track_inventory: true,
     product_status: 'ACTIVE',
     category_ids: [categoryA.data],
-    asset_storage_key: imageKey,
-    asset_public_url: imageUrl,
+    asset_storage_key: upload.public_id,
+    asset_public_url: upload.secure_url,
     asset_file_name: 'pixel.png',
     asset_mime_type: 'image/png',
-    asset_file_size: imageBytes.length,
+    asset_file_size: upload.bytes,
     asset_alt_text: 'Integration test pixel',
+    asset_storage_provider: 'cloudinary',
+    asset_resource_type: 'image',
+    asset_format: upload.format,
+    asset_width: upload.width,
+    asset_height: upload.height,
   });
   assert.ifError(productA.error);
   const categoryB = await ownerBSession.client.rpc('save_category', {
@@ -198,9 +216,38 @@ try {
     .update({ name: 'Bypass' })
     .eq('id', productA.data);
   assert.ok(directWrite.error, 'Direct product writes must be denied');
+  const draft = await ownerSession.client.rpc('save_site_draft', {
+    target_tenant: a,
+    business_name: 'Integration storefront A',
+    business_description: 'Tenant-controlled storefront content',
+    business_phone: '+234 800 000 0000',
+    business_address: 'Lagos',
+    theme_preset: 'fashion',
+    primary_color: '#342d44',
+    accent_color: '#ad8e64',
+    background_color: '#faf8f5',
+    text_color: '#25222a',
+    announcement_text: 'Integration announcement A',
+    announcement_enabled: true,
+    hero_eyebrow: 'Integration collection',
+    hero_headline: 'Integration homepage A',
+    hero_subheadline: 'Editable tenant content',
+    hero_cta_label: 'Browse products',
+    hero_variant: 'split',
+    products_heading: 'Integration products A',
+    products_enabled: true,
+    footer_description: 'Integration footer A',
+    navigation: [
+      { label: 'Home', target: '/', location: 'HEADER', linkType: 'URL', enabled: true },
+    ],
+  });
+  assert.ifError(draft.error);
+  const publish = await ownerSession.client.rpc('publish_site', { target_tenant: a });
+  assert.ifError(publish.error);
   await page(`/t/${slugA}/catalog`, ownerSession, 'Integration product A');
   await page(`/t/${slugB}/catalog`, ownerBSession, 'Integration product B');
-  const storefrontA = await page(`/store/${slugA}`, null, 'Integration product A');
+  const storefrontA = await page(`/store/${slugA}`, null, 'Integration homepage A');
+  assert.ok(storefrontA.html.includes('Integration product A'));
   assert.ok(!storefrontA.html.includes('Integration product B'));
   const storefrontB = await page(`/store/${slugB}`, null, 'Integration product B');
   assert.ok(!storefrontB.html.includes('Integration product A'));
@@ -227,20 +274,25 @@ try {
   assert.ifError(resumed.error);
   await page(`/t/${slugA}`, ownerSession, 'Welcome to your next chapter.');
   console.log(
-    'PASS: real Auth sessions, onboarding, two isolated catalogs, Storage upload, tenant CRUD pages, anonymous storefronts, direct-write denial, token replay denial, suspension/reactivation.',
+    'PASS: real Auth sessions, onboarding, two isolated catalogs, Cloudinary upload, tenant CRUD pages, anonymous storefronts, direct-write denial, token replay denial, suspension/reactivation.',
   );
 } catch (error) {
   reportError(error);
 } finally {
   try {
-    if (storageKeys.length) {
-      const { error } = await admin.storage.from('catalog-media').remove(storageKeys);
-      assert.ifError(error);
-    }
+    await Promise.all(
+      cloudinaryAssets.map((asset) =>
+        cloudinary.uploader.destroy(asset.publicId, {
+          resource_type: asset.resourceType,
+          invalidate: true,
+        }),
+      ),
+    );
     await sql.begin(async (tx) => {
       const fixtures = await tx`select id from public.tenants where slug=any(${slugs}::text[])`;
       const ids = fixtures.map((t) => t.id);
       for (const table of [
+        'tenant_site_versions',
         'product_media',
         'product_categories',
         'products',

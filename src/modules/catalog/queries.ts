@@ -40,7 +40,7 @@ export async function getProductEditor(slug: string, productId: string) {
       product.primary_image_asset_id
         ? catalog.supabase
             .from('media_assets')
-            .select('public_url_or_resolvable_key,alt_text')
+            .select('public_url_or_resolvable_key,alt_text,resource_type')
             .eq('tenant_id', catalog.tenant.id)
             .eq('id', product.primary_image_asset_id)
             .maybeSingle()
@@ -52,8 +52,9 @@ export async function getProductEditor(slug: string, productId: string) {
     product: {
       ...product,
       category_ids: (mappings ?? []).map((item) => item.category_id),
-      image_url: asset?.public_url_or_resolvable_key,
-      image_alt: asset?.alt_text,
+      media_url: asset?.public_url_or_resolvable_key,
+      media_alt: asset?.alt_text,
+      media_type: asset?.resource_type as 'image' | 'video' | undefined,
     },
   };
 }

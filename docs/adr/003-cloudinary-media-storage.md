@@ -2,13 +2,13 @@
 
 Date: 2026-09-06
 
-Status: accepted by product owner; integration pending
+Status: implemented
 
 ## Decision
 
 BusinessCare images and videos will be uploaded to and delivered from Cloudinary. After a successful upload, the application stores the Cloudinary delivery URL in the tenant-scoped media record; storefront and admin views render the media from that URL. The record also retains the Cloudinary public ID and resource type needed for transformations, replacement, and deletion.
 
-The Phase 2 Supabase `catalog-media` bucket is an interim implementation. Do not build new image features that depend permanently on Supabase Storage URLs or object semantics.
+New Phase 2 uploads use Cloudinary. Existing Supabase `catalog-media` records remain readable and receive provider-aware cleanup when their media is replaced or their product is deleted; no new upload depends on that bucket.
 
 ## Required integration boundaries
 
@@ -24,3 +24,10 @@ The Phase 2 Supabase `catalog-media` bucket is an interim implementation. Do not
 ## Migration note
 
 Existing `media_assets` fields are intentionally provider-oriented (`storage_provider`, `storage_key`, and `public_url_or_resolvable_key`). The Cloudinary integration should add a new immutable migration only if more provider metadata is required. Previously applied migrations must not be edited.
+
+## Implementation
+
+- `src/lib/cloudinary/server.ts` owns credential validation, authenticated streaming uploads, and provider deletion.
+- `202609070001_cloudinary_media.sql` records resource type and format, validates Cloudinary tenant namespaces, and cleans replaced/deleted metadata transactionally.
+- Product forms accept supported images and short videos up to 5 MB. The storefront selects an image or native video renderer from the stored resource type.
+- Live integration and browser regression tests verify upload, delivery URL rendering, tenant isolation, database cleanup, and Cloudinary deletion.

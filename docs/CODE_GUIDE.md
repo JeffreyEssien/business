@@ -14,16 +14,16 @@ The default is readable, modular code. Routes compose features; they do not cont
 
 ## Component responsibilities
 
-| Location | Responsibility | Examples |
-| --- | --- | --- |
-| `components/ui` | Reusable presentation and native controls; no Supabase queries | TextField, SelectField, Button, Panel, Checklist |
-| `components/auth` | Authentication-specific compositions | AuthLayout, LoginForm, PasswordForm |
-| `components/businesses` | Business-specific presentation and form orchestration | BusinessSummary, BusinessFilters, CreateBusinessForm |
-| `components/layout` | Application navigation and framing | PlatformSidebar, PlatformTopbar |
-| `components/super-admin` | Platform views composed from UI components | Shell, BusinessList, LaunchCard |
-| `modules/tenants` | Data access, validation, configuration, domain types, authorized actions | queries, workspace-query, actions |
-| `lib/supabase` | SDK construction and cookie handling | server, admin |
-| `app` | Route parameters, redirects, metadata, composition | page.tsx, layout.tsx |
+| Location                 | Responsibility                                                           | Examples                                             |
+| ------------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `components/ui`          | Reusable presentation and native controls; no Supabase queries           | TextField, SelectField, Button, Panel, Checklist     |
+| `components/auth`        | Authentication-specific compositions                                     | AuthLayout, LoginForm, PasswordForm                  |
+| `components/businesses`  | Business-specific presentation and form orchestration                    | BusinessSummary, BusinessFilters, CreateBusinessForm |
+| `components/layout`      | Application navigation and framing                                       | PlatformSidebar, PlatformTopbar                      |
+| `components/super-admin` | Platform views composed from UI components                               | Shell, BusinessList, LaunchCard                      |
+| `modules/tenants`        | Data access, validation, configuration, domain types, authorized actions | queries, workspace-query, actions                    |
+| `lib/supabase`           | SDK construction and cookie handling                                     | server, admin                                        |
+| `app`                    | Route parameters, redirects, metadata, composition                       | page.tsx, layout.tsx                                 |
 
 Use explicit prop types and descriptive names such as `submitAction`, `isPending`, `invitation`, and `onboarding`. Avoid positional data tuples for domain records. Pass data into presentation components instead of letting them query the database.
 
@@ -60,4 +60,17 @@ Meaningful UI regression checks inspect rendered behavior: visible borders and h
 6. `get_public_storefront` is the only anonymous catalog database surface. It returns a deliberately limited projection of active products for one resolved, available tenant; anonymous users cannot select catalog tables.
 7. Routes under `app/store/[slug]` render that public projection and never accept a tenant ID from the browser.
 
-Cloudinary is the accepted production image provider (ADR 003). Keep media persistence provider-neutral and tenant scoped. Until that integration lands, the current Supabase Storage upload path is interim and must not become a hidden dependency for later image features.
+Cloudinary is the production media provider (ADR 003). `lib/cloudinary/server.ts` owns authenticated upload/deletion calls and is imported only by server code. The database stores the secure delivery URL, public ID, resource type, dimensions, and tenant ownership. Provider-aware cleanup retains compatibility with legacy Supabase Storage records without using that bucket for new uploads.
+
+## Follow a theme and content publish
+
+1. `app/t/[slug]/design/page.tsx` authorizes the tenant and composes the editor plus saved-draft preview.
+2. `components/content` owns the grouped editor, publish status, and responsive two-panel layout.
+3. `modules/content/validation.ts` constrains every text field, color token, layout variant, navigation item, and media file before provider or database work.
+4. `modules/content/actions.ts` re-resolves membership for every mutation. Logo and hero uploads run concurrently inside one Server Action with `Promise.allSettled`; any partial upload is removed before an error is returned.
+5. `save_site_draft` updates tenant-scoped draft tables through a security-definer RPC. Direct browser writes remain denied by RLS.
+6. `publish_site` atomically archives the old live version and saves a complete normalized snapshot. A saved draft cannot change anonymous output until this RPC succeeds.
+7. `components/storefront/storefront-renderer.tsx` renders both the authenticated draft preview and public homepage. Never create a second preview-only rendering implementation.
+8. `get_public_storefront` exposes active catalog products and only the current published site snapshot to anonymous visitors.
+
+Keep tenant colors in validated tokens and pass them to storefront components through CSS variables. Marketing copy belongs in content records; only system UX labels may remain in code.

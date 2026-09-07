@@ -3,8 +3,8 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactCompiler: true,
   experimental: {
-    // Product images are validated at 5 MB; multipart encoding needs additional room.
-    serverActions: { bodySizeLimit: '6mb' },
+    // Two 5 MB site images may upload in one action so Cloudinary work can run in parallel.
+    serverActions: { bodySizeLimit: '11mb' },
   },
 };
 
