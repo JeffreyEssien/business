@@ -1,12 +1,12 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: theme and content (Phase 3)
+## Current stage: search appearance and discovery (Phase 4)
 
-Status: foundational vertical slice implemented and verified against development Supabase. Theme/content editing, shared preview/rendering, parallel site-media upload, and atomic publishing are ready for owner review. Secondary informational pages and free section reordering remain in this phase. No real business or product was created by the agent; integration fixtures and uploaded test media were removed.
+Status: Phase 3 is complete and verified. The Phase 4 foundation now lets each business control its homepage search title and description, search-listing preferences, social account, canonical URL, sitemap, robots response, and organization data. These settings remain saved privately until the owner publishes the storefront. Page-, product-, and category-specific search overrides remain before Phase 4 is complete. No real business or product was created by the agent; integration fixtures and uploaded test media were removed.
 
 ## Completed
 
@@ -54,6 +54,19 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Anonymous storefront projection exposes the current published site snapshot plus active catalog products, without granting raw-table reads.
 - Responsive desktop/mobile storefront variants, business profile footer, header navigation, media, editable homepage copy, and section enable/disable are rendered from tenant data.
 - Migration file 202609070002_theme_content.sql applied to development Supabase.
+- Homepage sections can be reordered through tenant-authorized database logic; ordinary content saves preserve the chosen order.
+- About, Contact, Policy, and custom customer-information pages can be created, edited, hidden, shown in the main menu, and deleted without changing the live store until publication.
+- Publishing includes all enabled customer pages in the same immutable site snapshot, and public pages use the same storefront header, theme, and footer as the homepage.
+- Migration files 202609070003_content_pages.sql and 202609070004_homepage_default.sql applied to development Supabase.
+
+### Phase 4: search appearance foundation
+
+- Tenant workspace at `/t/{slug}/marketing/search` uses customer-friendly labels, explanations, character counts, and a live search-result preview.
+- Search title, description, social account, and search-listing/link-following preferences are stored as private draft settings and become public only through the existing atomic publish action.
+- Published homepages emit absolute canonical, robots, Open Graph, Twitter, and ownership-verification metadata from the trusted application URL or an active verified custom hostname; request host headers are never trusted.
+- Public `/store/{slug}/sitemap` and `/store/{slug}/robots.txt` responses reflect only published settings and published/active storefront records.
+- Storefronts include safely serialized Organization structured data. Public storefront reads are request-memoized so metadata and page rendering do not repeat the same database query.
+- Migration file 202609070005_seo_foundation.sql applied to development Supabase.
 
 ## Validation
 
@@ -61,7 +74,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all three migrations were skipped on the final rerun; checksums and migration history are intact.
+- PASS: all eight migrations were skipped on the final rerun; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
@@ -70,18 +83,21 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: authenticated integration covers the design route, draft mutation, atomic publish, public tenant-controlled homepage content, and existing onboarding/catalog regression paths.
 - PASS: browser design flow uploads logo and hero media together, previews the saved draft through the production renderer, publishes version 1, preserves site media during product deletion, and cleans all database/Auth/Cloudinary fixtures.
 - PASS: visually inspected desktop editor plus desktop/mobile storefront screenshots; controls, hierarchy, responsive stacking, tenant theme, preview, footer, and overflow are acceptable.
+- PASS: content-page SQL coverage verifies saved/live separation, menu inclusion, persistent section ordering, outsider mutation denial, and anonymous raw-table denial.
+- PASS: authenticated integration and browser flows create a customer page, reorder homepage sections, publish once, and render the page from the immutable public snapshot.
+- PASS: search settings are tenant-isolated, stay private until publish, then drive exact homepage metadata, canonical output, sitemap, robots response, and Organization structured data.
+- PASS: visually inspected desktop/mobile website-page screens and the desktop search-appearance editor; descriptive controls, responsive layouts, live preview, and overflow are acceptable.
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
 ## Current limitations
 
-- The `/store/{slug}` catalog is functional, but theme/content publishing controls and custom domains are later phases. Reserved handles are not active DNS domains.
+- The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
 - New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
 - Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
 - Preferred payment mode is recorded, not connected. Email/SMS remain disabled.
 - Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
-- Additional content-page editors, SEO publishing, checkout, payment processing, and advanced operational controls remain future work.
-- Phase 3 still needs arbitrary approved-section reordering, additional homepage block types, and About/Contact/policy/custom page management before the phase is complete.
+- Page-, product-, and category-specific search overrides, richer product/breadcrumb structured data, checkout, payment processing, and advanced operational controls remain future work.
 - `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
 - Plain PostgreSQL CI emulates only the Auth schema contract; real Supabase Auth is covered by the separate development integration script.
 
@@ -92,8 +108,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Secure foundation      | 0          | Implemented and verified | Auth and isolation tests passed; CI configured             |
 | Super-admin onboarding | 1          | Implemented and verified | Atomic creation, owner acceptance, two isolated workspaces |
 | Catalog                | 2          | Implemented and verified | Tenant-scoped products, categories, media, inventory       |
-| Theme and content      | 3          | In progress              | Core editor/preview/publish verified; pages/reordering next |
-| SEO                    | 4          | Planned                  | Tenant-editable metadata and correct domain output         |
+| Theme and content      | 3          | Implemented and verified | Editor, pages, reordering, preview, atomic publishing       |
+| SEO                    | 4          | In progress              | Global output verified; record-specific overrides next     |
 | Orders and checkout    | 5          | Planned                  | Totals, inventory, snapshots, manual verification          |
 | Paystack               | 6          | Planned                  | Verified/idempotent payment processing                     |
 | Email                  | 7          | Planned                  | Branded delivery and logs                                  |

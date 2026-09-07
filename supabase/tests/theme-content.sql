@@ -41,6 +41,22 @@ do $$ begin
  if (select count(*) from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')<>1 then raise exception 'Multiple versions published'; end if;
  if (select configuration#>>'{sections,1,content,headline}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')<>'Unpublished headline' then raise exception 'Republish snapshot incorrect'; end if;
 end $$;
+insert into site_fixture(k,id) select 'page-a',public.save_content_page(
+ target_tenant=>(select id from site_fixture where k='tenant-a'),target_page=>null,page_type=>'ABOUT',page_name=>'About us',page_slug=>'about-us',
+ page_title=>'Our story',page_introduction=>'Who we are',page_body=>'Tenant-owned page content.',show_in_navigation=>true,page_enabled=>true
+);
+do $$ begin
+ if jsonb_array_length((select configuration->'pages' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED'))<>0 then raise exception 'Saved page changed live snapshot'; end if;
+end $$;
+select public.reorder_homepage_sections((select id from site_fixture where k='tenant-a'),array['products','hero','announcement','footer']);
+select public.save_global_seo((select id from site_fixture where k='tenant-a'),'Distinct Store A in Search','%s | Distinct Store A','Tenant A search description','@distincta',true,true,'','');
+select public.publish_site((select id from site_fixture where k='tenant-a'));
+do $$ begin
+ if (select configuration#>>'{sections,0,key}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'products' then raise exception 'Section order not published'; end if;
+ if (select configuration#>>'{pages,0,title}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'Our story' then raise exception 'Content page not published'; end if;
+ if (select configuration#>>'{seo,title}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'Distinct Store A in Search' then raise exception 'Search appearance not published'; end if;
+ if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and link_type='PAGE' and target='/about-us') then raise exception 'Page menu link missing'; end if;
+end $$;
 reset role;
 
 select set_config('request.jwt.claim.sub',(select id::text from site_fixture where k='outsider'),true);
@@ -48,14 +64,19 @@ set local role authenticated;
 do $$ begin
  begin perform public.publish_site((select id from site_fixture where k='tenant-a'));raise exception 'Outsider publish allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_site_draft(target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Bad',business_description=>'',business_phone=>'',business_address=>'',theme_preset=>'general',primary_color=>'#111111',accent_color=>'#222222',background_color=>'#ffffff',text_color=>'#000000',announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Bad',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',products_heading=>'Bad',products_enabled=>true,footer_description=>'',navigation=>'[]'::jsonb);raise exception 'Outsider draft write allowed';exception when insufficient_privilege then null;end;
+ begin perform public.delete_content_page((select id from site_fixture where k='tenant-a'),(select id from site_fixture where k='page-a'));raise exception 'Outsider page delete allowed';exception when insufficient_privilege then null;end;
+ begin perform public.save_global_seo((select id from site_fixture where k='tenant-a'),'Forbidden','%s | Forbidden','', '',true,true,'','');raise exception 'Outsider search settings write allowed';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
 
 set local role anon;
 do $$ declare site jsonb; begin
  site:=public.get_public_storefront(current_setting('businesscare.test_site_slug'))->'site';
- if site#>>'{sections,1,content,headline}'<>'Unpublished headline' then raise exception 'Published site unavailable anonymously'; end if;
+ if site#>>'{sections,1,content,headline}' is distinct from 'Unpublished headline' then raise exception 'Published site unavailable anonymously'; end if;
+ if site#>>'{pages,0,body}' is distinct from 'Tenant-owned page content.' then raise exception 'Published content page unavailable anonymously'; end if;
+ if site#>>'{seo,description}' is distinct from 'Tenant A search description' then raise exception 'Published search settings unavailable anonymously'; end if;
  begin perform 1 from public.tenant_site_versions;raise exception 'Anonymous version table read allowed';exception when insufficient_privilege then null;end;
  begin perform 1 from public.content_blocks;raise exception 'Anonymous content table read allowed';exception when insufficient_privilege then null;end;
+ begin perform 1 from public.seo_entries;raise exception 'Anonymous search override table read allowed';exception when insufficient_privilege then null;end;
 end $$;
 reset role;

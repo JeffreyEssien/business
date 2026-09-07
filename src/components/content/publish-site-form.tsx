@@ -17,7 +17,7 @@ export function PublishSiteForm({ slug }: { slug: string }) {
         </p>
       )}
       <Button type="submit" disabled={pending}>
-        {pending ? 'Publishing…' : 'Publish saved draft'}
+        {pending ? 'Making changes visible…' : 'Make saved changes visible to customers'}
       </Button>
     </form>
   );

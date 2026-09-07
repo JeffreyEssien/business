@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import type { PublicProduct } from '@/modules/catalog/types';
-import type { SiteConfiguration, SiteSection } from '@/modules/content/types';
+import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
 import styles from './storefront.module.css';
 
 function contentText(section: SiteSection, key: string) {
@@ -26,6 +26,63 @@ function currency(product: PublicProduct) {
   }).format(product.price);
 }
 
+function storefrontStyle(configuration: SiteConfiguration) {
+  const tokens = configuration.theme.tokens;
+  return {
+    '--store-primary': tokens.primary,
+    '--store-accent': tokens.accent,
+    '--store-background': tokens.background,
+    '--store-text': tokens.text,
+  } as CSSProperties;
+}
+
+function StoreHeader({ slug, configuration }: { slug: string; configuration: SiteConfiguration }) {
+  const headerLinks = configuration.navigation.filter(
+    (item) => item.enabled && item.location === 'HEADER',
+  );
+  return (
+    <header className={styles.header}>
+      <Link className={styles.brand} href={`/store/${slug}`}>
+        {configuration.business.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
+          <img src={configuration.business.logo.url} alt={configuration.business.logo.alt ?? ''} />
+        ) : (
+          <strong>{configuration.business.name}</strong>
+        )}
+      </Link>
+      <nav aria-label="Store navigation">
+        {headerLinks.map((item) => (
+          <Link
+            key={`${item.label}-${item.target}`}
+            href={
+              item.target.startsWith('/')
+                ? `/store/${slug}${item.target === '/' ? '' : item.target}`
+                : item.target
+            }
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+    </header>
+  );
+}
+
+function StoreFooter({ configuration }: { configuration: SiteConfiguration }) {
+  return (
+    <footer className={styles.footer}>
+      <div>
+        <strong>{configuration.business.name}</strong>
+        <p>{configuration.business.description}</p>
+      </div>
+      <div>
+        {configuration.business.address && <p>{configuration.business.address}</p>}
+        {configuration.business.phone && <p>{configuration.business.phone}</p>}
+      </div>
+    </footer>
+  );
+}
+
 export function StorefrontRenderer({
   slug,
   configuration,
@@ -37,54 +94,32 @@ export function StorefrontRenderer({
   products: PublicProduct[];
   preview?: boolean;
 }) {
-  const tokens = configuration.theme.tokens;
-  const themeStyle = {
-    '--store-primary': tokens.primary,
-    '--store-accent': tokens.accent,
-    '--store-background': tokens.background,
-    '--store-text': tokens.text,
-  } as CSSProperties;
-  const headerLinks = configuration.navigation.filter(
-    (item) => item.enabled && item.location === 'HEADER',
-  );
   return (
     <div
       className={styles.storefront}
-      style={themeStyle}
+      style={storefrontStyle(configuration)}
       data-preset={configuration.theme.presetKey}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: configuration.business.name,
+            description: configuration.business.description || undefined,
+            telephone: configuration.business.phone || undefined,
+            address: configuration.business.address || undefined,
+            logo: configuration.business.logo?.url,
+          }).replace(/</g, '\\u003c'),
+        }}
+      />
       {preview && (
         <div className={styles.previewBanner}>
-          Draft preview — customers cannot see these changes yet
+          Preview of saved changes — customers cannot see these changes yet
         </div>
       )}
-      <header className={styles.header}>
-        <Link className={styles.brand} href={`/store/${slug}`}>
-          {configuration.business.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
-            <img
-              src={configuration.business.logo.url}
-              alt={configuration.business.logo.alt ?? ''}
-            />
-          ) : (
-            <strong>{configuration.business.name}</strong>
-          )}
-        </Link>
-        <nav aria-label="Store navigation">
-          {headerLinks.map((item) => (
-            <Link
-              key={`${item.label}-${item.target}`}
-              href={
-                item.target.startsWith('/')
-                  ? `/store/${slug}${item.target === '/' ? '' : item.target}`
-                  : item.target
-              }
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </header>
+      <StoreHeader slug={slug} configuration={configuration} />
       <main>
         {configuration.sections
           .filter((section) => section.enabled)
@@ -159,16 +194,34 @@ export function StorefrontRenderer({
             return null;
           })}
       </main>
-      <footer className={styles.footer}>
-        <div>
-          <strong>{configuration.business.name}</strong>
-          <p>{configuration.business.description}</p>
-        </div>
-        <div>
-          {configuration.business.address && <p>{configuration.business.address}</p>}
-          {configuration.business.phone && <p>{configuration.business.phone}</p>}
-        </div>
-      </footer>
+      <StoreFooter configuration={configuration} />
+    </div>
+  );
+}
+
+export function StorefrontContentPage({
+  slug,
+  configuration,
+  page,
+}: {
+  slug: string;
+  configuration: SiteConfiguration;
+  page: PublishedContentPage;
+}) {
+  return (
+    <div
+      className={styles.storefront}
+      style={storefrontStyle(configuration)}
+      data-preset={configuration.theme.presetKey}
+    >
+      <StoreHeader slug={slug} configuration={configuration} />
+      <main className={styles.informationPage}>
+        <p className={styles.eyebrow}>{page.name}</p>
+        <h1>{page.title}</h1>
+        {page.introduction && <p className={styles.pageIntroduction}>{page.introduction}</p>}
+        <div className={styles.pageBody}>{page.body}</div>
+      </main>
+      <StoreFooter configuration={configuration} />
     </div>
   );
 }

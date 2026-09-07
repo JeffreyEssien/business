@@ -167,6 +167,27 @@
 .footer > div:last-child {
   text-align: right;
 }
+.informationPage {
+  width: min(760px, calc(100% - 40px));
+  min-height: 60dvh;
+  margin-inline: auto;
+  padding-block: 80px 96px;
+}
+.informationPage h1 {
+  font-family: Georgia, serif;
+  font-size: clamp(40px, 7vw, 68px);
+  line-height: 1.05;
+}
+.pageIntroduction {
+  margin: 24px 0 40px;
+  font-size: 19px;
+}
+.pageBody {
+  color: color-mix(in srgb, var(--store-text) 82%, transparent);
+  font-size: 16px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+}
 @media (max-width: 760px) {
   .header {
     align-items: flex-start;

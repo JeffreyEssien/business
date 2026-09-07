@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
@@ -59,10 +60,10 @@ export async function getProductEditor(slug: string, productId: string) {
   };
 }
 
-export async function getPublicStorefront(slug: string) {
+export const getPublicStorefront = cache(async function getPublicStorefront(slug: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('get_public_storefront', { store_slug: slug });
   if (error) throw new Error('Storefront could not be loaded.');
   if (!data) notFound();
   return data as PublicStorefront;
-}
+});

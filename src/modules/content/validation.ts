@@ -84,6 +84,41 @@ export function validateSiteDraft(form: FormData) {
 export function contentErrorMessage(code?: string, message?: string) {
   if (code === '42501') return 'You do not have permission to edit this storefront.';
   if (code === '22023') return 'The storefront settings were rejected. Check every field.';
-  if (message?.includes('duplicate')) return 'That media item already exists.';
+  if (code === '23505' || message?.includes('duplicate'))
+    return 'That web address is already being used. Choose another.';
   return 'The storefront could not be saved. Please try again.';
+}
+
+export function validateContentPage(form: FormData) {
+  const pageType = String(form.get('pageType') ?? '');
+  const name = text(form, 'name', 80);
+  const slug = text(form, 'slug', 100);
+  const title = text(form, 'title', 160);
+  const introduction = text(form, 'introduction', 500);
+  const body = text(form, 'body', 20000);
+  if (
+    !['ABOUT', 'CONTACT', 'POLICY', 'CUSTOM'].includes(pageType) ||
+    !name ||
+    !slug ||
+    !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug) ||
+    ['home', 'products'].includes(slug) ||
+    !title ||
+    !body ||
+    introduction === null
+  ) {
+    return { input: null, error: 'Add a page name, web address, heading, and page text.' };
+  }
+  return {
+    error: null,
+    input: {
+      pageType,
+      name,
+      slug,
+      title,
+      introduction,
+      body,
+      showInNavigation: form.get('showInNavigation') === 'on',
+      enabled: form.get('enabled') === 'on',
+    },
+  };
 }

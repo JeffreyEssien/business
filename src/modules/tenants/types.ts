@@ -13,6 +13,7 @@ export type OnboardingProgress = {
   owner_accepted: boolean;
   theme_selected: boolean;
   homepage_configured: boolean;
+  seo_configured: boolean;
   products_added: boolean;
   payment_configured: boolean;
   store_published: boolean;

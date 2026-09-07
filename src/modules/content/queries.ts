@@ -1,7 +1,13 @@
 import 'server-only';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import type { PublicProduct } from '@/modules/catalog/types';
-import type { SiteConfiguration, SiteEditorData, SiteNavigationItem, SiteSection } from './types';
+import type {
+  ContentPage,
+  SiteConfiguration,
+  SiteEditorData,
+  SiteNavigationItem,
+  SiteSection,
+} from './types';
 
 type BlockRow = {
   block_key: string;
@@ -111,6 +117,7 @@ export async function getSiteEditor(
       tokens: themeResult.data.tokens as SiteConfiguration['theme']['tokens'],
     },
     sections,
+    pages: [],
     navigation,
   };
   const storefront = productResult.data as { products?: PublicProduct[] } | null;
@@ -126,4 +133,37 @@ export async function getSiteEditor(
       resource_type: asset.resource_type as 'image' | 'video',
     })),
   };
+}
+
+export async function getContentPagesWorkspace(slug: string) {
+  const workspace = await getTenantWorkspace(slug);
+  const { data: pages, error: pageError } = await workspace.supabase
+    .from('pages')
+    .select('id,slug,name,page_type,show_in_navigation,is_enabled')
+    .eq('tenant_id', workspace.tenant.id)
+    .neq('page_type', 'HOME')
+    .order('sort_order')
+    .order('name');
+  if (pageError) throw new Error('Website pages could not be loaded.');
+  const ids = (pages ?? []).map((page) => page.id);
+  const blockResult = ids.length
+    ? await workspace.supabase
+        .from('content_blocks')
+        .select('page_id,content')
+        .eq('tenant_id', workspace.tenant.id)
+        .eq('block_key', 'main')
+        .in('page_id', ids)
+    : { data: [], error: null };
+  if (blockResult.error) throw new Error('Website page text could not be loaded.');
+  const contentPages = (pages ?? []).map((page) => {
+    const content = (blockResult.data ?? []).find((block) => block.page_id === page.id)?.content as
+      Record<string, unknown> | undefined;
+    return {
+      ...page,
+      title: typeof content?.title === 'string' ? content.title : page.name,
+      introduction: typeof content?.introduction === 'string' ? content.introduction : '',
+      body: typeof content?.body === 'string' ? content.body : '',
+    } as ContentPage;
+  });
+  return { workspace, pages: contentPages };
 }

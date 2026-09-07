@@ -74,3 +74,22 @@ Cloudinary is the production media provider (ADR 003). `lib/cloudinary/server.ts
 8. `get_public_storefront` exposes active catalog products and only the current published site snapshot to anonymous visitors.
 
 Keep tenant colors in validated tokens and pass them to storefront components through CSS variables. Marketing copy belongs in content records; only system UX labels may remain in code.
+
+## Follow a customer-information page change
+
+1. Routes under `app/t/[slug]/content/pages` authorize the tenant and compose the page list or editor.
+2. `components/content` explains where the page appears, whether customers can see it, and that saving does not change the live store.
+3. `modules/content/validation.ts` normalizes page names, addresses, headings, and plain text. Customer text is rendered as text, never injected as HTML.
+4. `save_content_page`, `delete_content_page`, and `reorder_homepage_sections` enforce tenant roles and relationships inside PostgreSQL. Direct browser writes remain denied.
+5. Homepage order is canonical in `content_blocks.sort_order`. Ordinary content saves preserve it; only the reorder action may change it.
+6. Publication copies enabled pages and navigation into the same immutable snapshot as the homepage. Public routes never read an unpublished page.
+
+## Follow a search-appearance change
+
+1. `app/t/[slug]/marketing/search/page.tsx` authorizes the tenant and composes the explanatory editor and search-result preview.
+2. `components/seo/search-appearance-form.tsx` uses customer-facing language for search title, description, listing, and links. It makes the save-versus-publish distinction explicit.
+3. `modules/seo/validation.ts` normalizes untrusted input, and `modules/seo/actions.ts` re-resolves membership before calling `save_global_seo`.
+4. Saved settings remain private in `tenant_seo_settings`. `publish_site` adds a normalized `seo` object to the immutable live snapshot and marks the onboarding search step complete.
+5. `modules/seo/public.ts` builds canonical URLs only from `NEXT_PUBLIC_APP_URL` or an active verified custom hostname. Never derive canonical metadata from an incoming Host header.
+6. The public homepage reads one request-memoized storefront result for both metadata and rendering. Sitemap and robots routes use only published settings and public storefront records.
+7. Structured data is serialized with `<` escaped before being placed in a script element. Preserve this protection when adding product or breadcrumb schemas.

@@ -11,6 +11,9 @@
   --success-surface: #edf8f0;
   --success-border: #bddfc5;
   --success-text: #356442;
+  --danger-surface: #fff5f5;
+  --danger-border: #efc5c5;
+  --danger-text: #963737;
 }
 @theme inline {
   --color-background: var(--background);

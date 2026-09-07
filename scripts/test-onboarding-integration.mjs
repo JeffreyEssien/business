@@ -24,6 +24,7 @@ cloudinary.config({
 });
 const prefix = `bc-test-${randomUUID()}`;
 const password = randomBytes(24).toString('base64url');
+let stage = 'Create integration identities';
 async function newUser(label) {
   const email = `${prefix}-${label}@example.invalid`;
   const { data, error } = await admin.auth.admin.createUser({
@@ -216,6 +217,7 @@ try {
     .update({ name: 'Bypass' })
     .eq('id', productA.data);
   assert.ok(directWrite.error, 'Direct product writes must be denied');
+  stage = 'Save storefront content';
   const draft = await ownerSession.client.rpc('save_site_draft', {
     target_tenant: a,
     business_name: 'Integration storefront A',
@@ -242,12 +244,47 @@ try {
     ],
   });
   assert.ifError(draft.error);
+  stage = 'Save customer information page';
+  const contentPage = await ownerSession.client.rpc('save_content_page', {
+    target_tenant: a,
+    target_page: null,
+    page_type: 'ABOUT',
+    page_name: 'About our business',
+    page_slug: 'about-our-business',
+    page_title: 'The integration story',
+    page_introduction: 'A customer-friendly introduction.',
+    page_body: 'This page belongs only to integration storefront A.',
+    show_in_navigation: true,
+    page_enabled: true,
+  });
+  assert.ifError(contentPage.error);
+  stage = 'Save search appearance';
+  const searchAppearance = await ownerSession.client.rpc('save_global_seo', {
+    target_tenant: a,
+    search_title: 'Integration Store A Search Title',
+    search_title_template: '%s | Integration Store A',
+    search_description: 'Tenant A search description for customers.',
+    social_account: '@integration-a',
+    allow_search_listing: true,
+    allow_search_links: true,
+    google_verification: '',
+    bing_verification: '',
+  });
+  assert.ifError(searchAppearance.error);
+  stage = 'Publish storefront and customer page';
   const publish = await ownerSession.client.rpc('publish_site', { target_tenant: a });
   assert.ifError(publish.error);
   await page(`/t/${slugA}/catalog`, ownerSession, 'Integration product A');
   await page(`/t/${slugB}/catalog`, ownerBSession, 'Integration product B');
+  stage = 'Read published storefront A';
   const storefrontA = await page(`/store/${slugA}`, null, 'Integration homepage A');
   assert.ok(storefrontA.html.includes('Integration product A'));
+  assert.ok(storefrontA.html.includes('Integration Store A Search Title'));
+  stage = 'Read published customer page A';
+  await page(`/store/${slugA}/about-our-business`, null, 'The integration story');
+  await page(`/store/${slugA}/sitemap`, null, 'about-our-business');
+  await page(`/store/${slugA}/robots.txt`, null, 'Allow: /');
+  stage = 'Read isolated storefront B';
   assert.ok(!storefrontA.html.includes('Integration product B'));
   const storefrontB = await page(`/store/${slugB}`, null, 'Integration product B');
   assert.ok(!storefrontB.html.includes('Integration product A'));
@@ -274,9 +311,11 @@ try {
   assert.ifError(resumed.error);
   await page(`/t/${slugA}`, ownerSession, 'Welcome to your next chapter.');
   console.log(
-    'PASS: real Auth sessions, onboarding, two isolated catalogs, Cloudinary upload, tenant CRUD pages, anonymous storefronts, direct-write denial, token replay denial, suspension/reactivation.',
+    'PASS: real Auth sessions, onboarding, two isolated catalogs, Cloudinary upload, customer pages, published search metadata, sitemap/robots output, anonymous storefronts, direct-write denial, token replay denial, and suspension/reactivation.',
   );
 } catch (error) {
+  console.error(`Integration check failed at: ${stage}.`);
+  if (error?.code === 'ERR_ASSERTION') console.error(String(error.message).slice(0, 400));
   reportError(error);
 } finally {
   try {
@@ -293,6 +332,7 @@ try {
       const ids = fixtures.map((t) => t.id);
       for (const table of [
         'tenant_site_versions',
+        'seo_entries',
         'product_media',
         'product_categories',
         'products',

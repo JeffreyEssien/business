@@ -1,13 +1,19 @@
 'use server';
 import { randomUUID } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import {
   deleteCloudinaryMedia,
   uploadTenantMedia,
   type UploadedMedia,
 } from '@/lib/cloudinary/server';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
-import { contentErrorMessage, validatedSiteImage, validateSiteDraft } from './validation';
+import {
+  contentErrorMessage,
+  validatedSiteImage,
+  validateContentPage,
+  validateSiteDraft,
+} from './validation';
 
 export type ContentActionState = { error: string; message: string };
 type StoredSiteMedia = {
@@ -165,7 +171,10 @@ export async function saveSiteDraft(
   );
   revalidatePath(`/t/${slug}/design`);
   revalidatePath(`/t/${slug}/design/preview`);
-  return { error: '', message: 'Draft saved. Your live storefront has not changed.' };
+  return {
+    error: '',
+    message: 'Changes saved for review. Your live storefront has not changed.',
+  };
 }
 
 export async function publishSite(
@@ -184,4 +193,68 @@ export async function publishSite(
   revalidatePath(`/t/${slug}/design`);
   revalidatePath(`/store/${slug}`);
   return { error: '', message: `Version ${data} is now live.` };
+}
+
+export async function reorderHomepageSections(
+  slug: string,
+  sectionKeys: string[],
+  _state: ContentActionState,
+  _form: FormData,
+): Promise<ContentActionState> {
+  const workspace = await getTenantWorkspace(slug);
+  if (!canEdit(workspace.membership.role))
+    return { error: 'You do not have permission to change the homepage order.', message: '' };
+  const { error } = await workspace.supabase.rpc('reorder_homepage_sections', {
+    target_tenant: workspace.tenant.id,
+    section_keys: sectionKeys,
+  });
+  if (error) return { error: contentErrorMessage(error.code, error.message), message: '' };
+  revalidatePath(`/t/${slug}/design`);
+  revalidatePath(`/t/${slug}/design/preview`);
+  return {
+    error: '',
+    message: 'Homepage order saved. Customers will see it after you publish your saved changes.',
+  };
+}
+
+export async function saveContentPage(
+  slug: string,
+  pageId: string | null,
+  _state: ContentActionState,
+  form: FormData,
+): Promise<ContentActionState> {
+  const validation = validateContentPage(form);
+  if (!validation.input)
+    return { error: validation.error ?? 'Check the page details.', message: '' };
+  const workspace = await getTenantWorkspace(slug);
+  if (!canEdit(workspace.membership.role))
+    return { error: 'You do not have permission to edit website pages.', message: '' };
+  const { error } = await workspace.supabase.rpc('save_content_page', {
+    target_tenant: workspace.tenant.id,
+    target_page: pageId,
+    page_type: validation.input.pageType,
+    page_name: validation.input.name,
+    page_slug: validation.input.slug,
+    page_title: validation.input.title,
+    page_introduction: validation.input.introduction,
+    page_body: validation.input.body,
+    show_in_navigation: validation.input.showInNavigation,
+    page_enabled: validation.input.enabled,
+  });
+  if (error) return { error: contentErrorMessage(error.code, error.message), message: '' };
+  revalidatePath(`/t/${slug}/content/pages`);
+  revalidatePath(`/t/${slug}/design`);
+  redirect(`/t/${slug}/content/pages`);
+}
+
+export async function deleteContentPage(slug: string, pageId: string, _form: FormData) {
+  const workspace = await getTenantWorkspace(slug);
+  if (!canEdit(workspace.membership.role)) throw new Error('FORBIDDEN');
+  const { error } = await workspace.supabase.rpc('delete_content_page', {
+    target_tenant: workspace.tenant.id,
+    target_page: pageId,
+  });
+  if (error) throw new Error(contentErrorMessage(error.code, error.message));
+  revalidatePath(`/t/${slug}/content/pages`);
+  revalidatePath(`/t/${slug}/design`);
 }

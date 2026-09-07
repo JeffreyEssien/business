@@ -148,16 +148,58 @@ try {
     'Catalog has no desktop overflow',
   );
   await page.screenshot({ path: 'artifacts/ui/catalog-desktop.png', fullPage: true });
+  stage = 'Create a customer information page';
+  await page.goto(`${base}/t/${slug}/content/pages/new`);
+  await expect(page.getByRole('heading', { name: 'What should customers know?' })).toBeVisible();
+  await page.getByLabel('Page name').fill('About our business');
+  await page.getByLabel('Page web address').fill('about-our-business');
+  await page.getByLabel('Add this page to the main store menu').check();
+  await page.getByLabel('Main page heading').fill('A business customers can trust');
+  await page
+    .getByLabel('Short introduction')
+    .fill('Helpful information written by the store owner.');
+  await page
+    .getByLabel('Full page text')
+    .fill('This customer page is saved first and published only when the owner is ready.');
+  await page.getByRole('button', { name: 'Save without changing the live store' }).click();
+  await page.waitForURL(`${base}/t/${slug}/content/pages`, { timeout: 30000 });
+  await expect(page.getByRole('heading', { name: 'About our business' })).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/website-pages-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Website pages list has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/website-pages-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Save customer-friendly search appearance';
+  await page.goto(`${base}/t/${slug}/marketing/search`);
+  await expect(page.getByRole('heading', { name: 'Search appearance' })).toBeVisible();
+  await page.getByLabel('Search result title').fill('Trusted UI verification store');
+  await page
+    .getByLabel('Search result description')
+    .fill('A clear customer-facing description for search and sharing.');
+  await page.getByLabel('Allow search services to list this store').check();
+  await page.getByRole('button', { name: 'Save for the next publish' }).click();
+  await expect(page.getByText(/Search appearance saved for review/)).toBeVisible({
+    timeout: 30000,
+  });
+  await page.screenshot({ path: 'artifacts/ui/search-appearance-desktop.png', fullPage: true });
   stage = 'Save and preview storefront design with parallel media uploads';
   await page.goto(`${base}/t/${slug}/design`);
   await expect(page.getByRole('heading', { name: 'Design your storefront' })).toBeVisible();
   await page.getByLabel('Short description').fill('A tenant-controlled UI test storefront.');
   await page.getByLabel('Public phone').fill('+234 800 000 0000');
-  await page.getByLabel('Eyebrow').fill('Browser verified');
-  await page.getByLabel('Headline', { exact: true }).fill('A storefront shaped by its owner');
-  await page.getByLabel('Subheadline').fill('Draft, preview, and publish use one renderer.');
-  await page.getByLabel('Button label').fill('See the collection');
-  await page.getByLabel('Section heading').fill('Owner-selected products');
+  await page.getByLabel('Short label above the heading').fill('Browser verified');
+  await page
+    .getByLabel('Main welcome heading', { exact: true })
+    .fill('A storefront shaped by its owner');
+  await page
+    .getByLabel('Supporting welcome text')
+    .fill('Saved changes are reviewed before customers see them.');
+  await page.getByLabel('Main button text').fill('See the collection');
+  await page.getByLabel('Heading above your products').fill('Owner-selected products');
   await page.getByLabel('Footer description').fill('Editable footer content.');
   const siteImage = {
     name: 'parallel-site-image.png',
@@ -170,12 +212,16 @@ try {
       .getByLabel('Replace hero image')
       .setInputFiles({ ...siteImage, name: 'parallel-hero.png' }),
   ]);
-  await page.getByRole('button', { name: 'Save draft' }).click();
+  await page.getByRole('button', { name: 'Save without changing the live store' }).click();
   await expect(
-    page.getByText('Draft saved. Your live storefront has not changed.', { exact: true }),
+    page.getByText('Changes saved for review. Your live storefront has not changed.', {
+      exact: true,
+    }),
   ).toBeVisible({
     timeout: 30000,
   });
+  await page.getByRole('button', { name: 'Move Product collection earlier' }).click();
+  await expect(page.getByText(/Homepage order saved/)).toBeVisible({ timeout: 30000 });
   await page.locator('iframe').evaluate((frame) => {
     frame.setAttribute('src', frame.getAttribute('src'));
   });
@@ -185,7 +231,7 @@ try {
     }),
   ).toBeVisible();
   await page.screenshot({ path: 'artifacts/ui/design-editor-desktop.png', fullPage: true });
-  await page.getByRole('button', { name: 'Publish saved draft' }).click();
+  await page.getByRole('button', { name: 'Make saved changes visible to customers' }).click();
   await expect(page.getByText('Version 1 is now live.', { exact: true })).toBeVisible({
     timeout: 30000,
   });
@@ -194,7 +240,11 @@ try {
   await expect(
     page.getByRole('heading', { name: 'A storefront shaped by its owner' }),
   ).toBeVisible();
+  await expect(page).toHaveTitle('Trusted UI verification store');
   await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
+  await page.getByRole('link', { name: 'About our business' }).click();
+  await expect(page.getByRole('heading', { name: 'A business customers can trust' })).toBeVisible();
+  await page.goBack({ waitUntil: 'domcontentloaded' });
   await page.screenshot({ path: 'artifacts/ui/storefront-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -238,7 +288,7 @@ try {
     .toBe(true);
   assert.equal(pageErrors.length, 0, 'No browser runtime errors');
   console.log(
-    'PASS: browser login, onboarding layouts, tenant catalog creation, Cloudinary upload/render/delete lifecycle, and responsive public storefront.',
+    'PASS: browser login, onboarding layouts, tenant catalog creation, website-page editing, search-appearance editing, Cloudinary upload/render/delete lifecycle, and responsive public storefront.',
   );
 } catch (error) {
   console.error(`UI check failed at ${stage}: ${error.name}.`);
@@ -267,6 +317,7 @@ try {
       mediaAssets.push(...remainingAssets);
       for (const table of [
         'tenant_site_versions',
+        'seo_entries',
         'product_media',
         'product_categories',
         'products',

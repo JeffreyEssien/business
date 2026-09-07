@@ -88,40 +88,40 @@ export function SiteEditorForm({
         </FormGrid>
       </FormSection>
       <FormSection
-        title="Theme"
-        description="Preset values are editable design tokens shared by every storefront component."
+        title="Store colors"
+        description="Choose a starting style, then adjust the colors customers see across your storefront."
       >
         <FormGrid>
           <SelectField
             name="preset"
-            label="Theme preset"
+            label="Starting color style"
             options={themePresetOptions}
             defaultValue={configuration.theme.presetKey}
           />
           <TextField
             name="primary"
-            label="Primary color"
+            label="Main button and link color"
             type="color"
             defaultValue={configuration.theme.tokens.primary}
             required
           />
           <TextField
             name="accent"
-            label="Accent color"
+            label="Highlight color"
             type="color"
             defaultValue={configuration.theme.tokens.accent}
             required
           />
           <TextField
             name="background"
-            label="Background color"
+            label="Page background color"
             type="color"
             defaultValue={configuration.theme.tokens.background}
             required
           />
           <TextField
             name="text"
-            label="Text color"
+            label="Main text color"
             type="color"
             defaultValue={configuration.theme.tokens.text}
             required
@@ -144,46 +144,46 @@ export function SiteEditorForm({
           defaultValue={value(configuration, 'announcement', 'text')}
         />
       </FormSection>
-      <FormSection title="Homepage hero">
+      <FormSection title="Main welcome area">
         <FormGrid>
           <SelectField
             name="heroVariant"
-            label="Hero layout"
+            label="Welcome area layout"
             defaultValue={section(configuration, 'hero')?.variant ?? 'centered'}
             options={[
-              { value: 'centered', label: 'Centered' },
-              { value: 'split', label: 'Split' },
-              { value: 'image-overlay', label: 'Image overlay' },
+              { value: 'centered', label: 'Text centered on the page' },
+              { value: 'split', label: 'Text beside the main image' },
+              { value: 'image-overlay', label: 'Text placed over the main image' },
             ]}
           />
           <TextField
             name="heroEyebrow"
-            label="Eyebrow"
+            label="Short label above the heading"
             maxLength={80}
             defaultValue={value(configuration, 'hero', 'eyebrow')}
           />
           <TextField
             name="heroHeadline"
-            label="Headline"
+            label="Main welcome heading"
             required
             maxLength={160}
             defaultValue={value(configuration, 'hero', 'headline')}
           />
           <TextAreaField
             name="heroSubheadline"
-            label="Subheadline"
+            label="Supporting welcome text"
             maxLength={320}
             defaultValue={value(configuration, 'hero', 'subheadline')}
           />
           <TextField
             name="heroCtaLabel"
-            label="Button label"
+            label="Main button text"
             maxLength={60}
             defaultValue={ctaLabel(configuration)}
           />
         </FormGrid>
       </FormSection>
-      <FormSection title="Product section">
+      <FormSection title="Product collection">
         <label className={styles.checkbox}>
           <input
             name="productsEnabled"
@@ -194,7 +194,7 @@ export function SiteEditorForm({
         </label>
         <TextField
           name="productsHeading"
-          label="Section heading"
+          label="Heading above your products"
           required
           maxLength={120}
           defaultValue={value(configuration, 'products', 'heading') || 'Products'}
@@ -231,9 +231,9 @@ export function SiteEditorForm({
           defaultValue={value(configuration, 'footer', 'description')}
         />
       </FormSection>
-      <FormActions note="Save updates the draft preview only. Publish separately when it is ready.">
+      <FormActions note="Saving updates your private preview only. Customers keep seeing the currently published version.">
         <Button type="submit" disabled={pending}>
-          {pending ? 'Saving draft…' : 'Save draft'}
+          {pending ? 'Saving your changes…' : 'Save without changing the live store'}
         </Button>
       </FormActions>
     </FormStack>

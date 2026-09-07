@@ -583,6 +583,41 @@ Prefer names that make ownership and behavior obvious.
 
 Directory structure should communicate architecture without requiring documentation.
 
+22.1 Plain-Language Product Communication
+
+Write user-facing product language for non-technical clients.
+
+Feature names, navigation labels, field labels, helper text, status messages, empty states, confirmations, and action buttons must explain what the user is doing and what outcome to expect.
+
+Avoid vague or unexplained terms such as:
+
+* Configure
+* Resource
+* Entity
+* Payload
+* Token
+* Variant
+* Draft state
+* Publish atomically
+
+When a domain or technical term is necessary, introduce it in plain language at the point of use.
+
+Prefer specific outcome-oriented language. For example:
+
+* "Store colors" instead of "Design tokens"
+* "Homepage layout" instead of "Section configuration"
+* "Save without changing the live store" instead of "Save draft"
+* "Make these changes visible to customers" instead of "Publish atomically"
+
+Every consequential control must make clear:
+
+* what will change;
+* where the change will appear;
+* whether customers can see it immediately;
+* whether the action can be undone or safely revised.
+
+Do not expose database, API, framework, or implementation terminology in client-facing interfaces.
+
 ⸻
 
 23. Comments & Documentation Efficiency
