@@ -21,6 +21,9 @@
 .navLinks a:hover {
   text-decoration: underline;
 }
+.mobileWorkspaceMenu {
+  display: none;
+}
 .summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -192,6 +195,40 @@
   .productDetail {
     grid-template-columns: 1fr;
     gap: 28px;
+  }
+  .navLinks {
+    display: none;
+  }
+  .mobileWorkspaceMenu {
+    display: block;
+    width: 100%;
+  }
+  .mobileWorkspaceMenu summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--primary);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .mobileWorkspaceMenu nav {
+    display: grid;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .mobileWorkspaceMenu a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    color: var(--primary);
   }
 }
 @media (max-width: 520px) {

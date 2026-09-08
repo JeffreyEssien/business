@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import type { PublicProduct } from '@/modules/catalog/types';
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
+import { StructuredData } from './structured-data';
 import styles from './storefront.module.css';
 
 function contentText(section: SiteSection, key: string) {
@@ -100,18 +101,15 @@ export function StorefrontRenderer({
       style={storefrontStyle(configuration)}
       data-preset={configuration.theme.presetKey}
     >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Organization',
-            name: configuration.business.name,
-            description: configuration.business.description || undefined,
-            telephone: configuration.business.phone || undefined,
-            address: configuration.business.address || undefined,
-            logo: configuration.business.logo?.url,
-          }).replace(/</g, '\\u003c'),
+      <StructuredData
+        value={{
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: configuration.business.name,
+          description: configuration.business.description || undefined,
+          telephone: configuration.business.phone || undefined,
+          address: configuration.business.address || undefined,
+          logo: configuration.business.logo?.url,
         }}
       />
       {preview && (
@@ -220,6 +218,57 @@ export function StorefrontContentPage({
         <h1>{page.title}</h1>
         {page.introduction && <p className={styles.pageIntroduction}>{page.introduction}</p>}
         <div className={styles.pageBody}>{page.body}</div>
+      </main>
+      <StoreFooter configuration={configuration} />
+    </div>
+  );
+}
+
+export function StorefrontCategoryPage({
+  slug,
+  configuration,
+  name,
+  description,
+  products,
+}: {
+  slug: string;
+  configuration: SiteConfiguration;
+  name: string;
+  description: string;
+  products: PublicProduct[];
+}) {
+  return (
+    <div
+      className={styles.storefront}
+      style={storefrontStyle(configuration)}
+      data-preset={configuration.theme.presetKey}
+    >
+      <StoreHeader slug={slug} configuration={configuration} />
+      <main className={styles.informationPage}>
+        <p className={styles.eyebrow}>PRODUCT COLLECTION</p>
+        <h1>{name}</h1>
+        {description && <p className={styles.pageIntroduction}>{description}</p>}
+        {products.length ? (
+          <div className={styles.productGrid}>
+            {products.map((product) => (
+              <Link
+                className={styles.productCard}
+                key={product.id}
+                href={`/store/${slug}/products/${product.slug}`}
+              >
+                <CatalogMedia
+                  url={product.mediaUrl}
+                  type={product.mediaType}
+                  alt={product.mediaAlt || product.name}
+                />
+                <h3>{product.name}</h3>
+                <p>{currency(product)}</p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p>No products are available in this collection yet.</p>
+        )}
       </main>
       <StoreFooter configuration={configuration} />
     </div>

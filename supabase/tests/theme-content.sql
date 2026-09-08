@@ -45,8 +45,31 @@ insert into site_fixture(k,id) select 'page-a',public.save_content_page(
  target_tenant=>(select id from site_fixture where k='tenant-a'),target_page=>null,page_type=>'ABOUT',page_name=>'About us',page_slug=>'about-us',
  page_title=>'Our story',page_introduction=>'Who we are',page_body=>'Tenant-owned page content.',show_in_navigation=>true,page_enabled=>true
 );
+insert into site_fixture(k,id) select 'category-a',public.save_category(
+ (select id from site_fixture where k='tenant-a'),null,'Search collection','search-collection','A searchable collection','ACTIVE'
+);
+insert into site_fixture(k,id) select 'product-a',public.save_product(
+ target_tenant=>(select id from site_fixture where k='tenant-a'),target_product=>null,
+ product_name=>'Search product',product_slug=>'search-product',product_description=>'A product with custom search wording',
+ product_short_description=>'Search product summary',product_sku=>'SEARCH-001',product_price=>1200,
+ product_compare_at_price=>null,product_stock_quantity=>2,product_track_inventory=>true,
+ product_status=>'ACTIVE',category_ids=>array[(select id from site_fixture where k='category-a')]
+);
+select public.save_entity_seo(
+ (select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),
+ 'About Store A','Store A page description','', 'Share Store A','Shared page description',true,true
+);
+select public.save_entity_seo(
+ (select id from site_fixture where k='tenant-a'),'PRODUCT',(select id from site_fixture where k='product-a'),
+ 'Buy Search Product','Product search description','', '', '',true,true
+);
+select public.save_entity_seo(
+ (select id from site_fixture where k='tenant-a'),'CATEGORY',(select id from site_fixture where k='category-a'),
+ 'Browse Search Collection','Collection search description','', '', '',true,true
+);
 do $$ begin
  if jsonb_array_length((select configuration->'pages' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED'))<>0 then raise exception 'Saved page changed live snapshot'; end if;
+ if coalesce(jsonb_array_length((select configuration->'seoEntries' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')),0)<>0 then raise exception 'Saved search override changed live snapshot'; end if;
 end $$;
 select public.reorder_homepage_sections((select id from site_fixture where k='tenant-a'),array['products','hero','announcement','footer']);
 select public.save_global_seo((select id from site_fixture where k='tenant-a'),'Distinct Store A in Search','%s | Distinct Store A','Tenant A search description','@distincta',true,true,'','');
@@ -55,6 +78,8 @@ do $$ begin
  if (select configuration#>>'{sections,0,key}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'products' then raise exception 'Section order not published'; end if;
  if (select configuration#>>'{pages,0,title}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'Our story' then raise exception 'Content page not published'; end if;
  if (select configuration#>>'{seo,title}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'Distinct Store A in Search' then raise exception 'Search appearance not published'; end if;
+ if (select count(*) from jsonb_array_elements((select configuration->'seoEntries' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')) item where item->>'title' in ('About Store A','Buy Search Product','Browse Search Collection'))<>3 then raise exception 'Record search overrides not published'; end if;
+ if (select configuration#>>'{pages,0,id}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from (select id::text from site_fixture where k='page-a') then raise exception 'Published page identity missing'; end if;
  if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and link_type='PAGE' and target='/about-us') then raise exception 'Page menu link missing'; end if;
 end $$;
 reset role;
@@ -66,6 +91,7 @@ do $$ begin
  begin perform public.save_site_draft(target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Bad',business_description=>'',business_phone=>'',business_address=>'',theme_preset=>'general',primary_color=>'#111111',accent_color=>'#222222',background_color=>'#ffffff',text_color=>'#000000',announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Bad',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',products_heading=>'Bad',products_enabled=>true,footer_description=>'',navigation=>'[]'::jsonb);raise exception 'Outsider draft write allowed';exception when insufficient_privilege then null;end;
  begin perform public.delete_content_page((select id from site_fixture where k='tenant-a'),(select id from site_fixture where k='page-a'));raise exception 'Outsider page delete allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_global_seo((select id from site_fixture where k='tenant-a'),'Forbidden','%s | Forbidden','', '',true,true,'','');raise exception 'Outsider search settings write allowed';exception when insufficient_privilege then null;end;
+ begin perform public.save_entity_seo((select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),'Forbidden','','','','',true,true);raise exception 'Outsider record search write allowed';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
 
@@ -75,6 +101,7 @@ do $$ declare site jsonb; begin
  if site#>>'{sections,1,content,headline}' is distinct from 'Unpublished headline' then raise exception 'Published site unavailable anonymously'; end if;
  if site#>>'{pages,0,body}' is distinct from 'Tenant-owned page content.' then raise exception 'Published content page unavailable anonymously'; end if;
  if site#>>'{seo,description}' is distinct from 'Tenant A search description' then raise exception 'Published search settings unavailable anonymously'; end if;
+ if (select count(*) from jsonb_array_elements(site->'seoEntries') item where item->>'entityType' in ('PAGE','PRODUCT','CATEGORY'))<>3 then raise exception 'Published record search settings unavailable anonymously'; end if;
  begin perform 1 from public.tenant_site_versions;raise exception 'Anonymous version table read allowed';exception when insufficient_privilege then null;end;
  begin perform 1 from public.content_blocks;raise exception 'Anonymous content table read allowed';exception when insufficient_privilege then null;end;
  begin perform 1 from public.seo_entries;raise exception 'Anonymous search override table read allowed';exception when insufficient_privilege then null;end;

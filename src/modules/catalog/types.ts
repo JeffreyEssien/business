@@ -44,8 +44,17 @@ export type PublicProduct = {
   categories: string[];
 };
 
+export type PublicCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  productIds: string[];
+};
+
 export type PublicStorefront = {
   tenant: { name: string; slug: string };
   site: import('@/modules/content/types').SiteConfiguration | null;
+  categories: PublicCategory[];
   products: PublicProduct[];
 };

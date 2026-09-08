@@ -93,3 +93,6 @@ Keep tenant colors in validated tokens and pass them to storefront components th
 5. `modules/seo/public.ts` builds canonical URLs only from `NEXT_PUBLIC_APP_URL` or an active verified custom hostname. Never derive canonical metadata from an incoming Host header.
 6. The public homepage reads one request-memoized storefront result for both metadata and rendering. Sitemap and robots routes use only published settings and public storefront records.
 7. Structured data is serialized with `<` escaped before being placed in a script element. Preserve this protection when adding product or breadcrumb schemas.
+8. `getSeoWorkspace` loads global settings, relevant records, and saved overrides concurrently. Record editors call `save_entity_seo`, which independently verifies that the selected page, product, or category belongs to the authorized tenant.
+9. Record overrides remain private until `publish_site` copies them into `seoEntries` in the immutable snapshot. Public metadata uses `entityMetadata` for one fallback chain across customer, product, and collection routes.
+10. Product and breadcrumb schemas are generated from trusted catalog/content records through `StructuredData`. Do not accept raw structured-data JSON from tenant forms.

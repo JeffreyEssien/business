@@ -11,6 +11,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const paths = [
     '',
     ...(store.site?.pages ?? []).map((page) => `/${page.slug}`),
+    ...store.categories.map((category) => `/categories/${category.slug}`),
     ...store.products.map((product) => `/products/${product.slug}`),
   ];
   const urls = paths

@@ -27,7 +27,19 @@ export type ContentPage = {
   introduction: string;
   body: string;
 };
-export type PublishedContentPage = Omit<ContentPage, 'id' | 'show_in_navigation' | 'is_enabled'>;
+export type PublishedContentPage = Omit<ContentPage, 'show_in_navigation' | 'is_enabled'>;
+export type SeoEntityType = 'PAGE' | 'PRODUCT' | 'CATEGORY';
+export type PublishedSeoEntry = {
+  entityType: SeoEntityType;
+  entityId: string;
+  title: string;
+  description: string;
+  canonicalUrl: string | null;
+  socialTitle: string;
+  socialDescription: string;
+  allowSearchListing: boolean;
+  allowSearchLinks: boolean;
+};
 export type PublishedSeoSettings = {
   title: string;
   titleTemplate: string;
@@ -55,6 +67,7 @@ export type SiteConfiguration = {
   sections: SiteSection[];
   pages: PublishedContentPage[];
   seo?: PublishedSeoSettings;
+  seoEntries?: PublishedSeoEntry[];
   navigation: SiteNavigationItem[];
 };
 export type StorefrontView = {

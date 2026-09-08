@@ -57,3 +57,98 @@
   background: var(--success-surface);
   color: var(--success-text);
 }
+.contentGroups,
+.contentGroup,
+.contentList {
+  display: grid;
+}
+.contentGroups {
+  gap: 32px;
+}
+.contentGroup {
+  gap: 14px;
+}
+.contentGroup h3 {
+  font-size: 16px;
+}
+.contentGroup > div > p {
+  margin: 5px 0 0;
+}
+.contentList {
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.contentList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.contentList p {
+  margin: 3px 0 0;
+  font-size: 12px;
+}
+.customizationStatus {
+  color: var(--muted);
+  font-size: 12px;
+}
+.editLink {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.emptyGroup {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.advancedSettings {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+.advancedSettings summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--foreground);
+  cursor: pointer;
+  font-weight: 600;
+}
+.advancedSettings > p {
+  max-width: 680px;
+  margin: 0 0 22px;
+}
+.formButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+@media (max-width: 760px) {
+  .contentList li {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .editLink {
+    width: fit-content;
+  }
+}
+@media (max-width: 520px) {
+  .preview {
+    padding: 18px;
+  }
+  .formButtons,
+  .formButtons > * {
+    width: 100%;
+  }
+}

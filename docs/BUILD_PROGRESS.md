@@ -1,12 +1,12 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-07
+Last updated: 2026-09-08
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
 ## Current stage: search appearance and discovery (Phase 4)
 
-Status: Phase 3 is complete and verified. The Phase 4 foundation now lets each business control its homepage search title and description, search-listing preferences, social account, canonical URL, sitemap, robots response, and organization data. These settings remain saved privately until the owner publishes the storefront. Page-, product-, and category-specific search overrides remain before Phase 4 is complete. No real business or product was created by the agent; integration fixtures and uploaded test media were removed.
+Status: Phase 3 is complete and verified. Phase 4 now lets each business control global and record-specific search wording for customer pages, products, and product collections. Published output includes canonical URLs, search visibility, social metadata, sitemap entries, and organization/product/breadcrumb structured data. Settings remain private until the owner publishes the storefront. Record-specific social images and the custom-domain verification lifecycle remain before Phase 4 can close. No real business or product was created by the agent; integration fixtures and uploaded test media were removed.
 
 ## Completed
 
@@ -67,6 +67,13 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Public `/store/{slug}/sitemap` and `/store/{slug}/robots.txt` responses reflect only published settings and published/active storefront records.
 - Storefronts include safely serialized Organization structured data. Public storefront reads are request-memoized so metadata and page rendering do not repeat the same database query.
 - Migration file 202609070005_seo_foundation.sql applied to development Supabase.
+- Customer pages, products, and product collections are listed in one understandable search workspace. Each record can inherit store defaults or save its own title, description, sharing wording, preferred HTTPS address, and search visibility.
+- Advanced record controls are collapsed by default. The editor explains fallback behavior and shows a live result preview with character counts.
+- Record overrides are tenant-authorized drafts and are copied into the immutable site snapshot only during publication. Deleting a source page, product, or collection removes its saved override.
+- Public customer, product, and collection routes use published fallback rules consistently. Active collections have storefront pages and sitemap entries.
+- Product and breadcrumb structured data is generated from validated application records and safely serialized; tenants cannot inject raw schema markup.
+- Tenant mobile navigation now uses a compact expandable workspace menu instead of wrapping a long row of links.
+- Migration file 202609070006_seo_overrides.sql applied to development Supabase.
 
 ## Validation
 
@@ -74,7 +81,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all eight migrations were skipped on the final rerun; checksums and migration history are intact.
+- PASS: all nine migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
@@ -87,6 +94,9 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: authenticated integration and browser flows create a customer page, reorder homepage sections, publish once, and render the page from the immutable public snapshot.
 - PASS: search settings are tenant-isolated, stay private until publish, then drive exact homepage metadata, canonical output, sitemap, robots response, and Organization structured data.
 - PASS: visually inspected desktop/mobile website-page screens and the desktop search-appearance editor; descriptive controls, responsive layouts, live preview, and overflow are acceptable.
+- PASS: record-level search SQL coverage verifies PAGE/PRODUCT/CATEGORY ownership, draft/live separation, outsider denial, and the published snapshot.
+- PASS: authenticated integration verifies record-specific public HTML, collection routing, category sitemap inclusion, and tenant isolation.
+- PASS: browser editing and publishing of product search wording, exact public title output, and Product/Breadcrumb structured-data scripts. The compact mobile navigation and record editor were visually inspected with no overflow.
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
@@ -97,7 +107,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
 - Preferred payment mode is recorded, not connected. Email/SMS remain disabled.
 - Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
-- Page-, product-, and category-specific search overrides, richer product/breadcrumb structured data, checkout, payment processing, and advanced operational controls remain future work.
+- Record-specific social share images, domain-verification UI, checkout, payment processing, and advanced operational controls remain future work.
+- The Store design editor is responsive and functional, but its long settings column should receive further progressive disclosure so first-time users see fewer controls at once.
 - `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
 - Plain PostgreSQL CI emulates only the Auth schema contract; real Supabase Auth is covered by the separate development integration script.
 
@@ -109,7 +120,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Super-admin onboarding | 1          | Implemented and verified | Atomic creation, owner acceptance, two isolated workspaces |
 | Catalog                | 2          | Implemented and verified | Tenant-scoped products, categories, media, inventory       |
 | Theme and content      | 3          | Implemented and verified | Editor, pages, reordering, preview, atomic publishing       |
-| SEO                    | 4          | In progress              | Global output verified; record-specific overrides next     |
+| SEO                    | 4          | In progress              | Global/record output verified; social images/domain gate    |
 | Orders and checkout    | 5          | Planned                  | Totals, inventory, snapshots, manual verification          |
 | Paystack               | 6          | Planned                  | Verified/idempotent payment processing                     |
 | Email                  | 7          | Planned                  | Branded delivery and logs                                  |

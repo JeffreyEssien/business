@@ -5,6 +5,7 @@ import type { GlobalSeoDraft } from '@/modules/seo/queries';
 import { Button } from '@/components/ui/button';
 import { TextAreaField, TextField } from '@/components/ui/form-fields';
 import { FormActions, FormError, FormSection, FormStack } from '@/components/ui/form-layout';
+import { SearchPreview } from './search-preview';
 import styles from './search-appearance.module.css';
 
 const initialState: SeoActionState = { error: '', message: '' };
@@ -26,15 +27,11 @@ export function SearchAppearanceForm({
           {state.message}
         </p>
       )}
-      <section className={styles.preview} aria-labelledby="search-preview-title">
-        <p className={styles.previewLabel}>Preview of a possible search result</p>
-        <h2 id="search-preview-title">{title || 'Your store name'}</h2>
-        <p className={styles.previewAddress}>your-store-address</p>
-        <p>
-          {description ||
-            'Add a short description that helps customers understand what your store offers.'}
-        </p>
-      </section>
+      <SearchPreview
+        title={title || 'Your store name'}
+        description={description}
+        address="your-store-address"
+      />
       <FormSection
         title="What people see in search"
         description="Search services may shorten or rewrite this text, but these details give them your preferred wording."

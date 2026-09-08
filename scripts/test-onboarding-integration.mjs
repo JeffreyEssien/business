@@ -271,6 +271,46 @@ try {
     bing_verification: '',
   });
   assert.ifError(searchAppearance.error);
+  stage = 'Save page, product, and collection search wording';
+  const recordSearchResults = await Promise.all([
+    ownerSession.client.rpc('save_entity_seo', {
+      target_tenant: a,
+      target_entity_type: 'PAGE',
+      target_entity: contentPage.data,
+      search_title: 'Integration About Page',
+      search_description: 'Published page-specific search description.',
+      canonical_address: '',
+      social_share_title: 'Share Integration About',
+      social_share_description: 'Published page sharing description.',
+      allow_search_listing: true,
+      allow_search_links: true,
+    }),
+    ownerSession.client.rpc('save_entity_seo', {
+      target_tenant: a,
+      target_entity_type: 'PRODUCT',
+      target_entity: productA.data,
+      search_title: 'Integration Product Search Title',
+      search_description: 'Published product-specific search description.',
+      canonical_address: '',
+      social_share_title: '',
+      social_share_description: '',
+      allow_search_listing: true,
+      allow_search_links: true,
+    }),
+    ownerSession.client.rpc('save_entity_seo', {
+      target_tenant: a,
+      target_entity_type: 'CATEGORY',
+      target_entity: categoryA.data,
+      search_title: 'Integration Category Search Title',
+      search_description: 'Published collection-specific search description.',
+      canonical_address: '',
+      social_share_title: '',
+      social_share_description: '',
+      allow_search_listing: true,
+      allow_search_links: true,
+    }),
+  ]);
+  recordSearchResults.forEach((result) => assert.ifError(result.error));
   stage = 'Publish storefront and customer page';
   const publish = await ownerSession.client.rpc('publish_site', { target_tenant: a });
   assert.ifError(publish.error);
@@ -281,18 +321,24 @@ try {
   assert.ok(storefrontA.html.includes('Integration product A'));
   assert.ok(storefrontA.html.includes('Integration Store A Search Title'));
   stage = 'Read published customer page A';
-  await page(`/store/${slugA}/about-our-business`, null, 'The integration story');
-  await page(`/store/${slugA}/sitemap`, null, 'about-our-business');
+  await page(`/store/${slugA}/about-our-business`, null, 'Integration About Page');
+  await page(
+    `/store/${slugA}/products/integration-product-a`,
+    null,
+    'Integration Product Search Title',
+  );
+  await page(
+    `/store/${slugA}/categories/integration-category-a`,
+    null,
+    'Integration Category Search Title',
+  );
+  const sitemap = await page(`/store/${slugA}/sitemap`, null, 'about-our-business');
+  assert.ok(sitemap.html.includes('categories/integration-category-a'));
   await page(`/store/${slugA}/robots.txt`, null, 'Allow: /');
   stage = 'Read isolated storefront B';
   assert.ok(!storefrontA.html.includes('Integration product B'));
   const storefrontB = await page(`/store/${slugB}`, null, 'Integration product B');
   assert.ok(!storefrontB.html.includes('Integration product A'));
-  await page(
-    `/store/${slugA}/products/integration-product-a`,
-    null,
-    'Visible only in storefront A',
-  );
   const replay = await newOwner.auth.verifyOtp({
     token_hash: invite.data.properties.hashed_token,
     type: 'invite',
@@ -311,7 +357,7 @@ try {
   assert.ifError(resumed.error);
   await page(`/t/${slugA}`, ownerSession, 'Welcome to your next chapter.');
   console.log(
-    'PASS: real Auth sessions, onboarding, two isolated catalogs, Cloudinary upload, customer pages, published search metadata, sitemap/robots output, anonymous storefronts, direct-write denial, token replay denial, and suspension/reactivation.',
+    'PASS: real Auth sessions, onboarding, two isolated catalogs, Cloudinary upload, customer pages, record-specific search metadata, collection routes, sitemap/robots output, anonymous storefronts, direct-write denial, token replay denial, and suspension/reactivation.',
   );
 } catch (error) {
   console.error(`Integration check failed at: ${stage}.`);

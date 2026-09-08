@@ -186,6 +186,31 @@ try {
     timeout: 30000,
   });
   await page.screenshot({ path: 'artifacts/ui/search-appearance-desktop.png', fullPage: true });
+  stage = 'Customize product search wording';
+  const productSearchItem = page
+    .getByRole('listitem')
+    .filter({ hasText: 'UI verification product' });
+  await productSearchItem.getByRole('link', { name: 'Customize search wording' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'UI verification product' }),
+  ).toBeVisible();
+  await page.getByLabel('Search result title (optional)').fill('Find the UI verification product');
+  await page
+    .getByLabel('Search result description (optional)')
+    .fill('Product-specific wording verified in a real browser.');
+  await page.getByText('More search and sharing controls').click();
+  await expect(page.getByLabel('Preferred page address (optional)')).toBeVisible();
+  await page.getByRole('button', { name: 'Save for the next publish' }).click();
+  await expect(page.getByText(/Search appearance saved for review/)).toBeVisible({
+    timeout: 30000,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: 'artifacts/ui/product-search-mobile.png', fullPage: true });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Product search editor has no mobile overflow',
+  );
+  await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Save and preview storefront design with parallel media uploads';
   await page.goto(`${base}/t/${slug}/design`);
   await expect(page.getByRole('heading', { name: 'Design your storefront' })).toBeVisible();
@@ -242,6 +267,10 @@ try {
   ).toBeVisible();
   await expect(page).toHaveTitle('Trusted UI verification store');
   await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
+  await page.getByRole('heading', { name: 'UI verification product' }).click();
+  await expect(page).toHaveTitle('Find the UI verification product');
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(2);
+  await page.goBack({ waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: 'About our business' }).click();
   await expect(page.getByRole('heading', { name: 'A business customers can trust' })).toBeVisible();
   await page.goBack({ waitUntil: 'domcontentloaded' });
@@ -288,7 +317,7 @@ try {
     .toBe(true);
   assert.equal(pageErrors.length, 0, 'No browser runtime errors');
   console.log(
-    'PASS: browser login, onboarding layouts, tenant catalog creation, website-page editing, search-appearance editing, Cloudinary upload/render/delete lifecycle, and responsive public storefront.',
+    'PASS: browser login, onboarding layouts, tenant catalog creation, website-page editing, record-specific search editing/publishing, structured data, compact mobile navigation, Cloudinary upload/render/delete lifecycle, and responsive public storefront.',
   );
 } catch (error) {
   console.error(`UI check failed at ${stage}: ${error.name}.`);

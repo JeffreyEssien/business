@@ -24,3 +24,36 @@ export function validateGlobalSeo(form: FormData) {
     },
   };
 }
+
+export function validateEntitySeo(form: FormData) {
+  const title = text(form, 'title', 60);
+  const description = text(form, 'description', 160);
+  const canonicalUrl = text(form, 'canonicalUrl', 2048);
+  const socialTitle = text(form, 'socialTitle', 60);
+  const socialDescription = text(form, 'socialDescription', 160);
+  if ([title, description, canonicalUrl, socialTitle, socialDescription].includes(null))
+    return { error: 'One or more search fields are too long.', input: null };
+  if (canonicalUrl) {
+    try {
+      const url = new URL(canonicalUrl);
+      if (url.protocol !== 'https:') throw new Error('HTTPS required');
+    } catch {
+      return {
+        error: 'The preferred page address must be a complete HTTPS address.',
+        input: null,
+      };
+    }
+  }
+  return {
+    error: null,
+    input: {
+      title: title ?? '',
+      description: description ?? '',
+      canonicalUrl: canonicalUrl ?? '',
+      socialTitle: socialTitle ?? '',
+      socialDescription: socialDescription ?? '',
+      allowSearchListing: form.get('allowSearchListing') === 'on',
+      allowSearchLinks: form.get('allowSearchLinks') === 'on',
+    },
+  };
+}
