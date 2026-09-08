@@ -5,6 +5,8 @@ import type {
   ContentPage,
   SiteConfiguration,
   SiteEditorData,
+  NavigationDestination,
+  NavigationEditorItem,
   SiteNavigationItem,
   SiteSection,
 } from './types';
@@ -132,6 +134,49 @@ export async function getSiteEditor(
       storage_key: asset.storage_key,
       resource_type: asset.resource_type as 'image' | 'video',
     })),
+  };
+}
+
+export async function getNavigationWorkspace(slug: string) {
+  const workspace = await getTenantWorkspace(slug);
+  const tenantId = workspace.tenant.id;
+  const [navigation, pages, categories] = await Promise.all([
+    workspace.supabase
+      .from('navigation_items')
+      .select('id,label,target,location,link_type,is_enabled,page_id,category_id')
+      .eq('tenant_id', tenantId)
+      .order('sort_order'),
+    workspace.supabase
+      .from('pages')
+      .select('id,name,slug')
+      .eq('tenant_id', tenantId)
+      .eq('is_enabled', true)
+      .order('sort_order')
+      .order('name'),
+    workspace.supabase
+      .from('categories')
+      .select('id,name,slug')
+      .eq('tenant_id', tenantId)
+      .neq('status', 'ARCHIVED')
+      .order('sort_order')
+      .order('name'),
+  ]);
+  if (navigation.error || pages.error || categories.error)
+    throw new Error('Store menu links could not be loaded.');
+  return {
+    workspace,
+    navigation: (navigation.data ?? []).map((item) => ({
+      id: item.id,
+      label: item.label,
+      target: item.target,
+      location: item.location,
+      linkType: item.link_type,
+      enabled: item.is_enabled,
+      pageId: item.page_id,
+      categoryId: item.category_id,
+    })) as NavigationEditorItem[],
+    pages: (pages.data ?? []) as NavigationDestination[],
+    categories: (categories.data ?? []) as NavigationDestination[],
   };
 }
 

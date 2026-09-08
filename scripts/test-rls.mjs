@@ -13,6 +13,9 @@ try {
     } catch (error) {
       if (error !== rollback) {
         console.error(`Failed suite: ${file}`);
+        if (String(error.code ?? '').startsWith('42') || error.code === 'P0001') {
+          console.error(`SQL test error: ${error.message}`);
+        }
         throw error;
       }
     }

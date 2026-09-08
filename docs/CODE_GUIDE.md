@@ -66,12 +66,24 @@ Cloudinary is the production media provider (ADR 003). `lib/cloudinary/server.ts
 
 1. `app/t/[slug]/design/page.tsx` authorizes the tenant and composes the editor plus saved-draft preview.
 2. `components/content` owns the grouped editor, publish status, and responsive two-panel layout.
-3. `modules/content/validation.ts` constrains every text field, color token, layout variant, navigation item, and media file before provider or database work.
+3. `modules/content/validation.ts` constrains every text field, color token, layout variant, and media file before provider or database work.
 4. `modules/content/actions.ts` re-resolves membership for every mutation. Logo and hero uploads run concurrently inside one Server Action with `Promise.allSettled`; any partial upload is removed before an error is returned.
 5. `save_site_draft` updates tenant-scoped draft tables through a security-definer RPC. Direct browser writes remain denied by RLS.
 6. `publish_site` atomically archives the old live version and saves a complete normalized snapshot. A saved draft cannot change anonymous output until this RPC succeeds.
 7. `components/storefront/storefront-renderer.tsx` renders both the authenticated draft preview and public homepage. Never create a second preview-only rendering implementation.
 8. `get_public_storefront` exposes active catalog products and only the current published site snapshot to anonymous visitors.
+
+Store Design does not own navigation. `save_site_draft` intentionally leaves menu records untouched; use the dedicated Store menus flow below for every navigation change.
+
+## Follow a Store menus change
+
+1. `app/t/[slug]/content/navigation/page.tsx` authorizes and composes the dedicated menu workspace.
+2. `components/content/navigation-manager.tsx` explains header/footer placement and lets an owner choose a store page, product collection, or explicit URL. It submits one ordered normalized payload rather than treating every destination as a URL string.
+3. `modules/content/validation.ts` validates labels, placement, destination type, related IDs, and safe internal/HTTPS addresses before the action runs.
+4. `save_navigation` independently verifies tenant ownership for every page and category, then atomically replaces only that tenant's navigation records. Direct writes remain denied.
+5. `navigation_items.page_id` and `category_id` are tenant-scoped foreign keys. Database triggers derive public paths from related slugs; application code must not manually synchronize typed targets.
+6. Page edits preserve an existing typed menu row in place. Page or category deletion removes related menu rows through foreign-key lifecycle rules.
+7. Saving a menu remains private until `publish_site` copies the ordered links into the immutable public snapshot. Store Design never deletes or recreates them.
 
 Keep tenant colors in validated tokens and pass them to storefront components through CSS variables. Marketing copy belongs in content records; only system UX labels may remain in code.
 

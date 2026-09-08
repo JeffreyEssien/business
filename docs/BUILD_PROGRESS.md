@@ -46,7 +46,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 
 ### Phase 3: theme and content foundation
 
-- Tenant design workspace at `/t/{slug}/design` with grouped business profile, theme tokens, announcement, hero, product section, navigation, and footer controls.
+- Tenant design workspace at `/t/{slug}/design` with grouped business profile, theme tokens, announcement, hero, product section, and footer controls.
 - Four controlled theme presets and editable semantic color tokens; storefront components consume CSS variables rather than scattered tenant colors.
 - Logo and hero files upload to tenant-scoped Cloudinary paths concurrently inside one authorized Server Action. Partial provider success is cleaned before database mutation, and the request limit supports two validated 5 MB files plus multipart overhead.
 - Draft content remains private and editable. Publishing atomically archives the previous live version and creates a normalized immutable snapshot with an audit record.
@@ -58,6 +58,10 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - About, Contact, Policy, and custom customer-information pages can be created, edited, hidden, shown in the main menu, and deleted without changing the live store until publication.
 - Publishing includes all enabled customer pages in the same immutable site snapshot, and public pages use the same storefront header, theme, and footer as the homepage.
 - Migration files 202609070003_content_pages.sql and 202609070004_homepage_default.sql applied to development Supabase.
+- Store menus have their own descriptive workspace at `/t/{slug}/content/navigation`; Store Design no longer reads, rewrites, or owns navigation records.
+- Page and product-collection menu destinations retain tenant-scoped foreign-key relationships. Their public paths are derived from the related records, so renaming a page or collection updates the existing menu link without losing its type, label, position, or header/footer location.
+- Existing exact internal URL links were safely backfilled to typed page or collection records. Custom internal paths and HTTPS links remain explicit URL destinations.
+- Migration files 202609080001_navigation_integrity.sql and 202609080002_navigation_page_lifecycle.sql applied to development Supabase.
 
 ### Phase 4: search appearance foundation
 
@@ -81,7 +85,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all nine migrations are applied; checksums and migration history are intact.
+- PASS: all eleven migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
@@ -97,6 +101,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: record-level search SQL coverage verifies PAGE/PRODUCT/CATEGORY ownership, draft/live separation, outsider denial, and the published snapshot.
 - PASS: authenticated integration verifies record-specific public HTML, collection routing, category sitemap inclusion, and tenant isolation.
 - PASS: browser editing and publishing of product search wording, exact public title output, and Product/Breadcrumb structured-data scripts. The compact mobile navigation and record editor were visually inspected with no overflow.
+- PASS: navigation SQL regression covers typed PAGE/CATEGORY ownership, cross-tenant rejection, footer preservation, page/category rename propagation, and the exact create-page → save-menu → save-Store-Design sequence without relationship degradation.
+- PASS: live integration saves typed store menus for a real authenticated tenant. Browser coverage confirms the page relationship survives a Store Design save; desktop/mobile menu editors were visually inspected with no overflow.
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 

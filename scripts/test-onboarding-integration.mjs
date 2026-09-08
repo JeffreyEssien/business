@@ -258,6 +258,44 @@ try {
     page_enabled: true,
   });
   assert.ifError(contentPage.error);
+  stage = 'Save typed store menus';
+  const homePage = await ownerSession.client
+    .from('pages')
+    .select('id')
+    .eq('tenant_id', a)
+    .eq('page_type', 'HOME')
+    .single();
+  assert.ifError(homePage.error);
+  const menus = await ownerSession.client.rpc('save_navigation', {
+    target_tenant: a,
+    navigation: [
+      {
+        label: 'Home',
+        linkType: 'PAGE',
+        pageId: homePage.data.id,
+        target: '',
+        location: 'HEADER',
+        enabled: true,
+      },
+      {
+        label: 'About our business',
+        linkType: 'PAGE',
+        pageId: contentPage.data,
+        target: '',
+        location: 'HEADER',
+        enabled: true,
+      },
+      {
+        label: 'Integration collection',
+        linkType: 'CATEGORY',
+        categoryId: categoryA.data,
+        target: '',
+        location: 'FOOTER',
+        enabled: true,
+      },
+    ],
+  });
+  assert.ifError(menus.error);
   stage = 'Save search appearance';
   const searchAppearance = await ownerSession.client.rpc('save_global_seo', {
     target_tenant: a,
