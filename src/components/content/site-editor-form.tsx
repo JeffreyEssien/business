@@ -35,7 +35,6 @@ export function SiteEditorForm({
   configuration: SiteConfiguration;
 }) {
   const [state, action, pending] = useActionState(saveSiteDraft.bind(null, slug), initialState);
-  const nav = configuration.navigation.filter((item) => item.location === 'HEADER').slice(0, 3);
   return (
     <FormStack action={action}>
       <FormError message={state.error} />
@@ -199,29 +198,6 @@ export function SiteEditorForm({
           maxLength={120}
           defaultValue={value(configuration, 'products', 'heading') || 'Products'}
         />
-      </FormSection>
-      <FormSection
-        title="Header navigation"
-        description="Up to three storefront links. Use paths such as / or /#products."
-      >
-        <div className={styles.navigationGrid}>
-          {[0, 1, 2].map((index) => (
-            <FormGrid key={index}>
-              <TextField
-                name={`navLabel${index}`}
-                label={`Link ${index + 1} label`}
-                maxLength={60}
-                defaultValue={nav[index]?.label ?? ''}
-              />
-              <TextField
-                name={`navTarget${index}`}
-                label={`Link ${index + 1} target`}
-                maxLength={300}
-                defaultValue={nav[index]?.target ?? ''}
-              />
-            </FormGrid>
-          ))}
-        </div>
       </FormSection>
       <FormSection title="Footer">
         <TextAreaField

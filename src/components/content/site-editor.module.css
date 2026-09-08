@@ -47,10 +47,6 @@
   width: 18px;
   height: 18px;
 }
-.navigationGrid {
-  display: grid;
-  gap: 20px;
-}
 .success {
   margin: 0;
   padding: 12px 14px;

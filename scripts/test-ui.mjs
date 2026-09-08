@@ -173,6 +173,23 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/website-pages-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify typed store menu editing';
+  await page.goto(`${base}/t/${slug}/content/navigation`);
+  await expect(page.getByRole('heading', { name: 'Store menus' })).toBeVisible();
+  const aboutMenu = page.getByRole('listitem').filter({ hasText: 'About our business' });
+  await expect(aboutMenu.getByLabel('Where should customers go?')).toHaveValue('PAGE');
+  await expect(aboutMenu.getByLabel('Choose the store page')).not.toHaveValue('');
+  await page.getByRole('button', { name: 'Save menus for the next publish' }).click();
+  await expect(page.getByText(/Store menus saved for review/)).toBeVisible({ timeout: 30000 });
+  await page.screenshot({ path: 'artifacts/ui/store-menus-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Store menus editor has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/store-menus-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Save customer-friendly search appearance';
   await page.goto(`${base}/t/${slug}/marketing/search`);
   await expect(page.getByRole('heading', { name: 'Search appearance' })).toBeVisible();
@@ -245,6 +262,14 @@ try {
   ).toBeVisible({
     timeout: 30000,
   });
+  const [pageMenuAfterDesignSave] = await sql`
+    select n.link_type,n.page_id,n.target
+    from public.navigation_items n join public.pages p on p.tenant_id=n.tenant_id and p.id=n.page_id
+    where n.tenant_id=${tenant.id} and p.slug='about-our-business'
+  `;
+  assert.equal(pageMenuAfterDesignSave.link_type, 'PAGE');
+  assert.ok(pageMenuAfterDesignSave.page_id, 'Page navigation keeps its page relationship');
+  assert.equal(pageMenuAfterDesignSave.target, '/about-our-business');
   await page.getByRole('button', { name: 'Move Product collection earlier' }).click();
   await expect(page.getByText(/Homepage order saved/)).toBeVisible({ timeout: 30000 });
   await page.locator('iframe').evaluate((frame) => {

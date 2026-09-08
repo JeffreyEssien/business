@@ -8,6 +8,7 @@ function workspaceLinks(slug: string) {
     { href: `/t/${slug}/catalog`, label: 'Catalog' },
     { href: `/t/${slug}/design`, label: 'Store design' },
     { href: `/t/${slug}/content/pages`, label: 'Website pages' },
+    { href: `/t/${slug}/content/navigation`, label: 'Store menus' },
     { href: `/t/${slug}/marketing/search`, label: 'Search appearance' },
   ];
 }

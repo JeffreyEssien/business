@@ -55,6 +55,35 @@ insert into site_fixture(k,id) select 'product-a',public.save_product(
  product_compare_at_price=>null,product_stock_quantity=>2,product_track_inventory=>true,
  product_status=>'ACTIVE',category_ids=>array[(select id from site_fixture where k='category-a')]
 );
+select public.save_navigation((select id from site_fixture where k='tenant-a'),jsonb_build_array(
+ jsonb_build_object('label','Home','linkType','PAGE','pageId',(select id from public.pages where tenant_id=(select id from site_fixture where k='tenant-a') and page_type='HOME'),'target','','location','HEADER','enabled',true),
+ jsonb_build_object('label','About us','linkType','PAGE','pageId',(select id from site_fixture where k='page-a'),'target','','location','HEADER','enabled',true),
+ jsonb_build_object('label','Shop collection','linkType','CATEGORY','categoryId',(select id from site_fixture where k='category-a'),'target','','location','HEADER','enabled',true),
+ jsonb_build_object('label','Customer help','linkType','URL','target','https://example.com/help','location','FOOTER','enabled',true)
+));
+select public.save_site_draft(
+ target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Distinct Store A',business_description=>'Navigation-safe design save',business_phone=>'',business_address=>'',
+ theme_preset=>'fashion',primary_color=>'#112233',accent_color=>'#aabbcc',background_color=>'#fefefe',text_color=>'#121212',
+ announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Navigation-safe headline',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',
+ products_heading=>'Store A products',products_enabled=>true,footer_description=>'Footer A',navigation=>'[]'::jsonb
+);
+do $$ begin
+ if (select count(*) from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a'))<>4 then raise exception 'Design save removed navigation'; end if;
+ if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and link_type='PAGE' and page_id=(select id from site_fixture where k='page-a')) then raise exception 'Design save degraded page navigation'; end if;
+ if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and link_type='CATEGORY' and category_id=(select id from site_fixture where k='category-a')) then raise exception 'Design save degraded category navigation'; end if;
+ if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and location='FOOTER') then raise exception 'Design save removed footer navigation'; end if;
+end $$;
+select public.save_content_page(
+ target_tenant=>(select id from site_fixture where k='tenant-a'),target_page=>(select id from site_fixture where k='page-a'),page_type=>'ABOUT',page_name=>'About the company',page_slug=>'about-company',
+ page_title=>'Our story',page_introduction=>'Who we are',page_body=>'Tenant-owned page content.',show_in_navigation=>true,page_enabled=>true
+);
+select public.save_category(
+ (select id from site_fixture where k='tenant-a'),(select id from site_fixture where k='category-a'),'Renamed collection','renamed-collection','A searchable collection','ACTIVE'
+);
+do $$ begin
+ if (select target from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and page_id=(select id from site_fixture where k='page-a')) is distinct from '/about-company' then raise exception 'Page navigation did not follow rename'; end if;
+ if (select target from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and category_id=(select id from site_fixture where k='category-a')) is distinct from '/categories/renamed-collection' then raise exception 'Category navigation did not follow rename'; end if;
+end $$;
 select public.save_entity_seo(
  (select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),
  'About Store A','Store A page description','', 'Share Store A','Shared page description',true,true
@@ -80,7 +109,7 @@ do $$ begin
  if (select configuration#>>'{seo,title}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'Distinct Store A in Search' then raise exception 'Search appearance not published'; end if;
  if (select count(*) from jsonb_array_elements((select configuration->'seoEntries' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')) item where item->>'title' in ('About Store A','Buy Search Product','Browse Search Collection'))<>3 then raise exception 'Record search overrides not published'; end if;
  if (select configuration#>>'{pages,0,id}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from (select id::text from site_fixture where k='page-a') then raise exception 'Published page identity missing'; end if;
- if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and link_type='PAGE' and target='/about-us') then raise exception 'Page menu link missing'; end if;
+ if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and link_type='PAGE' and page_id=(select id from site_fixture where k='page-a') and target='/about-company') then raise exception 'Page menu relationship missing'; end if;
 end $$;
 reset role;
 
@@ -92,13 +121,14 @@ do $$ begin
  begin perform public.delete_content_page((select id from site_fixture where k='tenant-a'),(select id from site_fixture where k='page-a'));raise exception 'Outsider page delete allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_global_seo((select id from site_fixture where k='tenant-a'),'Forbidden','%s | Forbidden','', '',true,true,'','');raise exception 'Outsider search settings write allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_entity_seo((select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),'Forbidden','','','','',true,true);raise exception 'Outsider record search write allowed';exception when insufficient_privilege then null;end;
+ begin perform public.save_navigation((select id from site_fixture where k='tenant-a'),'[]'::jsonb);raise exception 'Outsider navigation write allowed';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
 
 set local role anon;
 do $$ declare site jsonb; begin
  site:=public.get_public_storefront(current_setting('businesscare.test_site_slug'))->'site';
- if site#>>'{sections,1,content,headline}' is distinct from 'Unpublished headline' then raise exception 'Published site unavailable anonymously'; end if;
+ if site#>>'{sections,1,content,headline}' is distinct from 'Navigation-safe headline' then raise exception 'Published site unavailable anonymously'; end if;
  if site#>>'{pages,0,body}' is distinct from 'Tenant-owned page content.' then raise exception 'Published content page unavailable anonymously'; end if;
  if site#>>'{seo,description}' is distinct from 'Tenant A search description' then raise exception 'Published search settings unavailable anonymously'; end if;
  if (select count(*) from jsonb_array_elements(site->'seoEntries') item where item->>'entityType' in ('PAGE','PRODUCT','CATEGORY'))<>3 then raise exception 'Published record search settings unavailable anonymously'; end if;

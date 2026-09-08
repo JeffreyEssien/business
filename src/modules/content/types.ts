@@ -16,6 +16,12 @@ export type SiteNavigationItem = {
   linkType: 'PAGE' | 'URL' | 'CATEGORY';
   enabled: boolean;
 };
+export type NavigationEditorItem = SiteNavigationItem & {
+  id: string;
+  pageId: string | null;
+  categoryId: string | null;
+};
+export type NavigationDestination = { id: string; name: string; slug: string };
 export type ContentPage = {
   id: string;
   slug: string;

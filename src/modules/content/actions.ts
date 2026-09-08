@@ -10,6 +10,7 @@ import {
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import {
   contentErrorMessage,
+  validateNavigation,
   validatedSiteImage,
   validateContentPage,
   validateSiteDraft,
@@ -136,7 +137,7 @@ export async function saveSiteDraft(
     products_heading: validation.input.productsHeading,
     products_enabled: validation.input.productsEnabled,
     footer_description: validation.input.footerDescription,
-    navigation: validation.input.navigation,
+    navigation: [],
     logo_storage_key: logo.storage_key,
     logo_public_url: logo.public_url,
     logo_file_name: logo.file_name,
@@ -174,6 +175,38 @@ export async function saveSiteDraft(
   return {
     error: '',
     message: 'Changes saved for review. Your live storefront has not changed.',
+  };
+}
+
+export async function saveNavigation(
+  slug: string,
+  _state: ContentActionState,
+  form: FormData,
+): Promise<ContentActionState> {
+  const validation = validateNavigation(form);
+  if (!validation.input)
+    return { error: validation.error ?? 'Check every store menu link.', message: '' };
+  const workspace = await getTenantWorkspace(slug);
+  if (!canEdit(workspace.membership.role))
+    return { error: 'You do not have permission to change store menus.', message: '' };
+  const { error } = await workspace.supabase.rpc('save_navigation', {
+    target_tenant: workspace.tenant.id,
+    navigation: validation.input,
+  });
+  if (error)
+    return {
+      error:
+        error.code === '22023'
+          ? 'One or more menu destinations are no longer available. Check every menu link.'
+          : contentErrorMessage(error.code, error.message),
+      message: '',
+    };
+  revalidatePath(`/t/${slug}/content/navigation`);
+  revalidatePath(`/t/${slug}/design`);
+  revalidatePath(`/t/${slug}/design/preview`);
+  return {
+    error: '',
+    message: 'Store menus saved for review. Customers will see them after you publish.',
   };
 }
 

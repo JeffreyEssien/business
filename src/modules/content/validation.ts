@@ -1,5 +1,5 @@
 import { themePresets, type ThemePresetKey } from './presets';
-import type { SiteNavigationItem } from './types';
+import type { NavigationEditorItem } from './types';
 
 const hexColor = /^#[0-9a-fA-F]{6}$/;
 const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -54,13 +54,6 @@ export function validateSiteDraft(form: FormData) {
   ) {
     return { error: 'Check the required text, color, and layout fields.', input: null };
   }
-  const navigation: SiteNavigationItem[] = [0, 1, 2].flatMap((index) => {
-    const label = text(form, `navLabel${index}`, 60);
-    const target = text(form, `navTarget${index}`, 300);
-    return label && target
-      ? [{ label, target, location: 'HEADER', linkType: 'URL', enabled: true }]
-      : [];
-  });
   return {
     error: null,
     input: {
@@ -76,9 +69,55 @@ export function validateSiteDraft(form: FormData) {
       heroCtaLabel: values.heroCtaLabel!,
       productsHeading: values.productsHeading!,
       footerDescription: values.footerDescription!,
-      navigation,
     },
   };
+}
+
+export function validateNavigation(form: FormData) {
+  let items: unknown;
+  try {
+    items = JSON.parse(String(form.get('navigation') ?? '[]'));
+  } catch {
+    return { input: null, error: 'The store menu links could not be read. Reload and try again.' };
+  }
+  if (!Array.isArray(items) || items.length > 8)
+    return { input: null, error: 'Use no more than eight store menu links.' };
+  const navigation: NavigationEditorItem[] = [];
+  for (const value of items) {
+    if (!value || typeof value !== 'object')
+      return { input: null, error: 'Check every store menu link.' };
+    const item = value as Record<string, unknown>;
+    const label = String(item.label ?? '').trim();
+    const target = String(item.target ?? '').trim();
+    const location = String(item.location ?? '');
+    const linkType = String(item.linkType ?? '');
+    const pageId = item.pageId ? String(item.pageId) : null;
+    const categoryId = item.categoryId ? String(item.categoryId) : null;
+    if (
+      !label ||
+      label.length > 60 ||
+      !['HEADER', 'FOOTER'].includes(location) ||
+      !['PAGE', 'URL', 'CATEGORY'].includes(linkType) ||
+      (linkType === 'PAGE' && !pageId) ||
+      (linkType === 'CATEGORY' && !categoryId) ||
+      (linkType === 'URL' &&
+        !/^\/[A-Za-z0-9/#?&._=%+-]*$/.test(target) &&
+        !/^https:\/\/\S+$/.test(target))
+    ) {
+      return { input: null, error: 'Add a label and choose a valid destination for every link.' };
+    }
+    navigation.push({
+      id: String(item.id ?? ''),
+      label,
+      target,
+      location: location as NavigationEditorItem['location'],
+      linkType: linkType as NavigationEditorItem['linkType'],
+      enabled: item.enabled !== false,
+      pageId,
+      categoryId,
+    });
+  }
+  return { input: navigation, error: null };
 }
 
 export function contentErrorMessage(code?: string, message?: string) {
