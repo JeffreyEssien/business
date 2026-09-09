@@ -27,6 +27,7 @@ export function validateSiteDraft(form: FormData) {
     address: text(form, 'address', 300),
     preset,
     primary: String(form.get('primary') ?? ''),
+    secondary: String(form.get('secondary') ?? ''),
     accent: String(form.get('accent') ?? ''),
     background: String(form.get('background') ?? ''),
     text: String(form.get('text') ?? ''),
@@ -46,8 +47,8 @@ export function validateSiteDraft(form: FormData) {
     !values.heroHeadline ||
     !values.productsHeading ||
     !(preset in themePresets) ||
-    ![values.primary, values.accent, values.background, values.text].every((color) =>
-      hexColor.test(color),
+    ![values.primary, values.secondary, values.accent, values.background, values.text].every(
+      (color) => hexColor.test(color),
     ) ||
     !['centered', 'split', 'image-overlay'].includes(values.heroVariant) ||
     Object.values(values).some((value) => value === null)

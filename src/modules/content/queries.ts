@@ -36,7 +36,9 @@ export async function getSiteEditor(
     await Promise.all([
       workspace.supabase
         .from('tenant_business_settings')
-        .select('business_name,description,phone,address,logo_asset_id,hero_asset_id')
+        .select(
+          'business_name,description,phone,address,contact_email,whatsapp,instagram,facebook,tiktok,city,state,country,logo_asset_id,hero_asset_id',
+        )
         .eq('tenant_id', tenantId)
         .single(),
       workspace.supabase
@@ -111,6 +113,14 @@ export async function getSiteEditor(
       description: business.description,
       phone: business.phone,
       address: business.address,
+      contactEmail: business.contact_email,
+      whatsapp: business.whatsapp,
+      instagram: business.instagram,
+      facebook: business.facebook,
+      tiktok: business.tiktok,
+      city: business.city,
+      state: business.state,
+      country: business.country,
       logo: media(business.logo_asset_id),
       heroMedia: media(business.hero_asset_id),
     },

@@ -33,6 +33,7 @@ function storefrontStyle(configuration: SiteConfiguration) {
   const tokens = configuration.theme.tokens;
   return {
     '--store-primary': tokens.primary,
+    '--store-secondary': tokens.secondary ?? tokens.accent,
     '--store-accent': tokens.accent,
     '--store-background': tokens.background,
     '--store-text': tokens.text,
@@ -112,6 +113,13 @@ export function StorefrontShell({
 }
 
 function StoreFooter({ configuration }: { configuration: SiteConfiguration }) {
+  const socialLinks = [
+    ['Instagram', configuration.business.instagram, 'https://instagram.com/'],
+    ['Facebook', configuration.business.facebook, 'https://facebook.com/'],
+    ['TikTok', configuration.business.tiktok, 'https://tiktok.com/@'],
+  ] as const;
+  const destination = (value: string, prefix: string) =>
+    value.startsWith('https://') ? value : `${prefix}${value.replace(/^@/, '')}`;
   return (
     <footer className={styles.footer}>
       <div>
@@ -121,6 +129,29 @@ function StoreFooter({ configuration }: { configuration: SiteConfiguration }) {
       <div>
         {configuration.business.address && <p>{configuration.business.address}</p>}
         {configuration.business.phone && <p>{configuration.business.phone}</p>}
+        {configuration.business.contactEmail && (
+          <a href={`mailto:${configuration.business.contactEmail}`}>
+            {configuration.business.contactEmail}
+          </a>
+        )}
+        {configuration.business.whatsapp && (
+          <a
+            href={`https://wa.me/${configuration.business.whatsapp.replace(/\D/g, '')}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            WhatsApp
+          </a>
+        )}
+        <div className={styles.socialLinks}>
+          {socialLinks.map(([label, value, prefix]) =>
+            value ? (
+              <a key={label} href={destination(value, prefix)} target="_blank" rel="noreferrer">
+                {label}
+              </a>
+            ) : null,
+          )}
+        </div>
       </div>
     </footer>
   );

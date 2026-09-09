@@ -134,6 +134,7 @@ jobs:
           cat /tmp/businesscare-next.log
           exit 1
       - run: npm run test:integration
+      - run: npm run test:applications-ui
       - run: npm run test:ui
       - name: Upload browser regression artifacts
         if: always()

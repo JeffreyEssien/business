@@ -1,15 +1,18 @@
 export const platformNavigation = [
   { href: '/', label: 'Overview', icon: '◫' },
   { href: '/businesses', label: 'Businesses', icon: '▦' },
+  { href: '/businesses/applications', label: 'Applications', icon: '◇' },
   { href: '/setup', label: 'Launch checklist', icon: '☷' },
 ] as const;
 
 /** Nested business routes keep the Businesses navigation item active. */
 export function isNavigationActive(pathname: string, href: string) {
+  if (href === '/businesses' && pathname.startsWith('/businesses/applications')) return false;
   return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 }
 export function workspaceTitle(pathname: string) {
   if (pathname === '/businesses/new') return 'Create business';
+  if (pathname.startsWith('/businesses/applications')) return 'Business applications';
   return (
     platformNavigation.find((item) => isNavigationActive(pathname, item.href))?.label ?? 'Workspace'
   );

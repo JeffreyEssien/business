@@ -51,7 +51,7 @@
 }
 .announcement {
   padding: 10px 20px;
-  background: var(--store-primary);
+  background: var(--store-secondary);
   color: var(--store-background);
   text-align: center;
 }
@@ -180,6 +180,18 @@
 .footer > div:last-child {
   text-align: right;
 }
+.footer a {
+  color: var(--store-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.socialLinks {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
 .informationPage {
   width: min(760px, calc(100% - 40px));
   min-height: 60dvh;
@@ -228,6 +240,9 @@
   }
   .footer > div:last-child {
     text-align: left;
+  }
+  .socialLinks {
+    justify-content: flex-start;
   }
 }
 @media (prefers-reduced-motion: reduce) {

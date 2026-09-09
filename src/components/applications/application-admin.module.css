@@ -1,0 +1,245 @@
+.tableWrap {
+  overflow: auto;
+}
+.reference {
+  display: block;
+  margin-top: 5px;
+  color: #85808e;
+}
+.capitalize {
+  text-transform: capitalize;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 99px;
+  background: #f1eff5;
+  color: #665f74;
+  font-size: 10px;
+  font-weight: 700;
+}
+.pending {
+  background: #fff4dd;
+  color: #805d20;
+}
+.under_review {
+  background: #eeebff;
+  color: #5949a6;
+}
+.rejected {
+  background: #fff0f0;
+  color: #923e3e;
+}
+.provisioned {
+  background: #eaf7ed;
+  color: #347147;
+}
+.reviewLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 24px;
+  align-items: start;
+}
+.reviewMain {
+  display: grid;
+  gap: 24px;
+}
+.summaryCard,
+.reviewForm,
+.originalCard,
+.actionCard,
+.historyCard {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: white;
+}
+.summaryCard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  padding: 22px;
+}
+.summaryCard > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+.summaryCard span {
+  color: #7b7683;
+  font-size: 10px;
+}
+.summaryCard strong {
+  overflow-wrap: anywhere;
+}
+.summaryCard img {
+  width: 74px;
+  height: 58px;
+  object-fit: contain;
+  justify-self: end;
+}
+.reviewForm {
+  display: grid;
+  gap: 0;
+  padding: 26px;
+}
+.reviewForm fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 30px;
+  border: 0;
+}
+.reviewForm fieldset + fieldset {
+  padding-top: 30px;
+  border-top: 1px solid var(--border);
+}
+.reviewForm legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 22px;
+  color: #36313f;
+  font-size: 14px;
+  font-weight: 700;
+}
+.reviewForm fieldset > div {
+  clear: both;
+}
+.formGrid {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+.formGrid > div:has(textarea) {
+  grid-column: 1 / -1;
+}
+.checkGrid {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+.checkGrid label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+}
+.checkGrid input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+.removeLogo {
+  clear: both;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 18px;
+  color: #6f6877;
+  font-size: 12px;
+}
+.removeLogo input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+.saved {
+  color: var(--success-text);
+  font-size: 12px;
+}
+.reviewAside {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 18px;
+}
+.actionCard,
+.historyCard,
+.originalCard {
+  padding: 22px;
+}
+.actionCard {
+  display: grid;
+  gap: 18px;
+}
+.actionCard form {
+  display: grid;
+  gap: 10px;
+}
+.actionCard button,
+.actionCard a {
+  width: 100%;
+}
+.actionCard p {
+  font-size: 12px;
+}
+.historyCard {
+  display: grid;
+  gap: 14px;
+}
+.historyCard > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  text-transform: capitalize;
+}
+.historyCard span {
+  color: #827c89;
+  font-size: 10px;
+}
+.historyCard p {
+  font-size: 11px;
+}
+.originalCard dl {
+  display: grid;
+  gap: 0;
+  margin: 20px 0 0;
+}
+.originalCard dl div {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 20px;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+}
+.originalCard dt {
+  color: #77717e;
+  font-size: 11px;
+}
+.originalCard dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1050px) {
+  .reviewLayout {
+    grid-template-columns: 1fr;
+  }
+  .reviewAside {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .summaryCard,
+  .formGrid,
+  .reviewAside,
+  .checkGrid {
+    grid-template-columns: 1fr;
+  }
+  .summaryCard img {
+    justify-self: start;
+  }
+  .reviewForm {
+    padding: 20px;
+  }
+  .originalCard dl div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
