@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import type { PublicStorefront } from '@/modules/catalog/types';
 import type { SeoEntityType } from '@/modules/content/types';
 
+type PublicStoreIdentity = Pick<PublicStorefront, 'tenant' | 'site'>;
+
 function configuredPlatformOrigin() {
   try {
     return new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').origin;
@@ -10,12 +12,12 @@ function configuredPlatformOrigin() {
   }
 }
 
-export function storefrontOrigin(store: PublicStorefront) {
+export function storefrontOrigin(store: PublicStoreIdentity) {
   const customHostname = store.site?.seo?.customHostname;
   return customHostname ? `https://${customHostname}` : configuredPlatformOrigin();
 }
 
-export function storefrontUrl(store: PublicStorefront, path = '') {
+export function storefrontUrl(store: PublicStoreIdentity, path = '') {
   const customHostname = store.site?.seo?.customHostname;
   return customHostname
     ? new URL(path || '/', `https://${customHostname}`)
@@ -23,7 +25,7 @@ export function storefrontUrl(store: PublicStorefront, path = '') {
 }
 
 export function publishedSeoEntry(
-  store: PublicStorefront,
+  store: PublicStoreIdentity,
   entityType: SeoEntityType,
   entityId: string,
 ) {
@@ -41,7 +43,7 @@ export function entityMetadata({
   path,
   image,
 }: {
-  store: PublicStorefront;
+  store: PublicStoreIdentity;
   entityType: SeoEntityType;
   entityId: string;
   fallbackTitle: string;
@@ -58,6 +60,7 @@ export function entityMetadata({
   const canonical = entry?.canonicalUrl || storefrontUrl(store, path).toString();
   const socialTitle = entry?.socialTitle || title;
   const socialDescription = entry?.socialDescription || description;
+  const socialImage = entry?.socialImage || image || siteSeo?.socialImage;
   return {
     title: { absolute: title },
     description,
@@ -72,14 +75,14 @@ export function entityMetadata({
       description: socialDescription,
       url: canonical,
       siteName: store.tenant.name,
-      images: image ? [{ url: image }] : undefined,
+      images: socialImage ? [{ url: socialImage }] : undefined,
     },
     twitter: {
-      card: image ? 'summary_large_image' : 'summary',
+      card: socialImage ? 'summary_large_image' : 'summary',
       title: socialTitle,
       description: socialDescription,
       site: siteSeo?.twitterHandle || undefined,
-      images: image ? [image] : undefined,
+      images: socialImage ? [socialImage] : undefined,
     },
   };
 }

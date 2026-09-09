@@ -5,7 +5,7 @@ import type { SearchContentRecord, SeoEntryDraft } from '@/modules/seo/queries';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { TextAreaField, TextField } from '@/components/ui/form-fields';
 import { FormActions, FormError, FormSection, FormStack } from '@/components/ui/form-layout';
-import { SearchPreview } from './search-preview';
+import { SearchPreview, SocialPreview } from './search-preview';
 import styles from './search-appearance.module.css';
 
 const initialState: SeoActionState = { error: '', message: '' };
@@ -25,6 +25,8 @@ export function SearchEntryForm({
   );
   const [title, setTitle] = useState(entry?.seo_title ?? '');
   const [description, setDescription] = useState(entry?.meta_description ?? '');
+  const [socialTitle, setSocialTitle] = useState(entry?.social_title ?? '');
+  const [socialDescription, setSocialDescription] = useState(entry?.social_description ?? '');
   return (
     <FormStack action={action}>
       <FormError message={state.error} />
@@ -37,6 +39,11 @@ export function SearchEntryForm({
         title={title || record.name}
         description={description || record.description}
         address={`your-store-address/${record.slug}`}
+      />
+      <SocialPreview
+        title={socialTitle || title || record.name}
+        description={socialDescription || description || record.description}
+        imageUrl={entry?.social_image_url}
       />
       <FormSection
         title="Preferred search wording"
@@ -59,6 +66,13 @@ export function SearchEntryForm({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
+          <TextField
+            name="socialImage"
+            label={entry?.social_image_url ? 'Replace sharing image' : 'Sharing image (optional)'}
+            hint="Use a JPG, PNG, or WebP image up to 5 MB. If empty, the store or product image is used."
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+          />
         </div>
       </FormSection>
       <details className={styles.advancedSettings}>
@@ -72,13 +86,15 @@ export function SearchEntryForm({
             name="socialTitle"
             label="Title when this page is shared (optional)"
             maxLength={60}
-            defaultValue={entry?.social_title}
+            value={socialTitle}
+            onChange={(event) => setSocialTitle(event.target.value)}
           />
           <TextAreaField
             name="socialDescription"
             label="Description when this page is shared (optional)"
             maxLength={160}
-            defaultValue={entry?.social_description}
+            value={socialDescription}
+            onChange={(event) => setSocialDescription(event.target.value)}
           />
           <TextField
             name="canonicalUrl"

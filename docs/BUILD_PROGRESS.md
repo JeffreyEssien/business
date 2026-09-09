@@ -1,12 +1,12 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: search appearance and discovery (Phase 4)
+## Current stage: Paystack merchant payments (Phase 6)
 
-Status: Phase 3 is complete and verified. Phase 4 now lets each business control global and record-specific search wording for customer pages, products, and product collections. Published output includes canonical URLs, search visibility, social metadata, sitemap entries, and organization/product/breadcrumb structured data. Settings remain private until the owner publishes the storefront. Record-specific social images and the custom-domain verification lifecycle remain before Phase 4 can close. No real business or product was created by the agent; integration fixtures and uploaded test media were removed.
+Status: Phase 5 is complete and verified. Customers can use a responsive tenant-scoped cart, receive a database-authoritative quote, place a bank-transfer order, and report payment without self-confirming it. Businesses can configure checkout and delivery, filter and inspect their own orders, keep private notes, verify payment, advance fulfilment, and cancel fulfilment with exactly-once inventory restoration. Historical product, customer, delivery, price, and payment-instruction snapshots remain stable. Phase 6 is now active and will add provider-independent payments plus verified, idempotent Paystack processing. No real business, customer, product, or order was created by the agent; all test fixtures and uploaded media were removed.
 
 ## Completed
 
@@ -78,6 +78,35 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Product and breadcrumb structured data is generated from validated application records and safely serialized; tenants cannot inject raw schema markup.
 - Tenant mobile navigation now uses a compact expandable workspace menu instead of wrapping a long row of links.
 - Migration file 202609070006_seo_overrides.sql applied to development Supabase.
+- Global and page/product/collection sharing images upload to tenant-scoped Cloudinary paths. PostgreSQL stores provider identity and ownership; immutable published snapshots store delivery URLs.
+- Search editors include an understandable social-card preview and validated JPG/PNG/WebP uploads up to 5 MB. Record images fall back to product/store imagery when no override exists.
+- Replacing or deleting source records cleans database media metadata and provider assets through the existing server-authorized lifecycle.
+- Migration files 202609080004_seo_social_images.sql and 202609080005_seo_asset_lifecycle.sql applied to development Supabase.
+
+### Performance and reliability foundation
+
+- Public homepage catalog reads are capped at eight products; homepage configuration is no longer used as the complete catalog transport.
+- `/store/{slug}/products` provides bounded search and keyset pagination with a server-enforced maximum. Category browsing uses the same bounded read model.
+- Product detail uses a dedicated one-record public RPC. The tenant product editor queries one tenant-owned product instead of hydrating and searching the entire catalog in JavaScript.
+- Tenant product administration and SEO product selection are paginated and searchable. Counts use database aggregates rather than the visible page.
+- Sitemap reads use a narrow slug-only projection with the sitemap protocol ceiling instead of loading product descriptions, prices, media, and inventory.
+- Tenant-aware cursor/name indexes support implemented query patterns. SQL scale regression verifies bounded homepage and catalog lookahead results.
+- Every matched application request receives a generated correlation ID. Structured server logging records only slow/failing operational boundaries without payloads, credentials, or customer data.
+- `/api/health/live` is dependency-free. `/api/health/ready` performs one short, data-free database check and exposes no configuration or provider details.
+- Migration file 202609080003_bounded_catalog_reads.sql applied to development Supabase.
+
+### Phase 5: orders and checkout
+
+- Tenant-scoped customers, customer addresses, shipping zones/rates, orders, and order items are defined with RLS and no browser write grants.
+- Orders snapshot customer contact, shipping address, totals, currency, payment state, and fulfillment state. Order items snapshot product name, SKU, unit price, quantity, and line total.
+- Checkout settings distinguish required contact/address fields, customer notes, bank transfer, future Paystack, and tenant success messaging. Active bank instructions and state-based flat delivery rates are managed in the same descriptive workspace.
+- Commerce indexes cover tenant order chronology, payment state, fulfillment state, customers, order items, and shipping rates.
+- The browser cart is isolated by store and gives immediate local feedback. A database quote then validates current availability, inventory, prices, currency, and eligible delivery rates before enabling checkout.
+- `create_storefront_order` repeats all trust checks, locks product rows, computes totals server-side, snapshots the order, and decrements tracked inventory atomically. Mixed-currency, unavailable, cross-tenant, and out-of-stock requests fail without a partial order.
+- Bank-transfer customers receive the order reference and snapshotted account instructions. Their opaque order token can report payment only as awaiting verification; it cannot mark an order paid.
+- Tenant order administration provides bounded search/filter/pagination, complete historical detail, private notes, separate payment/fulfilment states, audited transitions, and exactly-once stock restoration on cancellation.
+- Customer order counts and verified paid totals are derived from authoritative order state at transaction completion, preventing unpaid orders or retries from inflating revenue.
+- Migration files 202609080006_orders_foundation.sql, 202609080007_checkout_order_workflow.sql, 202609080008_order_payment_snapshots.sql, and 202609080009_customer_paid_totals.sql applied to development Supabase.
 
 ## Validation
 
@@ -85,7 +114,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all eleven migrations are applied; checksums and migration history are intact.
+- PASS: all eighteen migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
@@ -103,6 +132,12 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: browser editing and publishing of product search wording, exact public title output, and Product/Breadcrumb structured-data scripts. The compact mobile navigation and record editor were visually inspected with no overflow.
 - PASS: navigation SQL regression covers typed PAGE/CATEGORY ownership, cross-tenant rejection, footer preservation, page/category rename propagation, and the exact create-page → save-menu → save-Store-Design sequence without relationship degradation.
 - PASS: live integration saves typed store menus for a real authenticated tenant. Browser coverage confirms the page relationship survives a Store Design save; desktop/mobile menu editors were visually inspected with no overflow.
+- PASS: sharing-image SQL coverage verifies tenant authorization, immutable global/record URLs, and published metadata. Browser coverage performs a real Cloudinary upload, publishes it, verifies `og:image`, and removes the provider/database/Auth fixtures.
+- PASS: bounded-read SQL coverage verifies the eight-item homepage and capped catalog lookahead. Integration verifies direct product and bounded browse RPCs; browser coverage verifies Shop search and responsive desktop/mobile rendering.
+- PASS: liveness and readiness endpoints return healthy responses against the production test server without exposing dependency details.
+- PASS: Phase 5 SQL coverage verifies authoritative quotes/prices, inventory locking and decrement, out-of-stock rejection, immutable order/payment snapshots, payment-notice separation, merchant verification, accurate paid totals, exactly-once stock restoration, tenant A/B isolation, anonymous denial, and direct-write denial.
+- PASS: authenticated integration configures checkout, creates a real anonymous order, verifies trusted totals/inventory, records a manual-transfer notice, confirms payment as the merchant, denies tenant B and direct writes, and removes every fixture.
+- PASS: browser regression covers product-to-cart, responsive cart/checkout, order placement, bank-transfer confirmation, customer payment notice, merchant order filtering/detail, payment verification, and fulfilment progression. Desktop/mobile screenshots were inspected with no horizontal overflow or confusing technical labels.
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
@@ -111,9 +146,9 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
 - New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
 - Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
-- Preferred payment mode is recorded, not connected. Email/SMS remain disabled.
+- Online card/payment-provider mode is not connected yet; this is the active Phase 6 scope. Manual bank transfer is functional. Email/SMS remain disabled.
 - Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
-- Record-specific social share images, domain-verification UI, checkout, payment processing, and advanced operational controls remain future work.
+- Domain-verification UI, Paystack processing, refunds, and advanced operational controls remain future work.
 - The Store design editor is responsive and functional, but its long settings column should receive further progressive disclosure so first-time users see fewer controls at once.
 - `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
 - Plain PostgreSQL CI emulates only the Auth schema contract; real Supabase Auth is covered by the separate development integration script.
@@ -126,9 +161,9 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Super-admin onboarding | 1          | Implemented and verified | Atomic creation, owner acceptance, two isolated workspaces |
 | Catalog                | 2          | Implemented and verified | Tenant-scoped products, categories, media, inventory       |
 | Theme and content      | 3          | Implemented and verified | Editor, pages, reordering, preview, atomic publishing       |
-| SEO                    | 4          | In progress              | Global/record output verified; social images/domain gate    |
-| Orders and checkout    | 5          | Planned                  | Totals, inventory, snapshots, manual verification          |
-| Paystack               | 6          | Planned                  | Verified/idempotent payment processing                     |
+| SEO                    | 4          | Implemented and verified | Global/record metadata and sharing images; DNS gate Phase 11 |
+| Orders and checkout    | 5          | Implemented and verified | Trusted totals, atomic inventory, bank transfer, order admin |
+| Paystack               | 6          | In progress              | Verified/idempotent payment processing                     |
 | Email                  | 7          | Planned                  | Branded delivery and logs                                  |
 | SMS                    | 8          | Planned                  | Settings and entitlement enforcement                       |
 | Entitlements/plans     | 9          | Planned                  | Central resolution and server enforcement                  |
@@ -142,12 +177,21 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Now: first business name/handle, owner name/email, template, and initial plan through the create form.
 - Now: sample products, categories, prices, images, and inventory preferences for real catalog review.
 - Content stage: logos, branding, homepage/about/policy copy.
-- Commerce: delivery regions/rates, currency confirmation (NGN default), payment choices and test credentials.
+- Phase 6: Paystack test secret/public keys, the intended test callback base URL, and access to configure the environment-specific webhook endpoint. Never provide live keys for local or staging work.
 - Integrations: email/SMS providers and sender identities when those stages begin.
 - Billing: plan prices/limits, trial length, grace policy.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.
 
 Credentials stay in local environment files, never this tracker. No production deployment, outbound invitations, or real customer transactions have occurred.
+
+## Deferred architecture decisions
+
+- Add cross-request published-version caching only after deployment topology is selected. Cache immutable design/navigation/SEO by version; never make cached storefront stock authoritative for checkout.
+- Verify Supabase production pooler configuration during deployment. The application currently uses Supabase HTTP clients and does not open a PostgreSQL connection per browser request.
+- Evaluate `pg_trgm` with realistic `EXPLAIN ANALYZE` evidence before adding fuzzy-search indexes. Current bounded name search does not justify indiscriminate extensions.
+- Publish quotas belong to Phase 9 entitlements and require an explicit pricing decision. Draft editing and preview must remain available regardless of any future publish allowance.
+- Audit archive/export requires background jobs, private object storage, verification, redaction, retention policy, email delivery, and retry state. Archive first, verify second, purge hot rows last.
+- Choose external error tracking and provider dashboards after the production host is known. Durable payment/webhook events, idempotency, retries, and failed-event visibility remain release blockers before Paystack.
 
 ## UI repair and modularity refactor — 2026-09-06
 

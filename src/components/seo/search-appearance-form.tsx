@@ -5,7 +5,7 @@ import type { GlobalSeoDraft } from '@/modules/seo/queries';
 import { Button } from '@/components/ui/button';
 import { TextAreaField, TextField } from '@/components/ui/form-fields';
 import { FormActions, FormError, FormSection, FormStack } from '@/components/ui/form-layout';
-import { SearchPreview } from './search-preview';
+import { SearchPreview, SocialPreview } from './search-preview';
 import styles from './search-appearance.module.css';
 
 const initialState: SeoActionState = { error: '', message: '' };
@@ -31,6 +31,11 @@ export function SearchAppearanceForm({
         title={title || 'Your store name'}
         description={description}
         address="your-store-address"
+      />
+      <SocialPreview
+        title={title || 'Your store name'}
+        description={description}
+        imageUrl={settings.social_image_url}
       />
       <FormSection
         title="What people see in search"
@@ -62,6 +67,17 @@ export function SearchAppearanceForm({
             defaultValue={settings.twitter_handle}
           />
         </div>
+      </FormSection>
+      <FormSection
+        title="Image shown when your store is shared"
+        description="Upload a wide image that represents your business. Social apps may crop it differently. JPG, PNG, or WebP up to 5 MB."
+      >
+        <TextField
+          name="socialImage"
+          label={settings.social_image_url ? 'Replace sharing image' : 'Choose sharing image'}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+        />
       </FormSection>
       <FormSection
         title="Who may discover your store"

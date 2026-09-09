@@ -134,6 +134,40 @@
   justify-content: flex-end;
   gap: 10px;
 }
+.socialPreview {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.socialPreview > .previewLabel {
+  padding: 18px 20px 0;
+}
+.socialPreview img,
+.socialPlaceholder {
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  display: block;
+  object-fit: cover;
+  background: var(--surface-muted);
+}
+.socialPlaceholder {
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  color: var(--muted);
+  text-align: center;
+}
+.socialPreview > div:last-child {
+  padding: 16px 20px 20px;
+}
+.socialPreview strong {
+  display: block;
+  margin-bottom: 5px;
+}
+.socialPreview p:last-child {
+  margin: 0;
+}
 @media (max-width: 760px) {
   .contentList li {
     grid-template-columns: 1fr;

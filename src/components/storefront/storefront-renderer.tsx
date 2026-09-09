@@ -1,6 +1,8 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
+import { AddToCartButton } from '@/components/commerce/add-to-cart-button';
+import { CartLink } from '@/components/commerce/cart-link';
 import type { PublicProduct } from '@/modules/catalog/types';
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { StructuredData } from './structured-data';
@@ -64,8 +66,48 @@ function StoreHeader({ slug, configuration }: { slug: string; configuration: Sit
             {item.label}
           </Link>
         ))}
+        <CartLink slug={slug} />
       </nav>
     </header>
+  );
+}
+
+function ProductCard({ slug, product }: { slug: string; product: PublicProduct }) {
+  return (
+    <article className={styles.productCard}>
+      <Link href={`/store/${slug}/products/${product.slug}`}>
+        <CatalogMedia
+          url={product.mediaUrl}
+          type={product.mediaType}
+          alt={product.mediaAlt || product.name}
+        />
+        <h3>{product.name}</h3>
+        <p>{currency(product)}</p>
+      </Link>
+      <AddToCartButton slug={slug} product={product} />
+    </article>
+  );
+}
+
+export function StorefrontShell({
+  slug,
+  configuration,
+  children,
+}: {
+  slug: string;
+  configuration: SiteConfiguration;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={styles.storefront}
+      style={storefrontStyle(configuration)}
+      data-preset={configuration.theme.presetKey}
+    >
+      <StoreHeader slug={slug} configuration={configuration} />
+      {children}
+      <StoreFooter configuration={configuration} />
+    </div>
   );
 }
 
@@ -168,23 +210,16 @@ export function StorefrontRenderer({
                   {products.length ? (
                     <div className={styles.productGrid}>
                       {products.map((product) => (
-                        <Link
-                          className={styles.productCard}
-                          key={product.id}
-                          href={`/store/${slug}/products/${product.slug}`}
-                        >
-                          <CatalogMedia
-                            url={product.mediaUrl}
-                            type={product.mediaType}
-                            alt={product.mediaAlt || product.name}
-                          />
-                          <h3>{product.name}</h3>
-                          <p>{currency(product)}</p>
-                        </Link>
+                        <ProductCard slug={slug} product={product} key={product.id} />
                       ))}
                     </div>
                   ) : (
                     <p>No products are available yet.</p>
+                  )}
+                  {products.length > 0 && (
+                    <Link className={styles.viewAllProducts} href={`/store/${slug}/products`}>
+                      Browse all products
+                    </Link>
                   )}
                 </section>
               );
@@ -230,12 +265,16 @@ export function StorefrontCategoryPage({
   name,
   description,
   products,
+  beforeContent,
+  afterProducts,
 }: {
   slug: string;
   configuration: SiteConfiguration;
   name: string;
   description: string;
   products: PublicProduct[];
+  beforeContent?: ReactNode;
+  afterProducts?: ReactNode;
 }) {
   return (
     <div
@@ -244,6 +283,7 @@ export function StorefrontCategoryPage({
       data-preset={configuration.theme.presetKey}
     >
       <StoreHeader slug={slug} configuration={configuration} />
+      {beforeContent}
       <main className={styles.informationPage}>
         <p className={styles.eyebrow}>PRODUCT COLLECTION</p>
         <h1>{name}</h1>
@@ -251,24 +291,13 @@ export function StorefrontCategoryPage({
         {products.length ? (
           <div className={styles.productGrid}>
             {products.map((product) => (
-              <Link
-                className={styles.productCard}
-                key={product.id}
-                href={`/store/${slug}/products/${product.slug}`}
-              >
-                <CatalogMedia
-                  url={product.mediaUrl}
-                  type={product.mediaType}
-                  alt={product.mediaAlt || product.name}
-                />
-                <h3>{product.name}</h3>
-                <p>{currency(product)}</p>
-              </Link>
+              <ProductCard slug={slug} product={product} key={product.id} />
             ))}
           </div>
         ) : (
           <p>No products are available in this collection yet.</p>
         )}
+        {afterProducts}
       </main>
       <StoreFooter configuration={configuration} />
     </div>

@@ -1,4 +1,4 @@
-import { getCatalogWorkspace } from '@/modules/catalog/queries';
+import { getCategoryWorkspace } from '@/modules/catalog/queries';
 import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { CategoryManager } from '@/components/catalog/category-manager';
 import { ButtonLink } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Panel } from '@/components/ui/panel';
 export const metadata = { title: 'Categories' };
 export default async function CategoriesPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { tenant, categories } = await getCatalogWorkspace(slug);
+  const { tenant, categories } = await getCategoryWorkspace(slug);
   return (
     <main className="tenant-home">
       <WorkspaceNavigation name={tenant.name} slug={slug} />

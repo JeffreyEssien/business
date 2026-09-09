@@ -3,6 +3,18 @@ function text(form: FormData, key: string, maximum: number) {
   return value.length <= maximum ? value : null;
 }
 
+export function validateSeoImage(form: FormData) {
+  const value = form.get('socialImage');
+  if (!(value instanceof File) || value.size === 0) return null;
+  if (
+    !['image/jpeg', 'image/png', 'image/webp'].includes(value.type) ||
+    value.size > 5 * 1024 * 1024
+  ) {
+    throw new Error('Sharing images must be JPG, PNG, or WebP files up to 5 MB.');
+  }
+  return value;
+}
+
 export function validateGlobalSeo(form: FormData) {
   const title = text(form, 'title', 60);
   const description = text(form, 'description', 160);

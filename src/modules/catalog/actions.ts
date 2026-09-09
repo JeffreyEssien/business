@@ -73,11 +73,27 @@ export async function saveCategory(
 
 export async function removeCategory(slug: string, categoryId: string, _form?: FormData) {
   const { tenant, supabase } = await editorWorkspace(slug);
+  const { data: socialEntry } = await supabase
+    .from('seo_entries')
+    .select('social_asset_id')
+    .eq('tenant_id', tenant.id)
+    .eq('entity_type', 'CATEGORY')
+    .eq('entity_id', categoryId)
+    .maybeSingle();
+  const { data: socialMedia } = socialEntry?.social_asset_id
+    ? await supabase
+        .from('media_assets')
+        .select('id,storage_provider,storage_key,resource_type')
+        .eq('tenant_id', tenant.id)
+        .eq('id', socialEntry.social_asset_id)
+        .maybeSingle()
+    : { data: null };
   const { error } = await supabase.rpc('delete_category', {
     target_tenant: tenant.id,
     target_category: categoryId,
   });
   if (error) throw new Error(catalogErrorMessage(error.code, error.message));
+  if (socialMedia) await deleteProviderMedia(socialMedia as StoredMedia, supabase);
   revalidatePath(`/t/${slug}/catalog`);
   revalidatePath(`/t/${slug}/catalog/categories`);
 }
@@ -160,7 +176,7 @@ export async function saveProduct(
 
 export async function removeProduct(slug: string, productId: string, _form?: FormData) {
   const { tenant, supabase } = await editorWorkspace(slug);
-  const [productResult, mappingResult] = await Promise.all([
+  const [productResult, mappingResult, socialEntryResult] = await Promise.all([
     supabase
       .from('products')
       .select('primary_image_asset_id')
@@ -172,12 +188,20 @@ export async function removeProduct(slug: string, productId: string, _form?: For
       .select('asset_id')
       .eq('tenant_id', tenant.id)
       .eq('product_id', productId),
+    supabase
+      .from('seo_entries')
+      .select('social_asset_id')
+      .eq('tenant_id', tenant.id)
+      .eq('entity_type', 'PRODUCT')
+      .eq('entity_id', productId)
+      .maybeSingle(),
   ]);
-  if (productResult.error || mappingResult.error)
+  if (productResult.error || mappingResult.error || socialEntryResult.error)
     throw new Error('Product media could not be resolved for deletion.');
   const assetIds = [
     productResult.data?.primary_image_asset_id,
     ...(mappingResult.data ?? []).map((item) => item.asset_id),
+    socialEntryResult.data?.social_asset_id,
   ].filter((id, index, all): id is string => Boolean(id) && all.indexOf(id) === index);
   const { data: media, error: mediaError } = assetIds.length
     ? await supabase

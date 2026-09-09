@@ -283,11 +283,31 @@ export async function saveContentPage(
 export async function deleteContentPage(slug: string, pageId: string, _form: FormData) {
   const workspace = await getTenantWorkspace(slug);
   if (!canEdit(workspace.membership.role)) throw new Error('FORBIDDEN');
+  const { data: socialEntry } = await workspace.supabase
+    .from('seo_entries')
+    .select('social_asset_id')
+    .eq('tenant_id', workspace.tenant.id)
+    .eq('entity_type', 'PAGE')
+    .eq('entity_id', pageId)
+    .maybeSingle();
+  const { data: socialMedia } = socialEntry?.social_asset_id
+    ? await workspace.supabase
+        .from('media_assets')
+        .select('storage_provider,storage_key,resource_type')
+        .eq('tenant_id', workspace.tenant.id)
+        .eq('id', socialEntry.social_asset_id)
+        .maybeSingle()
+    : { data: null };
   const { error } = await workspace.supabase.rpc('delete_content_page', {
     target_tenant: workspace.tenant.id,
     target_page: pageId,
   });
   if (error) throw new Error(contentErrorMessage(error.code, error.message));
+  if (socialMedia?.storage_provider === 'cloudinary')
+    await deleteCloudinaryMedia(
+      socialMedia.storage_key,
+      socialMedia.resource_type as 'image' | 'video',
+    );
   revalidatePath(`/t/${slug}/content/pages`);
   revalidatePath(`/t/${slug}/design`);
 }

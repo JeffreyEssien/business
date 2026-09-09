@@ -19,6 +19,7 @@ The default is readable, modular code. Routes compose features; they do not cont
 | `components/ui`          | Reusable presentation and native controls; no Supabase queries           | TextField, SelectField, Button, Panel, Checklist     |
 | `components/auth`        | Authentication-specific compositions                                     | AuthLayout, LoginForm, PasswordForm                  |
 | `components/businesses`  | Business-specific presentation and form orchestration                    | BusinessSummary, BusinessFilters, CreateBusinessForm |
+| `components/commerce`    | Cart, checkout, settings, order lists, and order-detail presentation      | CartCheckout, CheckoutSettings, OrderDetail          |
 | `components/layout`      | Application navigation and framing                                       | PlatformSidebar, PlatformTopbar                      |
 | `components/super-admin` | Platform views composed from UI components                               | Shell, BusinessList, LaunchCard                      |
 | `modules/tenants`        | Data access, validation, configuration, domain types, authorized actions | queries, workspace-query, actions                    |
@@ -108,3 +109,41 @@ Keep tenant colors in validated tokens and pass them to storefront components th
 8. `getSeoWorkspace` loads global settings, relevant records, and saved overrides concurrently. Record editors call `save_entity_seo`, which independently verifies that the selected page, product, or category belongs to the authorized tenant.
 9. Record overrides remain private until `publish_site` copies them into `seoEntries` in the immutable snapshot. Public metadata uses `entityMetadata` for one fallback chain across customer, product, and collection routes.
 10. Product and breadcrumb schemas are generated from trusted catalog/content records through `StructuredData`. Do not accept raw structured-data JSON from tenant forms.
+11. Sharing images upload through the server-only Cloudinary adapter. PostgreSQL owns the asset relationship; the publish trigger copies only the delivery URL into the immutable live snapshot.
+
+## Follow a public catalog read
+
+1. `get_public_storefront` returns published configuration plus no more than eight homepage products.
+2. `/store/[slug]/products` calls `get_public_products`, which enforces a 24-item page, a 48-item absolute server maximum, sanitized search text, and a `(created_at,id)` keyset cursor.
+3. Product detail calls `get_public_product` for one active product. Never reintroduce “load the storefront and find one product” behavior.
+4. Collection pages use the bounded product-page RPC. Sitemap generation uses its slug-only read model because it needs URLs, not catalog payloads.
+5. Stock and prices remain live catalog state. Do not cache them as part of a published design version or trust storefront output during order creation.
+
+## Reliability boundaries
+
+- `proxy.ts` generates `x-businesscare-request-id`; incoming IDs are not trusted. Public requests avoid the authenticated session-refresh call and private cache headers.
+- `lib/observability/server.ts` emits bounded structured records only for slow or failed important operations. Never add form bodies, credentials, tokens, addresses, or customer contact data.
+- `/api/health/live` checks only the application process. `/api/health/ready` makes one short call to the data-free database health RPC. Provider outages must not cascade into storefront unavailability.
+- Slow-operation thresholds are operational configuration, not product business logic.
+
+## Phase 5 commerce invariants
+
+- PostgreSQL is authoritative for product price, inventory, checkout totals, orders, and order items. Browser cart values are untrusted suggestions.
+- Order and shipping/customer relationships include `tenant_id`; cross-tenant IDs must fail inside the database transaction.
+- Historical customer, address, product, SKU, and price values are snapshots. Never rebuild an old order from mutable catalog/customer records.
+- Direct browser writes to commerce tables remain denied. `create_storefront_order` resolves the tenant from its public handle, locks inventory, computes all money from current database records, decrements stock, and writes the order plus snapshots in one transaction.
+- The browser cart is tenant-scoped local convenience state. `get_public_checkout_quote` must succeed before checkout can continue, and order creation repeats every price, availability, delivery, and relationship check.
+- A customer's payment notice means “awaiting verification,” never “paid.” Only an authorized merchant transition or a future verified provider event may confirm payment.
+- Customer paid totals are derived from orders whose payment status is `PAID`. The deferred database trigger is the canonical summary writer; application code must not increment paid revenue optimistically.
+- Cancelling fulfilment restores tracked stock exactly once and does not rewrite an already verified payment. Refunds remain a separate Phase 6 operation.
+- Payment instructions are copied onto the order. Replacing a store bank account must not alter what an existing customer was originally shown.
+
+## Follow a storefront checkout
+
+1. `modules/commerce/cart.ts` keeps a small, tenant-specific browser cart and never claims its cached prices are final.
+2. `/store/[slug]/cart` calls the public quote action. The database returns current products, stock availability, and eligible delivery rates from a bounded projection.
+3. `components/commerce/cart-checkout.tsx` explains unavailable items, required customer details, delivery choices, and bank-transfer verification in customer language.
+4. `modules/commerce/validation.ts` normalizes the form, while `create_storefront_order` independently revalidates every value and relationship inside PostgreSQL.
+5. Successful creation returns only the reference, totals, snapshotted bank instructions, and an opaque order-access token. The token may submit a payment notice but cannot read tenant tables or confirm payment.
+6. Routes under `/t/[slug]/orders` use membership-authorized bounded queries. Settings and every status/note mutation re-resolve tenant access on the server and call tenant-checking RPCs.
+7. Order administration keeps payment and fulfilment as separate state machines. All transitions are audited, and customer/order/item snapshots remain immutable.

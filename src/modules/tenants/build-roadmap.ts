@@ -17,13 +17,13 @@ export const buildStages = [
   ],
   [
     'Catalog, content & SEO · Phases 2–4',
-    'Planned',
-    'Products, themes, editable pages, previews, publishing, and search metadata.',
+    'Ready',
+    'Products, themes, editable pages, previews, publishing, menus, and search metadata.',
   ],
   [
     'Orders & payments · Phases 5–6',
-    'Planned',
-    'Checkout, order management, bank transfers, and verified Paystack payments.',
+    'In progress',
+    'Checkout, order management, and bank transfers are ready. Verified Paystack payments are next.',
   ],
   [
     'Notifications · Phases 7–8',

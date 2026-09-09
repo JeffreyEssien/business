@@ -43,6 +43,7 @@ export type PublishedSeoEntry = {
   canonicalUrl: string | null;
   socialTitle: string;
   socialDescription: string;
+  socialImage: string | null;
   allowSearchListing: boolean;
   allowSearchLinks: boolean;
 };
@@ -56,6 +57,7 @@ export type PublishedSeoSettings = {
   googleVerification: string;
   bingVerification: string;
   customHostname: string | null;
+  socialImage: string | null;
 };
 export type SiteConfiguration = {
   business: {

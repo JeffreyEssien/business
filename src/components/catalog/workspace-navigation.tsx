@@ -6,6 +6,7 @@ function workspaceLinks(slug: string) {
   return [
     { href: `/t/${slug}`, label: 'Overview' },
     { href: `/t/${slug}/catalog`, label: 'Catalog' },
+    { href: `/t/${slug}/orders`, label: 'Orders' },
     { href: `/t/${slug}/design`, label: 'Store design' },
     { href: `/t/${slug}/content/pages`, label: 'Website pages' },
     { href: `/t/${slug}/content/navigation`, label: 'Store menus' },
