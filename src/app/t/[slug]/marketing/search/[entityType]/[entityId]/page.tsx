@@ -32,7 +32,7 @@ export default async function SearchEntryPage({
         description="Choose custom search and sharing wording for this page, or leave fields empty to keep using your store defaults. Saved changes stay private until you publish."
       />
       <Panel>
-        <SearchEntryForm slug={slug} record={data.record} entry={data.entry} />
+        <SearchEntryForm slug={slug} record={data.record} entry={data.entry ?? undefined} />
       </Panel>
     </main>
   );

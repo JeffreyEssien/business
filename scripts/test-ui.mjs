@@ -119,7 +119,7 @@ try {
   await page.getByLabel('Category name', { exact: true }).first().fill('Featured');
   await page.getByLabel('Handle', { exact: true }).first().fill('featured');
   await page.getByRole('button', { name: 'Add category' }).click();
-  await expect(page.getByText('Featured', { exact: true })).toBeVisible();
+  await expect(page.getByText('Featured', { exact: true })).toBeVisible({ timeout: 30000 });
   stage = 'Create product through tenant workspace';
   await page.goto(`${base}/t/${slug}/catalog/products/new`);
   await page.getByLabel('Product name', { exact: true }).fill('UI verification product');
@@ -198,10 +198,17 @@ try {
     .getByLabel('Search result description')
     .fill('A clear customer-facing description for search and sharing.');
   await page.getByLabel('Allow search services to list this store').check();
+  await page.getByLabel('Choose sharing image').setInputFiles({
+    name: 'store-sharing-image.png',
+    mimeType: 'image/png',
+    buffer: pixel,
+  });
   await page.getByRole('button', { name: 'Save for the next publish' }).click();
   await expect(page.getByText(/Search appearance saved for review/)).toBeVisible({
     timeout: 30000,
   });
+  await page.reload();
+  await expect(page.getByLabel('Preview of a shared link').locator('img')).toBeVisible();
   await page.screenshot({ path: 'artifacts/ui/search-appearance-desktop.png', fullPage: true });
   stage = 'Customize product search wording';
   const productSearchItem = page
@@ -285,20 +292,131 @@ try {
   await expect(page.getByText('Version 1 is now live.', { exact: true })).toBeVisible({
     timeout: 30000,
   });
+  stage = 'Configure customer checkout';
+  await page.goto(`${base}/t/${slug}/orders/settings`);
+  await expect(page.getByRole('heading', { name: 'Checkout settings' })).toBeVisible();
+  await page.getByLabel('Bank name').fill('UI Test Bank');
+  await page.getByLabel('Account number').fill('0123456789');
+  await page.getByLabel('Account name').fill('UI verification business');
+  await page
+    .getByLabel('Extra payment instructions (optional)')
+    .fill('Include your order reference.');
+  await page.getByRole('button', { name: 'Save bank account' }).click();
+  await expect(page.getByText('Bank-transfer details saved.')).toBeVisible({ timeout: 30000 });
+  await page.getByLabel('Name customers will see').fill('Lagos delivery');
+  await page.getByLabel('Internal region name').fill('Lagos');
+  await page.getByLabel('Fee in NGN').fill('1000');
+  await page.getByLabel('Available states (optional)').fill('Lagos');
+  await page.getByRole('button', { name: 'Add delivery option' }).click();
+  await expect(page.getByText('Delivery option added.')).toBeVisible({ timeout: 30000 });
+  await page
+    .getByLabel('Message shown after an order is placed')
+    .fill('Your order is safely with us.');
+  await page.getByRole('button', { name: 'Save checkout choices' }).click();
+  await expect(page.getByText('Checkout choices saved.')).toBeVisible({ timeout: 30000 });
+  await page.screenshot({ path: 'artifacts/ui/checkout-settings-desktop.png', fullPage: true });
   stage = 'Verify public storefront layouts';
   await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
   await expect(
     page.getByRole('heading', { name: 'A storefront shaped by its owner' }),
   ).toBeVisible();
   await expect(page).toHaveTitle('Trusted UI verification store');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    'content',
+    /res\.cloudinary\.com/,
+  );
   await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
   await page.getByRole('heading', { name: 'UI verification product' }).click();
   await expect(page).toHaveTitle('Find the UI verification product');
   await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(2);
-  await page.goBack({ waitUntil: 'domcontentloaded' });
+  stage = 'Complete customer cart and checkout';
+  await page.getByRole('button', { name: 'Add to cart' }).click();
+  await expect(page.getByRole('link', { name: 'Cart (1)' })).toBeVisible();
+  await page.getByRole('link', { name: 'Cart (1)' }).click();
+  await expect(page.getByRole('heading', { name: 'Review your cart' })).toBeVisible();
+  await expect(page.getByText('UI verification product', { exact: true })).toBeVisible();
+  await expect(page.getByText('Checking current prices and availability…')).toHaveCount(0, {
+    timeout: 30000,
+  });
+  await expect(page.getByText('₦4,200.00').first()).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/cart-desktop.png', fullPage: true });
+  await page.getByRole('link', { name: 'Continue to checkout' }).click();
+  await expect(page.getByRole('heading', { name: 'Delivery and contact details' })).toBeVisible();
+  await page.getByLabel('Full name').fill('UI Test Customer');
+  await page.getByLabel('Email address').fill('customer@example.invalid');
+  await page.getByLabel('Phone number').fill('08012345678');
+  await page.getByText('Lagos delivery').click();
+  await page.getByLabel('Street address').fill('1 Browser Test Street');
+  await page.getByLabel('City').fill('Ikeja');
+  await page.getByLabel('State').fill('Lagos');
+  await page.getByLabel('Order note (optional)').fill('Call on arrival.');
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Checkout has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/checkout-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: /Place order/ }).click();
+  await expect(page.getByRole('heading', { name: 'Thank you for your order.' })).toBeVisible({
+    timeout: 30000,
+  });
+  await expect(page.getByText('Your order is safely with us.')).toBeVisible();
+  await expect(page.getByText('0123456789')).toBeVisible();
+  await page.getByRole('button', { name: 'I have made the transfer' }).click();
+  await expect(page.getByText(/store will verify the transfer/)).toBeVisible({ timeout: 30000 });
+  await page.screenshot({ path: 'artifacts/ui/order-confirmation-mobile.png', fullPage: true });
+  const [placedOrder] = await sql`
+    select id,reference,payment_status,total from public.orders
+    where tenant_id=${tenant.id} order by created_at desc limit 1
+  `;
+  assert.equal(placedOrder.payment_status, 'AWAITING_VERIFICATION');
+  assert.equal(Number(placedOrder.total), 5200);
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Manage order through tenant workspace';
+  await page.goto(`${base}/t/${slug}/orders`);
+  await expect(page.getByText(placedOrder.reference, { exact: true })).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/orders-desktop.png', fullPage: true });
+  stage = 'Open order details';
+  await page.getByRole('link', { name: placedOrder.reference }).click();
+  await expect(page.getByRole('heading', { name: placedOrder.reference })).toBeVisible();
+  await expect(page.getByText('● Awaiting verification')).toBeVisible();
+  stage = 'Confirm order payment';
+  await page.getByRole('button', { name: 'Confirm bank payment' }).click();
+  await expect(page.getByText('● Paid')).toBeVisible({ timeout: 30000 });
+  stage = 'Find next fulfilment action';
+  await expect(page.getByText('● New')).toBeVisible();
+  const startPreparing = page.getByRole('button', { name: 'Start preparing order' });
+  await expect(startPreparing).toBeVisible();
+  await expect(startPreparing).toBeEnabled();
+  await page.screenshot({ path: 'artifacts/ui/order-details-before-action.png', fullPage: true });
+  stage = 'Submit order fulfilment action';
+  await startPreparing.click();
+  stage = 'Verify order fulfilment action';
+  await expect(page.getByText('● Processing')).toBeVisible({ timeout: 30000 });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Order details have no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/order-details-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.goto(`${base}/store/${slug}/products?search=UI%20verification`);
+  await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
+  await expect(page.getByLabel("Search this store's products")).toHaveValue('UI verification');
+  await page.screenshot({ path: 'artifacts/ui/shop-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Shop has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/shop-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify published customer page after checkout';
+  await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: 'About our business' }).click();
   await expect(page.getByRole('heading', { name: 'A business customers can trust' })).toBeVisible();
-  await page.goBack({ waitUntil: 'domcontentloaded' });
+  await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
   await page.screenshot({ path: 'artifacts/ui/storefront-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -324,7 +442,11 @@ try {
   });
   const [remainingMedia] =
     await sql`select count(*)::integer as count from public.media_assets where tenant_id=${tenant.id}`;
-  assert.equal(remainingMedia.count, 2, 'Site media remains after deleting product media');
+  assert.equal(
+    remainingMedia.count,
+    3,
+    'Site and sharing media remain after deleting product media',
+  );
   await expect
     .poll(
       async () => {
@@ -342,7 +464,7 @@ try {
     .toBe(true);
   assert.equal(pageErrors.length, 0, 'No browser runtime errors');
   console.log(
-    'PASS: browser login, onboarding layouts, tenant catalog creation, website-page editing, record-specific search editing/publishing, structured data, compact mobile navigation, Cloudinary upload/render/delete lifecycle, and responsive public storefront.',
+    'PASS: browser login, bounded catalog browsing, cart and checkout, bank-transfer notice, order administration, website-page editing, social/search publishing, structured data, compact mobile navigation, Cloudinary lifecycle, and responsive public storefront.',
   );
 } catch (error) {
   console.error(`UI check failed at ${stage}: ${error.name}.`);
@@ -370,6 +492,13 @@ try {
         await tx`select storage_provider,storage_key,resource_type from public.media_assets where tenant_id=any(${ids}::uuid[])`;
       mediaAssets.push(...remainingAssets);
       for (const table of [
+        'order_items',
+        'orders',
+        'customer_addresses',
+        'customers',
+        'shipping_rates',
+        'shipping_zones',
+        'tenant_bank_accounts',
         'tenant_site_versions',
         'seo_entries',
         'product_media',
@@ -381,10 +510,10 @@ try {
         'pages',
         'tenant_invitations',
         'tenant_business_settings',
+        'tenant_seo_settings',
         'media_assets',
         'tenant_theme_settings',
         'tenant_layout_settings',
-        'tenant_seo_settings',
         'tenant_email_settings',
         'tenant_sms_settings',
         'tenant_checkout_settings',

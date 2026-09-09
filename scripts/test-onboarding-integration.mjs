@@ -12,6 +12,9 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
 const admin = createClient(url, process.env.SUPABASE_SECRET_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+const anonymous = createClient(url, key, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 const sql = database(),
   users = [],
   slugs = [],
@@ -352,6 +355,113 @@ try {
   stage = 'Publish storefront and customer page';
   const publish = await ownerSession.client.rpc('publish_site', { target_tenant: a });
   assert.ifError(publish.error);
+  const publicProduct = await anonymous.rpc('get_public_product', {
+    store_slug: slugA,
+    product_slug: 'integration-product-a',
+  });
+  assert.ifError(publicProduct.error);
+  assert.equal(publicProduct.data.product.id, productA.data, 'Public product lookup is direct');
+  const publicProducts = await anonymous.rpc('get_public_products', {
+    store_slug: slugA,
+    search_term: 'Integration',
+    category_slug: '',
+    cursor_created_at: null,
+    cursor_id: null,
+    result_limit: 24,
+  });
+  assert.ifError(publicProducts.error);
+  assert.ok(publicProducts.data.products.length <= 25, 'Public product page remains bounded');
+  stage = 'Configure checkout and create an order';
+  const bankAccount = await ownerSession.client.rpc('save_bank_account', {
+    target_tenant: a,
+    bank_name: 'Integration Bank',
+    account_number: '0123456789',
+    account_name: 'Integration Storefront A',
+    instructions: 'Include the order reference.',
+  });
+  assert.ifError(bankAccount.error);
+  const shippingRate = await ownerSession.client.rpc('save_shipping_rate', {
+    target_tenant: a,
+    target_rate: null,
+    zone_name: 'Lagos',
+    rate_name: 'Lagos delivery',
+    rate_amount: 1000,
+    delivery_states: ['Lagos'],
+    pickup: false,
+  });
+  assert.ifError(shippingRate.error);
+  const checkoutSettings = await ownerSession.client.rpc('save_checkout_settings', {
+    target_tenant: a,
+    phone_required: true,
+    email_required: true,
+    address_required: true,
+    notes_enabled: true,
+    transfer_enabled: true,
+    confirmation_message: 'Your integration order has been received.',
+  });
+  assert.ifError(checkoutSettings.error);
+  const cart = [{ productId: productA.data, quantity: 1 }];
+  const quote = await anonymous.rpc('get_public_checkout_quote', {
+    store_slug: slugA,
+    cart_items: cart,
+  });
+  assert.ifError(quote.error);
+  assert.equal(Number(quote.data.items[0].unitPrice), 2500, 'Quote must use database price');
+  const checkout = await anonymous.rpc('create_storefront_order', {
+    store_slug: slugA,
+    cart_items: cart,
+    customer_details: {
+      name: 'Integration Customer',
+      email: `${prefix}-customer@example.invalid`,
+      phone: '08012345678',
+    },
+    shipping_address: {
+      addressLine1: '1 Integration Street',
+      city: 'Ikeja',
+      state: 'Lagos',
+      country: 'NG',
+    },
+    selected_shipping_rate: shippingRate.data,
+    payment_choice: 'BANK_TRANSFER',
+    customer_note: 'Call on arrival.',
+  });
+  assert.ifError(checkout.error);
+  assert.equal(Number(checkout.data.total), 3500, 'Order total must include trusted delivery fee');
+  const transferNotice = await anonymous.rpc('submit_bank_transfer_notice', {
+    store_slug: slugA,
+    order_reference: checkout.data.reference,
+    access_token: checkout.data.accessToken,
+  });
+  assert.ifError(transferNotice.error);
+  const storedOrder = await ownerSession.client
+    .from('orders')
+    .select('id,total,payment_status,customer_name_snapshot')
+    .eq('tenant_id', a)
+    .eq('id', checkout.data.orderId)
+    .single();
+  assert.ifError(storedOrder.error);
+  assert.equal(storedOrder.data.payment_status, 'AWAITING_VERIFICATION');
+  assert.equal(Number(storedOrder.data.total), 3500);
+  const crossOrders = await ownerBSession.client.from('orders').select('id').eq('tenant_id', a);
+  assert.ifError(crossOrders.error);
+  assert.equal(crossOrders.data.length, 0, 'Tenant B must not read tenant A orders');
+  const directOrderWrite = await ownerSession.client
+    .from('orders')
+    .update({ payment_status: 'PAID' })
+    .eq('id', checkout.data.orderId);
+  assert.ok(directOrderWrite.error, 'Direct payment confirmation must be denied');
+  await page(`/t/${slugA}/orders`, ownerSession, checkout.data.reference);
+  await page(`/t/${slugA}/orders/${checkout.data.orderId}`, ownerSession, 'Confirm bank payment');
+  await page(`/t/${slugA}/orders/settings`, ownerSession, 'Checkout settings');
+  await page(`/store/${slugA}/cart`, null, 'Review your cart');
+  await page(`/store/${slugA}/checkout`, null, 'Delivery and contact details');
+  const confirmedPayment = await ownerSession.client.rpc('update_order_status', {
+    target_tenant: a,
+    target_order: checkout.data.orderId,
+    order_action: 'CONFIRM_PAYMENT',
+    note: 'Verified during integration testing.',
+  });
+  assert.ifError(confirmedPayment.error);
   await page(`/t/${slugA}/catalog`, ownerSession, 'Integration product A');
   await page(`/t/${slugB}/catalog`, ownerBSession, 'Integration product B');
   stage = 'Read published storefront A';
@@ -395,7 +505,7 @@ try {
   assert.ifError(resumed.error);
   await page(`/t/${slugA}`, ownerSession, 'Welcome to your next chapter.');
   console.log(
-    'PASS: real Auth sessions, onboarding, two isolated catalogs, Cloudinary upload, customer pages, record-specific search metadata, collection routes, sitemap/robots output, anonymous storefronts, direct-write denial, token replay denial, and suspension/reactivation.',
+    'PASS: real Auth sessions, onboarding, two isolated catalogs and orders, Cloudinary upload, customer pages, checkout totals/inventory, manual-transfer verification, order admin, record-specific search metadata, collection routes, sitemap/robots output, direct-write denial, token replay denial, and suspension/reactivation.',
   );
 } catch (error) {
   console.error(`Integration check failed at: ${stage}.`);
@@ -415,21 +525,28 @@ try {
       const fixtures = await tx`select id from public.tenants where slug=any(${slugs}::text[])`;
       const ids = fixtures.map((t) => t.id);
       for (const table of [
+        'order_items',
+        'orders',
+        'customer_addresses',
+        'customers',
+        'shipping_rates',
+        'shipping_zones',
+        'tenant_bank_accounts',
         'tenant_site_versions',
         'seo_entries',
         'product_media',
         'product_categories',
         'products',
         'categories',
-        'media_assets',
         'content_blocks',
         'navigation_items',
         'pages',
         'tenant_invitations',
         'tenant_business_settings',
+        'tenant_seo_settings',
+        'media_assets',
         'tenant_theme_settings',
         'tenant_layout_settings',
-        'tenant_seo_settings',
         'tenant_email_settings',
         'tenant_sms_settings',
         'tenant_checkout_settings',

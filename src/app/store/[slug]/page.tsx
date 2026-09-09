@@ -39,7 +39,7 @@ export async function generateMetadata({
   const title = seo?.title || store.tenant.name;
   const description = seo?.description || undefined;
   const canonical = storefrontUrl(store).toString();
-  const image = store.site?.business.heroMedia?.url;
+  const image = seo?.socialImage || store.site?.business.heroMedia?.url;
   return {
     title: { absolute: title },
     description,

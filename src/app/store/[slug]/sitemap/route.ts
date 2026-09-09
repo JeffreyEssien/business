@@ -1,4 +1,4 @@
-import { getPublicStorefront } from '@/modules/catalog/queries';
+import { getPublicSitemapRecords } from '@/modules/catalog/queries';
 import { storefrontUrl } from '@/modules/seo/public';
 
 function xml(value: string) {
@@ -7,13 +7,13 @@ function xml(value: string) {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const store = await getPublicStorefront(slug);
+  const store = await getPublicSitemapRecords(slug);
   const paths = [
     '',
     ...(store.site?.pages ?? []).map((page) => `/${page.slug}`),
-    ...store.categories.map((category) => `/categories/${category.slug}`),
-    ...store.products.map((product) => `/products/${product.slug}`),
-  ];
+    ...store.categorySlugs.map((categorySlug) => `/categories/${categorySlug}`),
+    ...store.productSlugs.map((productSlug) => `/products/${productSlug}`),
+  ].slice(0, 50_000);
   const urls = paths
     .map((path) => `<url><loc>${xml(storefrontUrl(store, path).toString())}</loc></url>`)
     .join('');

@@ -13,7 +13,7 @@ export type UploadedMedia = {
   height: number | null;
 };
 
-type TenantMediaFolder = 'products' | 'site';
+type TenantMediaFolder = 'products' | 'site' | 'seo';
 
 function configuredClient() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;

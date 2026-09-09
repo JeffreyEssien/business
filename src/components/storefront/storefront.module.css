@@ -157,6 +157,19 @@
   margin-top: 16px;
   font-size: 18px;
 }
+.viewAllProducts {
+  min-height: 46px;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 32px;
+  padding: 10px 18px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--store-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
 .footer {
   padding-block: 48px;
   border-top: 1px solid color-mix(in srgb, var(--store-text) 16%, transparent);

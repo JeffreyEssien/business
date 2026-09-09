@@ -42,6 +42,7 @@ export type PublicProduct = {
   mediaAlt: string | null;
   mediaType: 'image' | 'video' | null;
   categories: string[];
+  createdAt?: string;
 };
 
 export type PublicCategory = {
@@ -57,4 +58,14 @@ export type PublicStorefront = {
   site: import('@/modules/content/types').SiteConfiguration | null;
   categories: PublicCategory[];
   products: PublicProduct[];
+};
+
+export type PublicProductResult = Pick<PublicStorefront, 'tenant' | 'site'> & {
+  product: PublicProduct;
+};
+
+export type PublicProductPage = Pick<PublicStorefront, 'tenant' | 'site'> & {
+  category: Omit<PublicCategory, 'productIds'> | null;
+  products: PublicProduct[];
+  nextCursor: string | null;
 };

@@ -18,3 +18,29 @@ export function SearchPreview({
     </section>
   );
 }
+
+export function SocialPreview({
+  title,
+  description,
+  imageUrl,
+}: {
+  title: string;
+  description: string;
+  imageUrl?: string | null;
+}) {
+  return (
+    <section className={styles.socialPreview} aria-label="Preview of a shared link">
+      <p className={styles.previewLabel}>Preview of a shared link</p>
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URLs are tenant data.
+        <img src={imageUrl} alt="" />
+      ) : (
+        <div className={styles.socialPlaceholder}>Your sharing image will appear here</div>
+      )}
+      <div>
+        <strong>{title || 'Your page title'}</strong>
+        <p>{description || 'Your page description will appear here.'}</p>
+      </div>
+    </section>
+  );
+}

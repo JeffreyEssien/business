@@ -88,9 +88,30 @@ select public.save_entity_seo(
  (select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),
  'About Store A','Store A page description','', 'Share Store A','Shared page description',true,true
 );
+select public.save_seo_social_image(
+ (select id from site_fixture where k='tenant-a'),'GLOBAL',null,
+ 'businesscare/test/global-share','https://res.cloudinary.com/demo/image/upload/global-share.webp',
+ 'global-share.webp','image/webp',1200,'webp',1200,630
+);
+do $$ declare i integer; begin
+ for i in 1..12 loop
+  perform public.save_product(
+   target_tenant=>(select id from site_fixture where k='tenant-a'),target_product=>null,
+   product_name=>'Scale product '||i,product_slug=>'scale-product-'||i,product_description=>'Bounded read fixture',
+   product_short_description=>'Scale fixture',product_sku=>'SCALE-'||i,product_price=>100+i,
+   product_compare_at_price=>null,product_stock_quantity=>1,product_track_inventory=>true,
+   product_status=>'ACTIVE',category_ids=>'{}'::uuid[]
+  );
+ end loop;
+end $$;
 select public.save_entity_seo(
  (select id from site_fixture where k='tenant-a'),'PRODUCT',(select id from site_fixture where k='product-a'),
  'Buy Search Product','Product search description','', '', '',true,true
+);
+select public.save_seo_social_image(
+ (select id from site_fixture where k='tenant-a'),'PRODUCT',(select id from site_fixture where k='product-a'),
+ 'businesscare/test/product-share','https://res.cloudinary.com/demo/image/upload/product-share.webp',
+ 'product-share.webp','image/webp',1200,'webp',1200,630
 );
 select public.save_entity_seo(
  (select id from site_fixture where k='tenant-a'),'CATEGORY',(select id from site_fixture where k='category-a'),
@@ -110,6 +131,12 @@ do $$ begin
  if (select count(*) from jsonb_array_elements((select configuration->'seoEntries' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')) item where item->>'title' in ('About Store A','Buy Search Product','Browse Search Collection'))<>3 then raise exception 'Record search overrides not published'; end if;
  if (select configuration#>>'{pages,0,id}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from (select id::text from site_fixture where k='page-a') then raise exception 'Published page identity missing'; end if;
  if not exists(select 1 from public.navigation_items where tenant_id=(select id from site_fixture where k='tenant-a') and link_type='PAGE' and page_id=(select id from site_fixture where k='page-a') and target='/about-company') then raise exception 'Page menu relationship missing'; end if;
+ if (select configuration#>>'{seo,socialImage}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED') is distinct from 'https://res.cloudinary.com/demo/image/upload/global-share.webp' then raise exception 'Global sharing image not published'; end if;
+ if not exists(select 1 from jsonb_array_elements((select configuration->'seoEntries' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')) item where item->>'entityType'='PRODUCT' and item->>'socialImage'='https://res.cloudinary.com/demo/image/upload/product-share.webp') then raise exception 'Record sharing image not published'; end if;
+ if jsonb_array_length(public.get_public_storefront(current_setting('businesscare.test_site_slug'))->'products')>8 then raise exception 'Homepage product read is unbounded'; end if;
+ if jsonb_array_length(public.get_public_products(current_setting('businesscare.test_site_slug'),'','',null,null,5)->'products')<>6 then raise exception 'Public catalog lookahead is not bounded'; end if;
+ if public.get_public_product(current_setting('businesscare.test_site_slug'),'search-product')#>>'{product,id}' is distinct from (select id::text from site_fixture where k='product-a') then raise exception 'Single public product read failed'; end if;
+ if public.healthcheck()<>1 then raise exception 'Database healthcheck failed'; end if;
 end $$;
 reset role;
 
@@ -122,6 +149,7 @@ do $$ begin
  begin perform public.save_global_seo((select id from site_fixture where k='tenant-a'),'Forbidden','%s | Forbidden','', '',true,true,'','');raise exception 'Outsider search settings write allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_entity_seo((select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),'Forbidden','','','','',true,true);raise exception 'Outsider record search write allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_navigation((select id from site_fixture where k='tenant-a'),'[]'::jsonb);raise exception 'Outsider navigation write allowed';exception when insufficient_privilege then null;end;
+ begin perform public.save_seo_social_image((select id from site_fixture where k='tenant-a'),'GLOBAL',null,'bad','https://example.com/a.webp','a.webp','image/webp',10,'webp',1,1);raise exception 'Outsider social image write allowed';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
 

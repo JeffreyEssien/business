@@ -670,3 +670,49 @@ td {
     grid-template-columns: 1fr;
   }
 }
+.inline-filter {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.inline-filter input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+}
+.inline-filter button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-weight: 700;
+}
+.store-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 0 20px 48px;
+}
+.store-pagination a {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+}
+@media (max-width: 520px) {
+  .inline-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
