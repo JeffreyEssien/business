@@ -8,6 +8,22 @@ This living tracker records completed work, validation, outstanding work, and ow
 
 Status: Phase 5 is complete and verified. Customers can use a responsive tenant-scoped cart, receive a database-authoritative quote, place a bank-transfer order, and report payment without self-confirming it. Businesses can configure checkout and delivery, filter and inspect their own orders, keep private notes, verify payment, advance fulfilment, and cancel fulfilment with exactly-once inventory restoration. Historical product, customer, delivery, price, and payment-instruction snapshots remain stable. Phase 6 is now active and will add provider-independent payments plus verified, idempotent Paystack processing. No real business, customer, product, or order was created by the agent; all test fixtures and uploaded media were removed.
 
+### Customer application and approval flow
+
+- `/get-started` is a six-step, mobile-first application written for non-technical business owners. Its unfinished draft stays only in that browser; a database record is created only on final submission.
+- Public submission never provisions a tenant. Super Admin receives a searchable, filterable application queue and can edit all critical values while the immutable original submission and revision history remain available.
+- `Approve & create business` is one database transaction around the existing authoritative tenant provisioner. It applies the approved owner, plan, content, Cloudinary logo, contact/social details, theme preset, and all three real brand colours, and prepares requested pages as private drafts.
+- Page-backed homepage buttons automatically require their destination starter page at both the form and database layers. Provisioned Home navigation remains a typed `PAGE` relationship.
+- Public access is narrowed to submission and website-name availability functions. Server validation, file constraints, a honeypot, request-fingerprint throttling, email throttling, and duplicate controls protect intake; application tables and applicant details are Super-Admin-only.
+- A dedicated browser regression proves browser draft recovery, responsive layouts, deferred Cloudinary upload, no tenant before approval, editable review, preserved original values, atomic provisioning, typed navigation, and fixture/media cleanup.
+- All six customer-facing website styles now produce distinct storefront typography, geometry, spacing, or composition while retaining the shared renderer and four stable base presets.
+- “Other” businesses receive a required plain-language explanation field. Approved product readiness and quantity tailor the owner checklist, and category names become private draft suggestions rather than public catalog records.
+- The browser draft preserves its application identity across refreshes and explains that browser security prevents restoring a selected logo file.
+- Publishing rejects visible internal buttons or menu links whose destination is disabled, missing, or not customer-ready. Storefront CTAs resolve internal paths inside the correct tenant store.
+- Failed application-logo cleanup remains non-fatal but now emits a bounded warning containing the request, application, provider, asset key, and operation for investigation and future retries.
+
+Deferred deliberately: applicant accounts/status tracking, cross-device server drafts, application confirmation and owner-invitation email delivery (Phase 7 provider decision required), a managed challenge such as Turnstile if production abuse warrants it, bulk product import from an application, custom-domain selection, durable background retries for failed provider cleanup, and bespoke copy fields for every requested policy page. A standalone `APPROVED` holding state is also omitted because the chosen approval action provisions atomically; add it only if a later operational process requires approval and provisioning to happen at different times.
+
 ## Completed
 
 ### Frontend foundation

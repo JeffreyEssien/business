@@ -112,6 +112,13 @@ export function SiteEditorForm({
             required
           />
           <TextField
+            name="secondary"
+            label="Supporting brand color"
+            type="color"
+            defaultValue={configuration.theme.tokens.secondary ?? configuration.theme.tokens.accent}
+            required
+          />
+          <TextField
             name="background"
             label="Page background color"
             type="color"

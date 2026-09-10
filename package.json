@@ -11,6 +11,7 @@
     "db:test": "node scripts/test-rls.mjs",
     "owner:bootstrap": "node scripts/bootstrap-owner.mjs",
     "test:integration": "node scripts/test-onboarding-integration.mjs",
+    "test:applications-ui": "node scripts/test-application-ui.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
     "test:ui": "node scripts/test-ui.mjs"

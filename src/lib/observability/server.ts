@@ -12,6 +12,8 @@ type ServerEvent = {
   durationMs?: number;
   success?: boolean;
   errorCode?: string;
+  provider?: string;
+  assetKey?: string;
 };
 
 /** Emits bounded JSON at operational boundaries without payloads, credentials, or customer data. */

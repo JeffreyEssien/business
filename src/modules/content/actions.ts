@@ -116,7 +116,7 @@ export async function saveSiteDraft(
   );
   const logo = uploadArguments(logoUpload, logoFile, `${validation.input.businessName} logo`);
   const hero = uploadArguments(heroUpload, heroFile, validation.input.heroHeadline);
-  const { error } = await workspace.supabase.rpc('save_site_draft', {
+  const { error } = await workspace.supabase.rpc('save_site_draft_with_secondary', {
     target_tenant: workspace.tenant.id,
     business_name: validation.input.businessName,
     business_description: validation.input.businessDescription,
@@ -124,6 +124,7 @@ export async function saveSiteDraft(
     business_address: validation.input.address,
     theme_preset: validation.input.preset,
     primary_color: validation.input.primary,
+    secondary_color: validation.input.secondary,
     accent_color: validation.input.accent,
     background_color: validation.input.background,
     text_color: validation.input.text,
@@ -221,7 +222,13 @@ export async function publishSite(
   const { data, error } = await workspace.supabase.rpc('publish_site', {
     target_tenant: workspace.tenant.id,
   });
-  if (error) return { error: contentErrorMessage(error.code, error.message), message: '' };
+  if (error)
+    return {
+      error: error.message.includes('UNPUBLISHED_INTERNAL_LINK')
+        ? `Your website was not published because a visible button or menu link points to ${error.details || 'a page that is not visible yet'}. Make that page or catalog item visible, or change the link, then publish again.`
+        : contentErrorMessage(error.code, error.message),
+      message: '',
+    };
   revalidatePath(`/t/${slug}`);
   revalidatePath(`/t/${slug}/design`);
   revalidatePath(`/store/${slug}`);

@@ -37,13 +37,22 @@ export async function uploadTenantMedia(
   resourceType: CloudinaryResourceType,
   folder: TenantMediaFolder,
 ): Promise<UploadedMedia> {
+  return uploadMedia(file, `businesscare/tenants/${tenantId}/${folder}`, generatedId, resourceType);
+}
+
+async function uploadMedia(
+  file: File,
+  folder: string,
+  generatedId: string,
+  resourceType: CloudinaryResourceType,
+): Promise<UploadedMedia> {
   const client = configuredClient();
   const buffer = Buffer.from(await file.arrayBuffer());
   const result = await new Promise<Awaited<ReturnType<typeof client.uploader.upload>>>(
     (resolve, reject) => {
       const stream = client.uploader.upload_stream(
         {
-          folder: `businesscare/tenants/${tenantId}/${folder}`,
+          folder,
           public_id: generatedId,
           resource_type: resourceType,
           overwrite: false,
@@ -68,6 +77,11 @@ export async function uploadTenantMedia(
     width: result.width || null,
     height: result.height || null,
   };
+}
+
+/** Stages one logo before a tenant exists; approval later transfers database ownership. */
+export function uploadApplicationLogo(file: File, applicationId: string, generatedId: string) {
+  return uploadMedia(file, `businesscare/applications/${applicationId}/logo`, generatedId, 'image');
 }
 
 export function uploadCatalogMedia(

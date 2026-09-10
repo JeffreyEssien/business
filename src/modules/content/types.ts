@@ -65,12 +65,27 @@ export type SiteConfiguration = {
     description: string;
     phone: string;
     address: string;
+    contactEmail?: string;
+    whatsapp?: string;
+    instagram?: string;
+    facebook?: string;
+    tiktok?: string;
+    city?: string;
+    state?: string;
+    country?: string;
     logo: SiteMedia;
     heroMedia: SiteMedia;
   };
   theme: {
     presetKey: string;
-    tokens: { primary: string; accent: string; background: string; text: string };
+    tokens: {
+      primary: string;
+      secondary?: string;
+      styleKey?: string;
+      accent: string;
+      background: string;
+      text: string;
+    };
   };
   sections: SiteSection[];
   pages: PublishedContentPage[];

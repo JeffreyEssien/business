@@ -14,9 +14,9 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from site_fixture where k='owner-a'),true);
 set local role authenticated;
 select public.accept_tenant_invitation((select id from site_fixture where k='invite-a'));
-select public.save_site_draft(
+select public.save_site_draft_with_secondary(
  target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Distinct Store A',business_description=>'A unique description',business_phone=>'+234 800 000 0000',business_address=>'Lagos',
- theme_preset=>'fashion',primary_color=>'#112233',accent_color=>'#aabbcc',background_color=>'#fefefe',text_color=>'#121212',
+ theme_preset=>'fashion',primary_color=>'#112233',secondary_color=>'#445566',accent_color=>'#aabbcc',background_color=>'#fefefe',text_color=>'#121212',
  announcement_text=>'Today only',announcement_enabled=>true,hero_eyebrow=>'New',hero_headline=>'First published headline',hero_subheadline=>'Made for A',hero_cta_label=>'Shop now',hero_variant=>'split',
  products_heading=>'Store A products',products_enabled=>true,footer_description=>'Footer A',navigation=>'[{"label":"Home","target":"/","location":"HEADER","linkType":"URL","enabled":true}]'::jsonb
 );
@@ -144,7 +144,7 @@ select set_config('request.jwt.claim.sub',(select id::text from site_fixture whe
 set local role authenticated;
 do $$ begin
  begin perform public.publish_site((select id from site_fixture where k='tenant-a'));raise exception 'Outsider publish allowed';exception when insufficient_privilege then null;end;
- begin perform public.save_site_draft(target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Bad',business_description=>'',business_phone=>'',business_address=>'',theme_preset=>'general',primary_color=>'#111111',accent_color=>'#222222',background_color=>'#ffffff',text_color=>'#000000',announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Bad',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',products_heading=>'Bad',products_enabled=>true,footer_description=>'',navigation=>'[]'::jsonb);raise exception 'Outsider draft write allowed';exception when insufficient_privilege then null;end;
+ begin perform public.save_site_draft_with_secondary(target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Bad',business_description=>'',business_phone=>'',business_address=>'',theme_preset=>'general',primary_color=>'#111111',secondary_color=>'#333333',accent_color=>'#222222',background_color=>'#ffffff',text_color=>'#000000',announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Bad',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',products_heading=>'Bad',products_enabled=>true,footer_description=>'',navigation=>'[]'::jsonb);raise exception 'Outsider draft write allowed';exception when insufficient_privilege then null;end;
  begin perform public.delete_content_page((select id from site_fixture where k='tenant-a'),(select id from site_fixture where k='page-a'));raise exception 'Outsider page delete allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_global_seo((select id from site_fixture where k='tenant-a'),'Forbidden','%s | Forbidden','', '',true,true,'','');raise exception 'Outsider search settings write allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_entity_seo((select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),'Forbidden','','','','',true,true);raise exception 'Outsider record search write allowed';exception when insufficient_privilege then null;end;
