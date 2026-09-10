@@ -88,6 +88,8 @@ Store Design does not own navigation. `save_site_draft` intentionally leaves men
 
 Keep tenant colors in validated tokens and pass them to storefront components through CSS variables. Marketing copy belongs in content records; only system UX labels may remain in code.
 
+Application website styles are real storefront personality profiles stored in `theme.tokens.styleKey`. They layer typography, shape, spacing, and composition over the four base business presets without creating a second renderer. Store Design preserves the profile while its base preset is unchanged and selects the corresponding profile when an owner deliberately changes presets.
+
 ## Follow a customer-information page change
 
 1. Routes under `app/t/[slug]/content/pages` authorize the tenant and compose the page list or editor.
@@ -96,6 +98,7 @@ Keep tenant colors in validated tokens and pass them to storefront components th
 4. `save_content_page`, `delete_content_page`, and `reorder_homepage_sections` enforce tenant roles and relationships inside PostgreSQL. Direct browser writes remain denied.
 5. Homepage order is canonical in `content_blocks.sort_order`. Ordinary content saves preserve it; only the reorder action may change it.
 6. Publication copies enabled pages and navigation into the same immutable snapshot as the homepage. Public routes never read an unpublished page.
+7. The published-version integrity trigger rejects enabled homepage buttons or menu items whose internal page, product, or category is not currently public. Fix or enable the named destination instead of weakening this check.
 
 ## Follow a search-appearance change
 

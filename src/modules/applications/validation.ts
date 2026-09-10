@@ -57,6 +57,7 @@ export function applicationInputFromForm(form: FormData): BusinessApplicationInp
   return {
     businessName: read(form, 'businessName', 160),
     businessType: read(form, 'businessType', 30),
+    otherBusinessType: read(form, 'otherBusinessType', 100),
     businessDescription: read(form, 'businessDescription', 600),
     ownerName: read(form, 'ownerName', 120),
     ownerEmail: read(form, 'ownerEmail', 254).toLowerCase(),
@@ -98,6 +99,10 @@ export function validateApplicationInput(input: BusinessApplicationInput) {
     errors.businessName = 'Enter your business name so we know what to put on your website.';
   if (!contains(businessTypeOptions, input.businessType))
     errors.businessType = 'Choose the option that best describes your business.';
+  if (input.businessType === 'other' && !input.otherBusinessType)
+    errors.otherBusinessType = 'Tell us what kind of business you run.';
+  if (input.otherBusinessType.length > 100)
+    errors.otherBusinessType = 'Keep the business type under 100 characters.';
   if (input.businessDescription.length > 600)
     errors.businessDescription = 'Keep this introduction under 600 characters.';
   if (!input.ownerName || input.ownerName.length > 120)
@@ -159,6 +164,7 @@ export function applicationToInput(application: BusinessApplication): BusinessAp
   return {
     businessName: application.business_name,
     businessType: application.business_type,
+    otherBusinessType: application.other_business_type,
     businessDescription: application.business_description,
     ownerName: application.owner_name,
     ownerEmail: application.owner_email,

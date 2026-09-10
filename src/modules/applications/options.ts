@@ -16,31 +16,37 @@ export const brandStyleOptions = [
     value: 'clean-minimal',
     label: 'Clean & minimal',
     description: 'Calm spacing and a simple, modern look.',
+    preview: 'clean',
   },
   {
     value: 'elegant-luxury',
     label: 'Elegant & luxury',
     description: 'Refined type and an editorial feel.',
+    preview: 'elegant',
   },
   {
     value: 'bright-bold',
     label: 'Bright & bold',
     description: 'Confident colour and energetic highlights.',
+    preview: 'bold',
   },
   {
     value: 'soft-friendly',
     label: 'Soft & friendly',
     description: 'Welcoming shapes and a gentle visual tone.',
+    preview: 'soft',
   },
   {
     value: 'warm-natural',
     label: 'Warm & natural',
     description: 'Earthy character and comfortable contrast.',
+    preview: 'warm',
   },
   {
     value: 'professional-modern',
     label: 'Professional & modern',
     description: 'Structured, clear, and business-focused.',
+    preview: 'professional',
   },
 ] as const;
 
@@ -103,6 +109,7 @@ export const applicationStatusLabels = {
 export const defaultApplicationValues = {
   businessName: '',
   businessType: '',
+  otherBusinessType: '',
   businessDescription: '',
   ownerName: '',
   ownerEmail: '',

@@ -104,6 +104,14 @@ export function ApplicationReview({
                 defaultValue={application.business_type}
                 error={fieldError('businessType')}
               />
+              <TextField
+                name="otherBusinessType"
+                label="Other business type explanation"
+                hint="Required when the business type is Other."
+                maxLength={100}
+                defaultValue={application.other_business_type}
+                error={fieldError('otherBusinessType')}
+              />
               <TextAreaField
                 name="businessDescription"
                 label="Business description"
@@ -343,6 +351,15 @@ export function ApplicationReview({
             <div>
               <dt>Business</dt>
               <dd>{String(application.original_submission.businessName ?? '')}</dd>
+            </div>
+            <div>
+              <dt>Business type</dt>
+              <dd>
+                {String(application.original_submission.businessType ?? '')}
+                {application.original_submission.businessType === 'other' &&
+                  Boolean(application.original_submission.otherBusinessType) &&
+                  ` — ${String(application.original_submission.otherBusinessType)}`}
+              </dd>
             </div>
             <div>
               <dt>Owner</dt>

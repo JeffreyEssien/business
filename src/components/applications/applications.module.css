@@ -206,6 +206,71 @@
   flex-direction: column;
   gap: 4px;
 }
+.choiceCard .stylePreview {
+  width: 62px;
+  min-width: 62px;
+  height: 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: center;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid #dedbe5;
+  background: #fff;
+}
+.stylePreview i {
+  display: block;
+  height: 5px;
+  border-radius: 4px;
+  background: #6655d7;
+}
+.stylePreview i:first-child {
+  grid-column: 1 / -1;
+  height: 10px;
+}
+.stylePreview.clean {
+  border-radius: 3px;
+}
+.stylePreview.elegant {
+  border-radius: 0;
+  background: #faf8f5;
+}
+.stylePreview.elegant i {
+  border-radius: 0;
+  background: #342d44;
+}
+.stylePreview.bold {
+  border: 2px solid #252033;
+  border-radius: 8px;
+  background: #fff3a6;
+  box-shadow: 3px 3px 0 #252033;
+}
+.stylePreview.bold i {
+  background: #e6533f;
+}
+.stylePreview.soft {
+  border-radius: 18px;
+  background: #fff2f7;
+}
+.stylePreview.soft i {
+  border-radius: 99px;
+  background: #bd6f91;
+}
+.stylePreview.warm {
+  border-radius: 10px 10px 22px 10px;
+  background: #f3e6d5;
+}
+.stylePreview.warm i {
+  background: #8a5031;
+}
+.stylePreview.professional {
+  border-radius: 2px;
+  background: #edf3f7;
+}
+.stylePreview.professional i {
+  border-radius: 0;
+  background: #24445b;
+}
 .choiceCard small {
   line-height: 1.45;
 }
@@ -299,6 +364,12 @@
 }
 .logoField input {
   min-height: 44px;
+}
+.fileNotice {
+  margin: 0;
+  color: #777181;
+  font-size: 11px;
+  line-height: 1.55;
 }
 .logoPreview {
   display: flex;

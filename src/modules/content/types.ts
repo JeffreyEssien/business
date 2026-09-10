@@ -81,6 +81,7 @@ export type SiteConfiguration = {
     tokens: {
       primary: string;
       secondary?: string;
+      styleKey?: string;
       accent: string;
       background: string;
       text: string;

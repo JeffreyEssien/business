@@ -17,6 +17,9 @@ export type OnboardingProgress = {
   products_added: boolean;
   payment_configured: boolean;
   store_published: boolean;
+  application_product_readiness: '' | 'READY' | 'NOT_YET' | 'SERVICES';
+  expected_product_range: '' | '1_10' | '11_50' | '51_100' | 'OVER_100';
+  suggested_categories: string[];
 };
 export type OwnerInvitation = { id: string; owner_name: string; email: string; status: string };
 export type ActivityEvent = { id: string; action: string; created_at: string };

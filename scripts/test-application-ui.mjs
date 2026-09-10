@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { chromium, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -11,6 +11,10 @@ assert.ok(['127.0.0.1', 'localhost'].includes(new URL(base).hostname));
 const slug = `application-ui-${randomUUID()}`;
 const email = `${slug}@example.invalid`;
 const password = randomBytes(24).toString('base64url');
+const testAddress = `192.0.2.${randomBytes(1)[0] || 1}`;
+const testFingerprint = createHash('sha256')
+  .update(`businesscare-application:${testAddress}`)
+  .digest('hex');
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -35,7 +39,10 @@ try {
 
   stage = 'Open the public application';
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 1100 },
+    extraHTTPHeaders: { 'x-forwarded-for': testAddress },
+  });
   page.on('pageerror', (error) => pageErrors.push(error.name));
   await page.goto(`${base}/get-started`);
   await expect(
@@ -49,17 +56,27 @@ try {
 
   stage = 'Complete business details and prove browser-only draft recovery';
   await page.getByLabel('What is your business called?').fill('Customer-first test studio');
-  await page.getByLabel(/Fashion & clothing/).check();
+  await page.getByLabel(/^Other$/).check();
+  await page.getByLabel('Tell us what kind of business you run').fill('Personal wardrobe styling');
   await page
     .getByLabel('Tell customers a little about your business')
     .fill('Thoughtful pieces made for everyday life.');
   await page.getByLabel('Choose your BusinessCare website name').fill(slug);
   await expect(page.getByText('This name is currently available.')).toBeVisible({ timeout: 30000 });
+  const applicationIdBeforeRefresh = await page.locator('[name="applicationId"]').inputValue();
   await page.reload();
   await expect(page.getByLabel('What is your business called?')).toHaveValue(
     'Customer-first test studio',
   );
   await expect(page.getByLabel('Choose your BusinessCare website name')).toHaveValue(slug);
+  await expect(page.getByLabel('Tell us what kind of business you run')).toHaveValue(
+    'Personal wardrobe styling',
+  );
+  assert.equal(
+    await page.locator('[name="applicationId"]').inputValue(),
+    applicationIdBeforeRefresh,
+    'Browser draft recovery keeps the same application identity',
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -90,6 +107,16 @@ try {
   await page.getByLabel('Main brand colour').fill('#173f35');
   await page.getByLabel('Secondary brand colour').fill('#c77842');
   await page.getByLabel(/Warm & natural/).check();
+  await page.screenshot({
+    path: 'artifacts/ui/application-brand-styles-mobile.png',
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.screenshot({
+    path: 'artifacts/ui/application-brand-styles-desktop.png',
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Continue' }).click();
 
   stage = 'Complete website details';
@@ -125,12 +152,13 @@ try {
   );
 
   const [submitted] = await sql`
-    select id,status,reference,logo_storage_key,logo_public_url,requested_pages
+    select id,status,reference,logo_storage_key,logo_public_url,requested_pages,other_business_type
     from public.business_applications where preferred_slug=${slug}
   `;
   assert.equal(submitted.status, 'PENDING');
   assert.ok(submitted.logo_public_url.includes('res.cloudinary.com'));
   assert.ok(submitted.requested_pages.includes('CONTACT'));
+  assert.equal(submitted.other_business_type, 'Personal wardrobe styling');
   uploadedAssets.push({
     storage_provider: 'cloudinary',
     storage_key: submitted.logo_storage_key,
@@ -172,20 +200,37 @@ try {
   await page.getByRole('button', { name: 'Approve & create business' }).click();
   await page.waitForURL(/\/businesses\/[0-9a-f-]{36}$/, { timeout: 30000 });
   const [approved] = await sql`
-    select a.status,a.provisioned_tenant_id,t.name,t.slug,s.contact_email,h.tokens
+    select a.status,a.provisioned_tenant_id,t.name,t.slug,s.contact_email,s.business_type_detail,h.tokens,
+      o.application_product_readiness,o.expected_product_range,o.suggested_categories
     from public.business_applications a
     join public.tenants t on t.id=a.provisioned_tenant_id
     join public.tenant_business_settings s on s.tenant_id=t.id
     join public.tenant_theme_settings h on h.tenant_id=t.id
+    join public.tenant_onboarding o on o.tenant_id=t.id
     where a.id=${submitted.id}
   `;
   assert.equal(approved.status, 'PROVISIONED');
   assert.equal(approved.name, 'Approved customer studio');
   assert.equal(approved.slug, slug);
   assert.equal(approved.contact_email, email);
+  assert.equal(approved.business_type_detail, 'Personal wardrobe styling');
   assert.equal(approved.tokens.secondary, '#c77842');
+  assert.equal(approved.tokens.styleKey, 'warm-natural');
+  assert.equal(approved.application_product_readiness, 'READY');
+  assert.equal(approved.expected_product_range, '11_50');
+  assert.deepEqual(approved.suggested_categories, ['Shirts', 'Trousers']);
+  const draftCategories = await sql`
+    select name,status from public.categories where tenant_id=${approved.provisioned_tenant_id} order by sort_order
+  `;
+  assert.deepEqual(
+    draftCategories.map((item) => [item.name, item.status]),
+    [
+      ['Shirts', 'DRAFT'],
+      ['Trousers', 'DRAFT'],
+    ],
+  );
   const pages = await sql`
-    select slug,status,is_enabled from public.pages
+    select id,slug,status,is_enabled from public.pages
     where tenant_id=${approved.provisioned_tenant_id} and slug<>'home'
   `;
   assert.ok(pages.some((item) => item.slug === 'contact-us'));
@@ -197,6 +242,89 @@ try {
   assert.equal(homeLink.link_type, 'PAGE');
   assert.ok(homeLink.page_id);
   assert.equal(homeLink.target, '/');
+
+  stage = 'Protect publication from a broken application CTA';
+  const [profile] = await sql`select id from public.users where auth_user_id=${userId}`;
+  await sql`
+    insert into public.tenant_memberships(tenant_id,user_id,role)
+    values(${approved.provisioned_tenant_id},${profile.id},'TENANT_OWNER')
+    on conflict(tenant_id,user_id) do nothing
+  `;
+  await sql`update public.tenants set status='TRIAL' where id=${approved.provisioned_tenant_id}`;
+  await sql`update public.tenant_onboarding set owner_accepted=true where tenant_id=${approved.provisioned_tenant_id}`;
+  await page.goto(`${base}/t/${slug}/design`);
+  await page.getByRole('button', { name: 'Make saved changes visible to customers' }).click();
+  await expect(page.getByText(/visible button or menu link points to \/contact-us/)).toBeVisible({
+    timeout: 30000,
+  });
+  const contact = pages.find((item) => item.slug === 'contact-us');
+  await page.goto(`${base}/t/${slug}/content/pages/${contact.id}`);
+  await page.getByLabel('Include this page the next time you publish').check();
+  await page.getByRole('button', { name: 'Save without changing the live store' }).click();
+  await page.waitForURL(`${base}/t/${slug}/content/pages`, { timeout: 30000 });
+  await page.goto(`${base}/t/${slug}/design`);
+  await page.getByRole('button', { name: 'Make saved changes visible to customers' }).click();
+  await expect(page.getByText('Version 1 is now live.', { exact: true })).toBeVisible({
+    timeout: 30000,
+  });
+  await page.goto(`${base}/store/${slug}`);
+  const applicationCta = page.getByRole('link', { name: 'Talk to our team' });
+  await expect(applicationCta).toHaveAttribute('href', `/store/${slug}/contact-us`);
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  const contrast = await page.locator('main h1').evaluate((heading) => {
+    const rgb = (value) =>
+      value
+        .match(/\d+(?:\.\d+)?/g)
+        .slice(0, 3)
+        .map(Number);
+    const luminance = (value) => {
+      const channels = rgb(value).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.03928
+          ? normalized / 12.92
+          : Math.pow((normalized + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+    const foregroundColor = getComputedStyle(heading).color;
+    const backgroundColor = getComputedStyle(
+      document.querySelector('[data-style]'),
+    ).backgroundColor;
+    const foreground = luminance(foregroundColor);
+    const background = luminance(backgroundColor);
+    return {
+      ratio: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+      foregroundColor,
+      backgroundColor,
+    };
+  });
+  assert.ok(
+    contrast.ratio >= 4.5,
+    `Provisioned storefront text contrast is ${contrast.ratio} (${contrast.foregroundColor} on ${contrast.backgroundColor})`,
+  );
+  const ctaContrast = await applicationCta.evaluate((link) => {
+    const luminance = (value) => {
+      const channels = value
+        .match(/\d+(?:\.\d+)?/g)
+        .slice(0, 3)
+        .map(Number)
+        .map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.03928
+            ? normalized / 12.92
+            : Math.pow((normalized + 0.055) / 1.055, 2.4);
+        });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+    const styles = getComputedStyle(link);
+    const foreground = luminance(styles.color);
+    const background = luminance(styles.backgroundColor);
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+  });
+  assert.ok(ctaContrast >= 4.5, `Provisioned storefront button contrast is ${ctaContrast}`);
+  await page.screenshot({ path: 'artifacts/ui/application-style-storefront.png', fullPage: true });
+  await applicationCta.click();
+  await expect(page.getByRole('heading', { name: 'Contact us' })).toBeVisible();
   assert.equal(pageErrors.length, 0, 'No browser runtime errors');
   console.log(
     'PASS: public application draft, responsive wizard, deferred upload, admin review, and atomic provisioning.',
@@ -218,6 +346,7 @@ try {
   if (browser) await browser.close();
   try {
     await sql.begin(async (tx) => {
+      await tx`delete from private.business_application_limits where fingerprint=${testFingerprint}`;
       const applications = await tx`
         select id,logo_storage_key from public.business_applications where preferred_slug=${slug}
       `;

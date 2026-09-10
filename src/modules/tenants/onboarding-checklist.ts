@@ -2,6 +2,14 @@ import type { OnboardingProgress } from './types';
 
 /** Both platform and owner dashboards describe the same persisted onboarding state. */
 export function onboardingChecklist(progress: OnboardingProgress | null) {
+  const categoryNames = progress?.suggested_categories ?? [];
+  const productGuidance = progress?.products_added
+    ? 'Your first customer-ready product is in the catalog.'
+    : progress?.application_product_readiness === 'READY'
+      ? `Your application said your products are ready${progress.expected_product_range ? ` (${progress.expected_product_range.replace('_', '–').replace('OVER–100', 'more than 100')})` : ''}. Add the first product${categoryNames.length ? ` using your draft category suggestions: ${categoryNames.join(', ')}` : ''}.`
+      : progress?.application_product_readiness === 'SERVICES'
+        ? `Add each service customers can choose as a catalog item${categoryNames.length ? `; your suggested service groups are ${categoryNames.join(', ')}` : ''}.`
+        : 'Start adding products when they are ready. Nothing from the application was presented to customers automatically.';
   return [
     {
       label: 'Add business contact details',
@@ -30,7 +38,7 @@ export function onboardingChecklist(progress: OnboardingProgress | null) {
     },
     {
       label: 'Add products customers can buy',
-      description: 'Create at least one product with its price, availability, and images.',
+      description: productGuidance,
       complete: progress?.products_added ?? false,
     },
     {

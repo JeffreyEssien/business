@@ -3,6 +3,7 @@ export type ApplicationStatus = 'PENDING' | 'UNDER_REVIEW' | 'REJECTED' | 'PROVI
 export type BusinessApplicationInput = {
   businessName: string;
   businessType: string;
+  otherBusinessType: string;
   businessDescription: string;
   ownerName: string;
   ownerEmail: string;
@@ -49,6 +50,7 @@ export type BusinessApplication = {
   logo_storage_key: string | null;
   business_name: string;
   business_type: string;
+  other_business_type: string;
   business_description: string;
   owner_name: string;
   owner_email: string;

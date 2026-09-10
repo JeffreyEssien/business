@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { logServerEvent } from '@/lib/observability/server';
 import { requirePlatformAdmin } from '@/modules/auth/authorization';
 import {
   deleteCloudinaryMedia,
@@ -61,6 +62,28 @@ function logoPayload(upload: UploadedMedia | null, file: File | null) {
     : null;
 }
 
+async function cleanupApplicationLogo(
+  storageKey: string,
+  applicationId: string,
+  operation: 'submission_rollback' | 'duplicate_upload' | 'edit_rollback' | 'logo_replaced',
+) {
+  try {
+    await deleteCloudinaryMedia(storageKey, 'image');
+  } catch (error) {
+    await logServerEvent({
+      event: 'application_media_cleanup_failed',
+      level: 'warning',
+      operation,
+      resourceType: 'business_application',
+      resourceId: applicationId,
+      provider: 'cloudinary',
+      assetKey: storageKey,
+      success: false,
+      errorCode: error instanceof Error ? error.name : 'UNKNOWN_PROVIDER_ERROR',
+    });
+  }
+}
+
 export async function checkWebsiteName(value: string) {
   const candidate = String(value).trim().toLowerCase();
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(candidate) || candidate.length < 3)
@@ -99,7 +122,7 @@ export async function submitBusinessApplication(
     if (file) upload = await uploadApplicationLogo(file, applicationId, randomUUID());
     const requestHeaders = await headers();
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc('submit_business_application', {
+    const { data, error } = await supabase.rpc('submit_business_application_complete', {
       application_id: applicationId,
       payload: { ...input, logo: logoPayload(upload, file) },
       request_fingerprint: safeRequestFingerprint(requestHeaders),
@@ -111,14 +134,15 @@ export async function submitBusinessApplication(
       existing?: boolean;
     } | null;
     if (error || !result?.ok || !result.reference) {
-      if (upload) await deleteCloudinaryMedia(upload.publicId, upload.resourceType).catch(() => {});
+      if (upload)
+        await cleanupApplicationLogo(upload.publicId, applicationId, 'submission_rollback');
       return { error: publicError(result?.code ?? error?.code), fieldErrors: {} };
     }
     if (result.existing && upload)
-      await deleteCloudinaryMedia(upload.publicId, upload.resourceType).catch(() => {});
+      await cleanupApplicationLogo(upload.publicId, applicationId, 'duplicate_upload');
     return { error: '', reference: result.reference };
   } catch {
-    if (upload) await deleteCloudinaryMedia(upload.publicId, upload.resourceType).catch(() => {});
+    if (upload) await cleanupApplicationLogo(upload.publicId, applicationId, 'submission_rollback');
     return {
       error:
         'We could not submit your application safely. Your answers are still here, so please try again.',
@@ -163,7 +187,7 @@ export async function saveApplicationChanges(
       error: 'The replacement logo could not be uploaded. No application details were changed.',
     };
   }
-  const { error } = await supabase.rpc('save_business_application', {
+  const { error } = await supabase.rpc('save_business_application_complete', {
     target_application: id,
     payload: {
       ...input,
@@ -175,7 +199,7 @@ export async function saveApplicationChanges(
       .slice(0, 4001),
   });
   if (error) {
-    if (upload) await deleteCloudinaryMedia(upload.publicId, upload.resourceType).catch(() => {});
+    if (upload) await cleanupApplicationLogo(upload.publicId, id, 'edit_rollback');
     return { error: publicError(error.code), fieldErrors: validation.errors };
   }
   if (
@@ -183,7 +207,7 @@ export async function saveApplicationChanges(
     currentLogo.data?.logo_storage_key &&
     currentLogo.data.logo_storage_key !== upload?.publicId
   )
-    await deleteCloudinaryMedia(currentLogo.data.logo_storage_key, 'image').catch(() => {});
+    await cleanupApplicationLogo(currentLogo.data.logo_storage_key, id, 'logo_replaced');
   revalidatePath(`/businesses/applications/${id}`);
   revalidatePath('/businesses/applications');
   return {
@@ -227,7 +251,7 @@ export async function approveAndCreateBusiness(
 ): Promise<ApplicationActionState> {
   const { supabase } = await requirePlatformAdmin();
   if (!uuidPattern.test(id)) return { error: 'This application is unavailable.' };
-  const { data, error } = await supabase.rpc('provision_business_application', {
+  const { data, error } = await supabase.rpc('provision_business_application_complete', {
     target_application: id,
   });
   if (error)

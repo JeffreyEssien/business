@@ -45,7 +45,7 @@ function ChoiceCards({
 }: {
   name: string;
   value: string;
-  options: readonly { value: string; label: string; description?: string }[];
+  options: readonly { value: string; label: string; description?: string; preview?: string }[];
   onChange: (value: string) => void;
 }) {
   return (
@@ -62,6 +62,13 @@ function ChoiceCards({
             checked={value === option.value}
             onChange={() => onChange(option.value)}
           />
+          {option.preview && (
+            <span className={`${styles.stylePreview} ${styles[option.preview]}`} aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          )}
           <span>
             <strong>{option.label}</strong>
             {option.description && <small>{option.description}</small>}
@@ -102,25 +109,49 @@ export function ApplicationWizard() {
   const [state, submitAction, pending] = useActionState(submitBusinessApplication, { error: '' });
 
   useEffect(() => {
+    let restoredId = '';
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) setValues({ ...defaultApplicationValues, ...JSON.parse(saved) });
+      if (saved) {
+        const parsed = JSON.parse(saved) as {
+          applicationId?: unknown;
+          values?: Partial<Values>;
+        } & Partial<Values>;
+        const savedValues = parsed.values ?? parsed;
+        setValues({
+          ...defaultApplicationValues,
+          ...savedValues,
+          requestedPages: Array.isArray(savedValues.requestedPages)
+            ? savedValues.requestedPages
+            : [...defaultApplicationValues.requestedPages],
+        });
+        if (
+          typeof parsed.applicationId === 'string' &&
+          /^[0-9a-f-]{36}$/i.test(parsed.applicationId)
+        )
+          restoredId = parsed.applicationId;
+      }
     } catch {
       /* A damaged browser draft should never block a fresh application. */
     }
-    setApplicationId(crypto.randomUUID());
+    setApplicationId(restoredId || crypto.randomUUID());
     setReady(true);
   }, []);
   useEffect(() => {
-    if (ready && !state.reference) localStorage.setItem(storageKey, JSON.stringify(values));
-  }, [ready, state.reference, values]);
+    if (ready && applicationId && !state.reference)
+      localStorage.setItem(storageKey, JSON.stringify({ applicationId, values }));
+  }, [applicationId, ready, state.reference, values]);
   useEffect(() => {
     if (state.reference) localStorage.removeItem(storageKey);
   }, [state.reference]);
   useEffect(() => {
     const fields = Object.keys(state.fieldErrors ?? {});
     if (!fields.length) return;
-    if (fields.some((field) => ['businessName', 'businessType', 'preferredSlug'].includes(field)))
+    if (
+      fields.some((field) =>
+        ['businessName', 'businessType', 'otherBusinessType', 'preferredSlug'].includes(field),
+      )
+    )
       setStep(0);
     else if (
       fields.some((field) =>
@@ -192,6 +223,7 @@ export function ApplicationWizard() {
       step === 0 &&
       (!values.businessName ||
         !values.businessType ||
+        (values.businessType === 'other' && !values.otherBusinessType.trim()) ||
         values.preferredSlug.length < 3 ||
         websiteState === 'unavailable')
     )
@@ -327,6 +359,21 @@ export function ApplicationWizard() {
               value={values.businessDescription}
               onChange={(event) => set('businessDescription', event.target.value)}
             />
+            {values.businessType === 'other' && (
+              <TextField
+                name="otherBusinessType"
+                label="Tell us what kind of business you run"
+                hint="For example: Event planning, cleaning services, or an online learning business."
+                required
+                maxLength={100}
+                value={values.otherBusinessType}
+                error={fieldError('otherBusinessType')}
+                onChange={(event) => set('otherBusinessType', event.target.value)}
+              />
+            )}
+            {values.businessType !== 'other' && (
+              <input type="hidden" name="otherBusinessType" value="" />
+            )}
             <TextField
               name="preferredSlug"
               label="Choose your BusinessCare website name"
@@ -517,6 +564,10 @@ export function ApplicationWizard() {
                   );
                 }}
               />
+              <p className={styles.fileNotice}>
+                For your privacy, browsers cannot restore a selected file after a refresh. Your
+                other answers will remain saved, but you would need to choose the logo again.
+              </p>
               {logoPreview && (
                 <div className={styles.logoPreview}>
                   <img src={logoPreview} alt="Preview of your chosen logo" />
@@ -731,7 +782,7 @@ export function ApplicationWizard() {
             <div className={styles.reviewList}>
               <ReviewRow
                 label="Business"
-                value={`${values.businessName}${businessType ? ` · ${businessType}` : ''}`}
+                value={`${values.businessName}${businessType ? ` · ${businessType}` : ''}${values.otherBusinessType ? ` (${values.otherBusinessType})` : ''}`}
                 onEdit={() => setStep(0)}
               />
               <ReviewRow

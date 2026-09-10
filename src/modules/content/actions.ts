@@ -222,7 +222,13 @@ export async function publishSite(
   const { data, error } = await workspace.supabase.rpc('publish_site', {
     target_tenant: workspace.tenant.id,
   });
-  if (error) return { error: contentErrorMessage(error.code, error.message), message: '' };
+  if (error)
+    return {
+      error: error.message.includes('UNPUBLISHED_INTERNAL_LINK')
+        ? `Your website was not published because a visible button or menu link points to ${error.details || 'a page that is not visible yet'}. Make that page or catalog item visible, or change the link, then publish again.`
+        : contentErrorMessage(error.code, error.message),
+      message: '',
+    };
   revalidatePath(`/t/${slug}`);
   revalidatePath(`/t/${slug}/design`);
   revalidatePath(`/store/${slug}`);
