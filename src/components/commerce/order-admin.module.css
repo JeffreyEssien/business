@@ -187,6 +187,31 @@
   color: #28623a;
   font-size: 12px;
 }
+.paymentAttempts {
+  border-top: 1px solid var(--border);
+}
+.paymentAttempts > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.paymentAttempts > div > div {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+}
+.paymentAttempts > div > div:last-child {
+  justify-items: end;
+  text-align: right;
+}
+.paymentAttempts small {
+  color: #737b8c;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
 .settingsStack {
   display: grid;
   gap: 24px;
@@ -215,6 +240,27 @@
   height: 18px;
   margin-top: 1px;
   accent-color: var(--primary);
+}
+.fieldNotice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #765a21;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.settlementSummary {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #cce7d4;
+  border-radius: 10px;
+  background: #f1faf4;
+}
+.settlementSummary span {
+  color: #526559;
+  font-size: 13px;
 }
 .deliverySettings {
   display: grid;

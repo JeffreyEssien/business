@@ -263,6 +263,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.paymentChoices {
+  display: grid;
+  gap: 12px;
+}
 .deliveryChoices label,
 .paymentChoice {
   min-height: 72px;
@@ -322,6 +326,13 @@
   margin-block: 16px;
 }
 .confirmation > .secondaryLink {
+  margin-top: 28px;
+}
+.paymentActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
   margin-top: 28px;
 }
 

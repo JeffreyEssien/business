@@ -47,17 +47,21 @@ export function validateCheckout(form: FormData) {
   const postalCode = text(form, 'postalCode', 30);
   const country = text(form, 'country', 2).toUpperCase() || 'NG';
   const shippingRate = text(form, 'shippingRate', 36);
+  const paymentChoice = text(form, 'paymentChoice', 20).toUpperCase();
   const note = text(form, 'note', 1000);
   if (!cart) return { error: 'Your cart could not be read. Review it and try again.' };
   if (!name) return { error: 'Enter the name the store should use for this order.' };
   if (shippingRate && !uuidPattern.test(shippingRate))
     return { error: 'Choose an available delivery or pickup option.' };
+  if (!['BANK_TRANSFER', 'PAYSTACK'].includes(paymentChoice))
+    return { error: 'Choose how you would like to pay.' };
   return {
     input: {
       cart,
       customer: { name, email, phone },
       address: { addressLine1, addressLine2, city, state, postalCode, country },
       shippingRate: shippingRate || null,
+      paymentChoice,
       note,
     },
   };
@@ -69,7 +73,7 @@ export function commerceErrorMessage(message: string) {
     DUPLICATE_CART_ITEM: 'A product appears more than once. Refresh your cart and try again.',
     STORE_UNAVAILABLE: 'This store is not accepting orders right now.',
     CHECKOUT_UNAVAILABLE: 'Checkout is not available for this store right now.',
-    PAYMENT_METHOD_UNAVAILABLE: 'Bank transfer is not available yet. Please contact the store.',
+    PAYMENT_METHOD_UNAVAILABLE: 'That payment method is not available. Choose another option.',
     INVALID_CUSTOMER_DETAILS: 'Check your name and contact details, then try again.',
     DELIVERY_METHOD_REQUIRED: 'Choose how you would like to receive your order.',
     DELIVERY_METHOD_UNAVAILABLE: 'That delivery option is not available for this address.',
@@ -80,6 +84,9 @@ export function commerceErrorMessage(message: string) {
     ORDER_NOT_FOUND: 'That order could not be found.',
     INVALID_ORDER_TRANSITION: 'That order cannot move to the selected status yet.',
     BANK_ACCOUNT_REQUIRED: 'Save a bank account before turning on bank-transfer checkout.',
+    PAYSTACK_ACCOUNT_REQUIRED:
+      'Connect a settlement account before turning on secure online payment.',
+    PAYMENT_RETRY_UNAVAILABLE: 'Please wait before trying this payment again.',
   };
   return (
     Object.entries(messages).find(([code]) => message.includes(code))?.[1] ??

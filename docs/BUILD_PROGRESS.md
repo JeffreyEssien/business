@@ -4,9 +4,9 @@ Last updated: 2026-09-09
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: Paystack merchant payments (Phase 6)
+## Current stage: transactional email (Phase 7)
 
-Status: Phase 5 is complete and verified. Customers can use a responsive tenant-scoped cart, receive a database-authoritative quote, place a bank-transfer order, and report payment without self-confirming it. Businesses can configure checkout and delivery, filter and inspect their own orders, keep private notes, verify payment, advance fulfilment, and cancel fulfilment with exactly-once inventory restoration. Historical product, customer, delivery, price, and payment-instruction snapshots remain stable. Phase 6 is now active and will add provider-independent payments plus verified, idempotent Paystack processing. No real business, customer, product, or order was created by the agent; all test fixtures and uploaded media were removed.
+Status: Phases 0–6 are complete and verified. Customers can choose manual transfer or hosted Paystack checkout, return to a token-protected payment-status page, and retry an unresolved online payment. Tenants connect a verified Paystack settlement subaccount, inspect provider attempts, and request provider reconciliation without being able to self-confirm payment. Signed webhooks apply exact reference/amount/currency matches idempotently, and super admins have a bounded payment-operations view. Phase 7 is now active for transactional email. No real customer transaction or settlement subaccount was created by the agent; all automated database, Auth, and Cloudinary fixtures were removed.
 
 ### Customer application and approval flow
 
@@ -124,6 +124,18 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Customer order counts and verified paid totals are derived from authoritative order state at transaction completion, preventing unpaid orders or retries from inflating revenue.
 - Migration files 202609080006_orders_foundation.sql, 202609080007_checkout_order_workflow.sql, 202609080008_order_payment_snapshots.sql, and 202609080009_customer_paid_totals.sql applied to development Supabase.
 
+### Phase 6: Paystack merchant payments
+
+- Tenant checkout settings connect a Paystack-verified settlement account and store only the subaccount code plus masked settlement identity. Paystack availability cannot be enabled until that connection is active.
+- Checkout offers descriptive bank-transfer and secure-online choices. Paystack-required email collection is enforced in both the UI and database even when general email collection is off.
+- Orders and payment attempts are saved before redirect. Initialization is server-side through a provider abstraction, uses an allowlisted hosted-checkout URL, and keeps merchant payments separate from future SaaS billing.
+- The callback verifies with Paystack but is never authoritative by itself. The webhook verifies the raw-body HMAC-SHA512 signature and applies success only for an exact stored reference, amount, currency, tenant, and order.
+- Webhook delivery and payment application are idempotent. Stale attempts cannot pay an already-paid order; unresolved retries are token-bound, rate-limited, and capped.
+- Customers receive a responsive token-protected payment-status/retry page. Tenant staff see attempts and can ask Paystack to verify again but cannot manually confirm online payment.
+- Super admins have `/payment-operations` for the 50 latest attempts, 25 latest sanitized webhook outcomes, and safe provider re-verification. No raw provider payload or customer contact data is displayed.
+- The provider contract includes validated refund initiation, but no refund UI is exposed until durable refund records, authorization, accounting, notification, and idempotency are implemented with the returns workflow.
+- Migration 202609110001_paystack_payments.sql applied to development Supabase.
+
 ## Validation
 
 - PASS: TypeScript and production Webpack build.
@@ -154,6 +166,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: Phase 5 SQL coverage verifies authoritative quotes/prices, inventory locking and decrement, out-of-stock rejection, immutable order/payment snapshots, payment-notice separation, merchant verification, accurate paid totals, exactly-once stock restoration, tenant A/B isolation, anonymous denial, and direct-write denial.
 - PASS: authenticated integration configures checkout, creates a real anonymous order, verifies trusted totals/inventory, records a manual-transfer notice, confirms payment as the merchant, denies tenant B and direct writes, and removes every fixture.
 - PASS: browser regression covers product-to-cart, responsive cart/checkout, order placement, bank-transfer confirmation, customer payment notice, merchant order filtering/detail, payment verification, and fulfilment progression. Desktop/mobile screenshots were inspected with no horizontal overflow or confusing technical labels.
+- PASS: Phase 6 SQL coverage verifies exact provider reference/amount/currency matching, duplicate webhook delivery, one successful attempt per order, token-bound retries, manual-confirmation denial, direct-write denial, and tenant isolation.
+- PASS: Paystack callback, webhook, customer status, tenant settlement/attempt, and platform payment-operation routes compile in the production build. Existing authenticated integration and desktop/mobile commerce regression pass with complete fixture cleanup.
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
@@ -162,9 +176,9 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
 - New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
 - Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
-- Online card/payment-provider mode is not connected yet; this is the active Phase 6 scope. Manual bank transfer is functional. Email/SMS remain disabled.
+- Paystack merchant payments are implemented. A real hosted test-card payment still requires the owner to connect a Paystack test settlement account and run Paystack's external checkout; automated tests do not create persistent provider subaccounts or transactions. Email/SMS remain disabled.
 - Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
-- Domain-verification UI, Paystack processing, refunds, and advanced operational controls remain future work.
+- Domain-verification UI, the durable merchant refund workflow, and advanced operational controls remain future work.
 - The Store design editor is responsive and functional, but its long settings column should receive further progressive disclosure so first-time users see fewer controls at once.
 - `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
 - Plain PostgreSQL CI emulates only the Auth schema contract; real Supabase Auth is covered by the separate development integration script.
@@ -179,8 +193,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Theme and content      | 3          | Implemented and verified | Editor, pages, reordering, preview, atomic publishing       |
 | SEO                    | 4          | Implemented and verified | Global/record metadata and sharing images; DNS gate Phase 11 |
 | Orders and checkout    | 5          | Implemented and verified | Trusted totals, atomic inventory, bank transfer, order admin |
-| Paystack               | 6          | In progress              | Verified/idempotent payment processing                     |
-| Email                  | 7          | Planned                  | Branded delivery and logs                                  |
+| Paystack               | 6          | Implemented and verified | Verified/idempotent payment processing                     |
+| Email                  | 7          | In progress              | Branded delivery and logs                                  |
 | SMS                    | 8          | Planned                  | Settings and entitlement enforcement                       |
 | Entitlements/plans     | 9          | Planned                  | Central resolution and server enforcement                  |
 | SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
@@ -193,7 +207,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Now: first business name/handle, owner name/email, template, and initial plan through the create form.
 - Now: sample products, categories, prices, images, and inventory preferences for real catalog review.
 - Content stage: logos, branding, homepage/about/policy copy.
-- Phase 6: Paystack test secret/public keys, the intended test callback base URL, and access to configure the environment-specific webhook endpoint. Never provide live keys for local or staging work.
+- Deployment: configure Paystack callback `/payments/paystack/callback` and webhook `/api/webhooks/paystack` on each environment, then complete one owner-observed test-mode payment before production approval.
 - Integrations: email/SMS providers and sender identities when those stages begin.
 - Billing: plan prices/limits, trial length, grace policy.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.

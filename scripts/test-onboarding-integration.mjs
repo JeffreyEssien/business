@@ -390,13 +390,14 @@ try {
     pickup: false,
   });
   assert.ifError(shippingRate.error);
-  const checkoutSettings = await ownerSession.client.rpc('save_checkout_settings', {
+  const checkoutSettings = await ownerSession.client.rpc('save_checkout_settings_complete', {
     target_tenant: a,
     phone_required: true,
     email_required: true,
     address_required: true,
     notes_enabled: true,
     transfer_enabled: true,
+    paystack_payment_enabled: false,
     confirmation_message: 'Your integration order has been received.',
   });
   assert.ifError(checkoutSettings.error);
@@ -525,6 +526,8 @@ try {
       const fixtures = await tx`select id from public.tenants where slug=any(${slugs}::text[])`;
       const ids = fixtures.map((t) => t.id);
       for (const table of [
+        'payment_webhook_events',
+        'payments',
         'order_items',
         'orders',
         'customer_addresses',
@@ -550,6 +553,7 @@ try {
         'tenant_email_settings',
         'tenant_sms_settings',
         'tenant_checkout_settings',
+        'tenant_payment_settings',
         'subscriptions',
         'tenant_domains',
         'tenant_onboarding',

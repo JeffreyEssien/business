@@ -30,6 +30,8 @@ try {
       where tenant_id = any(${tenantIds}::uuid[])
     `;
     for (const table of [
+      'payment_webhook_events',
+      'payments',
       'order_items',
       'orders',
       'customer_addresses',
@@ -55,6 +57,7 @@ try {
       'tenant_email_settings',
       'tenant_sms_settings',
       'tenant_checkout_settings',
+      'tenant_payment_settings',
       'subscriptions',
       'tenant_domains',
       'tenant_onboarding',

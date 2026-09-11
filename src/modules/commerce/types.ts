@@ -51,6 +51,7 @@ export type CheckoutQuote = {
     collectDeliveryAddress: boolean;
     orderNotesEnabled: boolean;
     bankTransferEnabled: boolean;
+    paystackEnabled: boolean;
     successMessage: string;
   };
   items: CheckoutItem[];
@@ -72,7 +73,11 @@ export type CreatedOrder = {
   deliveryFee: number;
   total: number;
   successMessage: string;
-  bankAccount: BankAccount;
+  paymentMethod: 'BANK_TRANSFER' | 'PAYSTACK';
+  paymentReference: string | null;
+  paymentAuthorizationUrl?: string;
+  paymentError?: string;
+  bankAccount: BankAccount | null;
 };
 export type OrderSummary = {
   id: string;
@@ -87,6 +92,7 @@ export type OrderSummary = {
 export type OrderDetail = OrderSummary & {
   subtotal: number;
   delivery_fee: number;
+  payment_method: 'BANK_TRANSFER' | 'PAYSTACK';
   customer_email_snapshot: string;
   customer_phone_snapshot: string;
   shipping_address_jsonb: Record<string, string>;
@@ -117,7 +123,37 @@ export type CheckoutSettings = {
   collect_delivery_address: boolean;
   order_notes_enabled: boolean;
   bank_transfer_enabled: boolean;
+  paystack_enabled: boolean;
+  paystack_account_ready: boolean;
   success_message: string;
+};
+export type TenantPaymentSettings = {
+  connection_status: 'NOT_CONNECTED' | 'ACTIVE' | 'ERROR';
+  subaccount_code: string | null;
+  settlement_bank_code: string;
+  settlement_bank_name: string;
+  settlement_account_last4: string;
+  settlement_account_name: string;
+  connected_at: string | null;
+};
+export type PaymentAttempt = {
+  id: string;
+  provider_reference: string;
+  status: 'INITIALIZING' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  amount: number;
+  currency: string;
+  failure_code: string | null;
+  initiated_at: string;
+  paid_at: string | null;
+};
+export type PublicPaystackOrder = {
+  reference: string;
+  storeName: string;
+  currency: string;
+  total: number;
+  paymentStatus: PaymentStatus;
+  fulfillmentStatus: FulfillmentStatus;
+  successMessage: string;
 };
 export type StoredBankAccount = {
   bank_name: string;

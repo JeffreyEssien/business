@@ -30,6 +30,7 @@ export default async function OrderDetailPage({
         slug={slug}
         order={data.order}
         items={data.items}
+        payments={data.payments}
       />
     </main>
   );

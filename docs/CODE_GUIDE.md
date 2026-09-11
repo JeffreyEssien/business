@@ -138,7 +138,19 @@ Application website styles are real storefront personality profiles stored in `t
 - The browser cart is tenant-scoped local convenience state. `get_public_checkout_quote` must succeed before checkout can continue, and order creation repeats every price, availability, delivery, and relationship check.
 - A customer's payment notice means “awaiting verification,” never “paid.” Only an authorized merchant transition or a future verified provider event may confirm payment.
 - Customer paid totals are derived from orders whose payment status is `PAID`. The deferred database trigger is the canonical summary writer; application code must not increment paid revenue optimistically.
-- Cancelling fulfilment restores tracked stock exactly once and does not rewrite an already verified payment. Refunds remain a separate Phase 6 operation.
+- Cancelling fulfilment restores tracked stock exactly once and does not rewrite an already verified payment. Refunds remain a separate, durable returns-workflow operation.
+
+## Follow a Paystack payment
+
+1. A tenant manager connects a settlement account in Checkout settings. The server resolves the account with Paystack, creates or updates the tenant subaccount, and stores only the provider code, verified account name, bank, and final four digits.
+2. Checkout creates the authoritative order and an `INITIALIZING` payment attempt in one database transaction before any provider request. Product totals, tenant, currency, inventory, and customer token come from PostgreSQL, not the browser.
+3. `modules/payments/service.ts` initializes hosted Paystack checkout through the provider abstraction. Provider URLs are accepted only from the exact HTTPS Paystack checkout host.
+4. The callback verifies the transaction server-side before redirecting to the token-protected customer status page. A callback by itself never changes payment state.
+5. The webhook route reads a bounded raw body, verifies its HMAC-SHA512 signature, stores a sanitized event record, and applies success only when reference, amount, currency, order, and tenant all match. Duplicate delivery is harmless.
+6. Tenant staff can inspect attempts and request provider reconciliation, but cannot manually confirm Paystack payment. Super admins use `/payment-operations` for bounded cross-platform visibility and safe re-verification.
+7. `PaymentProvider.refundPayment` provides the validated provider capability. Do not expose it directly: the future returns/refunds workflow must add authorization, durable refund records, partial-refund accounting, notifications, and idempotency first.
+
+`PAYSTACK_SECRET_KEY` is server-only. The hosted checkout currently needs no browser SDK; the public key remains an environment placeholder for future client-side Paystack features. Merchant payments remain separate from future BusinessCare subscription billing.
 - Payment instructions are copied onto the order. Replacing a store bank account must not alter what an existing customer was originally shown.
 
 ## Follow a storefront checkout

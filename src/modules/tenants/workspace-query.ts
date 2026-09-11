@@ -25,7 +25,7 @@ export async function getTenantWorkspace(slug: string) {
   if (!tenant) notFound();
   const { data: membership, error: memberError } = await supabase
     .from('tenant_memberships')
-    .select('role')
+    .select('user_id,role')
     .eq('tenant_id', tenant.id)
     .eq('user_id', profile.id)
     .eq('status', 'ACTIVE')

@@ -73,6 +73,20 @@ try {
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Sign in to your workspace' }).click();
   await page.waitForURL(base + '/', { timeout: 30000 });
+  stage = 'Verify platform payment operations';
+  await page.goto(`${base}/payment-operations`);
+  await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible();
+  await expect(
+    page.getByText('No Paystack payment attempts have been recorded yet.'),
+  ).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/payment-operations-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Payment operations has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/payment-operations-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Open create-business page';
   await page.goto(`${base}/businesses/new`);
   await expect(page.getByRole('heading', { name: 'Create a business.' })).toBeVisible();
@@ -296,7 +310,7 @@ try {
   await page.goto(`${base}/t/${slug}/orders/settings`);
   await expect(page.getByRole('heading', { name: 'Checkout settings' })).toBeVisible();
   await page.getByLabel('Bank name').fill('UI Test Bank');
-  await page.getByLabel('Account number').fill('0123456789');
+  await page.getByLabel('Bank-transfer account number').fill('0123456789');
   await page.getByLabel('Account name').fill('UI verification business');
   await page
     .getByLabel('Extra payment instructions (optional)')
@@ -492,6 +506,8 @@ try {
         await tx`select storage_provider,storage_key,resource_type from public.media_assets where tenant_id=any(${ids}::uuid[])`;
       mediaAssets.push(...remainingAssets);
       for (const table of [
+        'payment_webhook_events',
+        'payments',
         'order_items',
         'orders',
         'customer_addresses',
@@ -517,6 +533,7 @@ try {
         'tenant_email_settings',
         'tenant_sms_settings',
         'tenant_checkout_settings',
+        'tenant_payment_settings',
         'subscriptions',
         'tenant_domains',
         'tenant_onboarding',
