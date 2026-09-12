@@ -100,15 +100,52 @@ export function BankAccountForm({
 export function CheckoutSettingsForm({
   slug,
   settings,
+  bankAccountReady,
 }: {
   slug: string;
   settings: CheckoutSettings;
+  bankAccountReady: boolean;
 }) {
   const [state, action, pending] = useActionState(saveCheckoutSettings.bind(null, slug), initial);
   return (
     <FormStack action={action}>
       <FormSection
-        title="Information to collect"
+        title="Choose the payment methods shown at checkout"
+        description="Customers will choose from the methods you enable here. At least one method must remain available."
+      >
+        <div className={styles.checks}>
+          <label>
+            <input
+              type="checkbox"
+              name="bankTransfer"
+              defaultChecked={settings.bank_transfer_enabled}
+              disabled={!bankAccountReady}
+            />{' '}
+            Accept orders paid by manual bank transfer
+          </label>
+          {!bankAccountReady && (
+            <p className={styles.fieldNotice}>
+              Save your bank-transfer account below before turning on manual transfers.
+            </p>
+          )}
+          <label>
+            <input
+              type="checkbox"
+              name="paystack"
+              defaultChecked={settings.paystack_enabled}
+              disabled={!settings.paystack_account_ready}
+            />{' '}
+            Accept card, bank, and other secure online payments through Paystack
+          </label>
+          {!settings.paystack_account_ready && (
+            <p className={styles.fieldNotice}>
+              Connect a Paystack settlement account below before turning on secure online payments.
+            </p>
+          )}
+        </div>
+      </FormSection>
+      <FormSection
+        title="Customer information and confirmation"
         description="Only ask customers for information needed to prepare and deliver their orders."
       >
         <div className={styles.checks}>
@@ -136,28 +173,6 @@ export function CheckoutSettingsForm({
             />{' '}
             Let customers add an order note
           </label>
-          <label>
-            <input
-              type="checkbox"
-              name="bankTransfer"
-              defaultChecked={settings.bank_transfer_enabled}
-            />{' '}
-            Accept orders paid by bank transfer
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              name="paystack"
-              defaultChecked={settings.paystack_enabled}
-              disabled={!settings.paystack_account_ready}
-            />{' '}
-            Accept secure online payments through Paystack
-          </label>
-          {!settings.paystack_account_ready && (
-            <p className={styles.fieldNotice}>
-              Connect a settlement account above before turning on secure online payments.
-            </p>
-          )}
         </div>
         <TextAreaField
           name="successMessage"
@@ -168,7 +183,7 @@ export function CheckoutSettingsForm({
         />
       </FormSection>
       <Result {...state} />
-      <FormActions note="These choices affect the live checkout immediately. Turning off bank transfer stops new checkouts until another payment method is available.">
+      <FormActions note="These choices affect the live checkout immediately. BusinessCare will not save the form unless at least one fully configured payment method remains enabled.">
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving checkout…' : 'Save checkout choices'}
         </Button>

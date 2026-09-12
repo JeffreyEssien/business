@@ -19,11 +19,37 @@ update application_fixture set value=jsonb_build_object(
 ) where k='application';
 
 set local role anon;
-do $$ declare result jsonb; begin
- result:=public.submit_business_application_complete(
+do $$ declare result jsonb; preflight jsonb; begin
+ preflight:=public.preflight_business_application(
   (select id from application_fixture where k='application'),
   (select value from application_fixture where k='application'),repeat('a',64));
+ if preflight->>'ok'<>'true' or preflight->>'reservationToken' is null then
+  raise exception 'Application preflight failed';
+ end if;
+ result:=public.submit_reserved_business_application(
+  (select id from application_fixture where k='application'),
+  (select value||jsonb_build_object('homepageHeadline','Changed after preflight') from application_fixture where k='application'),
+  repeat('a',64),(preflight->>'reservationToken')::uuid);
+ if result->>'code'<>'INVALID_RESERVATION' then
+  raise exception 'Reservation accepted a different application payload';
+ end if;
+ result:=public.submit_reserved_business_application(
+  (select id from application_fixture where k='application'),
+  (select value from application_fixture where k='application'),repeat('a',64),
+  (preflight->>'reservationToken')::uuid);
  if result->>'ok'<>'true' or result->>'reference' not like 'BCA-%' then raise exception 'Public application submission failed'; end if;
+ result:=public.submit_reserved_business_application(
+  (select id from application_fixture where k='application'),
+  (select value from application_fixture where k='application'),repeat('a',64),
+  (preflight->>'reservationToken')::uuid);
+ if result->>'code'<>'INVALID_RESERVATION' then raise exception 'Reservation replay was accepted'; end if;
+ begin
+  perform public.submit_business_application_complete(
+   (select id from application_fixture where k='application'),
+   (select value from application_fixture where k='application'),repeat('a',64));
+  raise exception 'Legacy submission bypass remained public';
+ exception when insufficient_privilege then null;
+ end;
 end $$;
 do $$ begin
  begin perform 1 from public.business_applications;raise exception 'Anonymous application read allowed';exception when insufficient_privilege then null;end;

@@ -38,28 +38,32 @@ export default async function CheckoutSettingsPage({
       />
       <div className={styles.settingsStack}>
         <Panel
-          title="1. Secure online payments"
+          title="1. Payment methods customers can choose"
+          description="Turn on the payment choices that should appear during checkout. Set up an account below before enabling its method."
+        >
+          <CheckoutSettingsForm
+            slug={slug}
+            settings={data.settings}
+            bankAccountReady={Boolean(data.bankAccount)}
+          />
+        </Panel>
+        <Panel
+          title="2. Secure online payments"
           description="Connect the bank account where Paystack should settle your online sales."
         >
           <PaystackSettlementForm slug={slug} settings={data.paymentSettings} banks={banks} />
         </Panel>
         <Panel
-          title="2. Manual bank transfers"
+          title="3. Manual bank transfers"
           description="Save this account before turning on bank-transfer checkout."
         >
           <BankAccountForm slug={slug} account={data.bankAccount} />
         </Panel>
         <Panel
-          title="3. Delivery and pickup choices"
+          title="4. Delivery and pickup choices"
           description="Customers choose one available option during checkout."
         >
           <DeliveryOptions slug={slug} rates={data.shippingRates} />
-        </Panel>
-        <Panel
-          title="4. Checkout choices"
-          description="These choices affect the live checkout as soon as you save them."
-        >
-          <CheckoutSettingsForm slug={slug} settings={data.settings} />
         </Panel>
       </div>
     </main>

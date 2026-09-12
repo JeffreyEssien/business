@@ -12,6 +12,8 @@ type ServerEvent = {
   durationMs?: number;
   success?: boolean;
   errorCode?: string;
+  errorMessage?: string;
+  errorDetails?: string;
   provider?: string;
   assetKey?: string;
 };

@@ -17,7 +17,7 @@ export function PaystackPaymentStatus({
 }) {
   const [state, action, pending] = useActionState(
     retryPaystackPayment.bind(null, slug, order.reference, accessToken),
-    { error: '', authorizationUrl: '' },
+    { error: '', message: '', authorizationUrl: '' },
   );
   useEffect(() => {
     if (state.authorizationUrl.startsWith('https://checkout.paystack.com/'))
@@ -60,6 +60,11 @@ export function PaystackPaymentStatus({
       {state.error && (
         <p className={styles.error} role="alert">
           {state.error}
+        </p>
+      )}
+      {state.message && (
+        <p className={styles.success} role="status">
+          {state.message}
         </p>
       )}
       <div className={styles.paymentActions}>

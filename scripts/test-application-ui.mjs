@@ -8,6 +8,7 @@ import { database, reportError } from './database.mjs';
 const sql = database();
 const base = process.env.INTEGRATION_APP_URL ?? 'http://127.0.0.1:3100';
 assert.ok(['127.0.0.1', 'localhost'].includes(new URL(base).hostname));
+const skipLogo = process.env.APPLICATION_UI_SKIP_LOGO === 'true';
 const slug = `application-ui-${randomUUID()}`;
 const email = `${slug}@example.invalid`;
 const password = randomBytes(24).toString('base64url');
@@ -54,6 +55,21 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/application-desktop.png', fullPage: true });
 
+  stage = 'Discard an expired browser draft';
+  await page.evaluate(() => {
+    localStorage.setItem(
+      'businesscare-application-draft-v1',
+      JSON.stringify({
+        applicationId: crypto.randomUUID(),
+        values: { businessName: 'Expired private draft' },
+        savedAt: Date.now() - 49 * 60 * 60 * 1000,
+      }),
+    );
+  });
+  await page.reload();
+  await expect(page.getByLabel('What is your business called?')).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Clear saved application' })).toBeVisible();
+
   stage = 'Complete business details and prove browser-only draft recovery';
   await page.getByLabel('What is your business called?').fill('Customer-first test studio');
   await page.getByLabel(/^Other$/).check();
@@ -99,11 +115,12 @@ try {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
     'base64',
   );
-  await page.getByLabel('Your logo optional').setInputFiles({
-    name: 'application-logo.png',
-    mimeType: 'image/png',
-    buffer: pixel,
-  });
+  if (!skipLogo)
+    await page.getByLabel('Your logo optional').setInputFiles({
+      name: 'application-logo.png',
+      mimeType: 'image/png',
+      buffer: pixel,
+    });
   await page.getByLabel('Main brand colour').fill('#173f35');
   await page.getByLabel('Secondary brand colour').fill('#c77842');
   await page.getByLabel(/Warm & natural/).check();
@@ -152,18 +169,30 @@ try {
   );
 
   const [submitted] = await sql`
-    select id,status,reference,logo_storage_key,logo_public_url,requested_pages,other_business_type
+    select id,status,reference,logo_storage_key,logo_public_url,requested_pages,other_business_type,source_fingerprint
     from public.business_applications where preferred_slug=${slug}
   `;
   assert.equal(submitted.status, 'PENDING');
-  assert.ok(submitted.logo_public_url.includes('res.cloudinary.com'));
+  if (skipLogo) {
+    assert.equal(submitted.logo_storage_key, null);
+    assert.equal(submitted.logo_public_url, null);
+  } else {
+    assert.ok(submitted.logo_public_url.includes('res.cloudinary.com'));
+  }
   assert.ok(submitted.requested_pages.includes('CONTACT'));
   assert.equal(submitted.other_business_type, 'Personal wardrobe styling');
-  uploadedAssets.push({
-    storage_provider: 'cloudinary',
-    storage_key: submitted.logo_storage_key,
-    resource_type: 'image',
-  });
+  assert.equal(submitted.source_fingerprint, testFingerprint);
+  const [reservation] = await sql`
+    select consumed_at from private.business_application_reservations
+    where application_id=${submitted.id}
+  `;
+  assert.ok(reservation.consumed_at, 'The upload reservation is consumed exactly once');
+  if (submitted.logo_storage_key)
+    uploadedAssets.push({
+      storage_provider: 'cloudinary',
+      storage_key: submitted.logo_storage_key,
+      resource_type: 'image',
+    });
   const [beforeApproval] =
     await sql`select count(*)::integer as count from public.tenants where slug=${slug}`;
   assert.equal(beforeApproval.count, 0, 'Submitting an application must not create a tenant');
@@ -346,7 +375,9 @@ try {
   if (browser) await browser.close();
   try {
     await sql.begin(async (tx) => {
-      await tx`delete from private.business_application_limits where fingerprint=${testFingerprint}`;
+      await tx`delete from private.business_application_reservations where request_fingerprint=${testFingerprint}`;
+      const emailFingerprint = createHash('sha256').update(email.toLowerCase()).digest('hex');
+      await tx`delete from private.business_application_limits where fingerprint in (${testFingerprint},${`network:${testFingerprint}`},${`email:${emailFingerprint}`})`;
       const applications = await tx`
         select id,logo_storage_key from public.business_applications where preferred_slug=${slug}
       `;

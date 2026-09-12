@@ -51,7 +51,7 @@ function TransferNotice({ slug, order }: { slug: string; order: CreatedOrder }) 
 function OrderConfirmation({ slug, order }: { slug: string; order: CreatedOrder }) {
   const [paymentState, paymentAction, paymentPending] = useActionState(
     retryPaystackPayment.bind(null, slug, order.reference, order.accessToken),
-    { error: '', authorizationUrl: '' },
+    { error: '', message: '', authorizationUrl: '' },
   );
   useEffect(() => {
     const destination = order.paymentAuthorizationUrl || paymentState.authorizationUrl;
@@ -111,6 +111,11 @@ function OrderConfirmation({ slug, order }: { slug: string; order: CreatedOrder 
           {(order.paymentError || paymentState.error) && (
             <p className={styles.error} role="alert">
               {paymentState.error || order.paymentError}
+            </p>
+          )}
+          {paymentState.message && (
+            <p className={styles.success} role="status">
+              {paymentState.message}
             </p>
           )}
           {!order.paymentAuthorizationUrl && (

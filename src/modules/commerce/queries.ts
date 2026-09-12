@@ -104,7 +104,9 @@ export async function getOrderDetail(slug: string, orderId: string) {
       .order('created_at'),
     workspace.supabase
       .from('payments')
-      .select('id,provider_reference,status,amount,currency,failure_code,initiated_at,paid_at')
+      .select(
+        'id,provider_reference,status,provider_status,order_application_status,resolution_status,amount,currency,failure_code,initiated_at,paid_at',
+      )
       .eq('tenant_id', workspace.tenant.id)
       .eq('order_id', orderId)
       .order('created_at', { ascending: false })

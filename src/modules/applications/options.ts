@@ -54,17 +54,17 @@ export const planApplicationOptions = [
   {
     value: 'starter',
     label: 'Starter',
-    description: 'A practical start for getting your business online.',
+    description: 'A proposed starting point for a smaller initial website.',
   },
   {
     value: 'growth',
     label: 'Growth',
-    description: 'More products and tools for an expanding business.',
+    description: 'A proposal for businesses expecting a larger catalogue or team.',
   },
   {
     value: 'pro',
     label: 'Pro',
-    description: 'The complete BusinessCare toolkit for established teams.',
+    description: 'A proposal for established businesses with broader operational needs.',
   },
 ] as const;
 

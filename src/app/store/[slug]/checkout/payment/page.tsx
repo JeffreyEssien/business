@@ -8,6 +8,7 @@ import { getPublicPaystackOrder } from '@/modules/commerce/queries';
 export const metadata: Metadata = {
   title: 'Payment status',
   robots: { index: false, follow: false },
+  referrer: 'no-referrer',
 };
 
 export default async function PaymentStatusPage({

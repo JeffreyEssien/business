@@ -110,6 +110,26 @@
   color: #272532;
   font-size: 15px;
 }
+.progressTools {
+  align-items: flex-end;
+}
+.progressTools button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #6655d7;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.progressTools button:focus-visible {
+  border-radius: 3px;
+  outline: 3px solid #6655d733;
+  outline-offset: 4px;
+}
 .progressTrack {
   height: 4px;
   margin-top: 15px;

@@ -13,13 +13,14 @@ import {
 import {
   initializeStoredPaystackPayment,
   verifyAndApplyPaystackPayment,
+  verifyAndApplyPaystackPaymentState,
 } from '@/modules/payments/service';
 import type { CartLine, CheckoutQuote, CreatedOrder } from './types';
 import { commerceErrorMessage, parseCart, validateCheckout } from './validation';
 
 export type CheckoutActionState = { error: string; order: CreatedOrder | null };
 export type CommerceActionState = { error: string; message: string };
-export type PaymentActionState = { error: string; authorizationUrl: string };
+export type PaymentActionState = { error: string; message: string; authorizationUrl: string };
 
 function canManage(role: string) {
   return ['TENANT_OWNER', 'TENANT_ADMIN', 'TENANT_MANAGER'].includes(role);
@@ -80,20 +81,76 @@ export async function retryPaystackPayment(
   _state: PaymentActionState,
 ): Promise<PaymentActionState> {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !/^BC-[A-Z0-9-]{8,40}$/.test(orderReference))
-    return { error: 'This payment link is not valid.', authorizationUrl: '' };
+    return { error: 'This payment link is not valid.', message: '', authorizationUrl: '' };
   const supabase = await createClient();
+  const { data: retryData, error: retryError } = await supabase.rpc('get_paystack_retry_context', {
+    store_slug: slug,
+    order_reference: orderReference,
+    access_token: accessToken,
+  });
+  const context = retryData as {
+    providerReference?: string;
+    status?: string;
+    authorizationUrl?: string;
+    createdAt?: string;
+  } | null;
+  if (retryError || !context?.providerReference)
+    return {
+      error: commerceErrorMessage(retryError?.message ?? ''),
+      message: '',
+      authorizationUrl: '',
+    };
+  try {
+    const verification = await verifyAndApplyPaystackPaymentState(context.providerReference);
+    if (
+      ['PROCESSED', 'ALREADY_PROCESSED'].includes(verification.result) ||
+      verification.result.endsWith('_RECORDED')
+    )
+      return {
+        error: '',
+        message: 'Paystack confirmed this payment. Refresh to see the latest order status.',
+        authorizationUrl: '',
+      };
+    if (
+      ['pending', 'ongoing', 'processing'].includes(verification.providerStatus) &&
+      context.authorizationUrl?.startsWith('https://checkout.paystack.com/')
+    )
+      return { error: '', message: '', authorizationUrl: context.authorizationUrl };
+  } catch (error) {
+    const age = Date.now() - Date.parse(context.createdAt ?? '');
+    const recoverable =
+      Number.isFinite(age) &&
+      ((context.status === 'FAILED' && age >= 2 * 60_000) ||
+        (context.status === 'INITIALIZING' && age >= 5 * 60_000));
+    if (!recoverable)
+      return {
+        error:
+          'We could not confirm the existing payment yet. Wait a moment, then refresh before trying again.',
+        message: '',
+        authorizationUrl: '',
+      };
+  }
   const { data, error } = await supabase.rpc('prepare_paystack_retry', {
     store_slug: slug,
     order_reference: orderReference,
     access_token: accessToken,
   });
   if (error || typeof data !== 'string')
-    return { error: commerceErrorMessage(error?.message ?? ''), authorizationUrl: '' };
+    return {
+      error: commerceErrorMessage(error?.message ?? ''),
+      message: '',
+      authorizationUrl: '',
+    };
   try {
-    return { error: '', authorizationUrl: await initializeStoredPaystackPayment(data) };
+    return {
+      error: '',
+      message: '',
+      authorizationUrl: await initializeStoredPaystackPayment(data),
+    };
   } catch {
     return {
       error: 'Secure payment could not open. Your order is still saved; please try again shortly.',
+      message: '',
       authorizationUrl: '',
     };
   }

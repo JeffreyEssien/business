@@ -163,12 +163,27 @@ export function OrderDetail({
                   <div key={attempt.id}>
                     <div>
                       <strong>
-                        {attempt.status === 'SUCCESS' ? 'Payment confirmed' : 'Payment attempt'}
+                        {attempt.order_application_status === 'DUPLICATE'
+                          ? 'Duplicate payment received'
+                          : attempt.order_application_status === 'LATE_CANCELLED'
+                            ? 'Payment received after cancellation'
+                            : attempt.resolution_status === 'REVIEW_REQUIRED'
+                              ? 'Payment needs review'
+                              : attempt.order_application_status === 'APPLIED'
+                                ? 'Payment confirmed'
+                                : 'Payment attempt'}
                       </strong>
                       <small>{attempt.provider_reference}</small>
+                      {attempt.resolution_status !== 'NONE' && (
+                        <small>
+                          BusinessCare support must resolve this receipt before the case is closed.
+                        </small>
+                      )}
                     </div>
                     <div>
-                      <OrderStatus value={attempt.status === 'SUCCESS' ? 'PAID' : attempt.status} />
+                      <OrderStatus
+                        value={attempt.provider_status === 'SUCCESS' ? 'PAID' : attempt.status}
+                      />
                       <small>
                         {new Intl.DateTimeFormat('en-NG', {
                           dateStyle: 'medium',

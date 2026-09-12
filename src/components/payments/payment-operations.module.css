@@ -8,6 +8,10 @@
   border-radius: 14px;
   background: #fff;
 }
+.attentionPanel {
+  border-color: #edcf8b;
+  background: #fffcf5;
+}
 .panel > header {
   padding: 24px;
   border-bottom: 1px solid var(--border);
@@ -70,9 +74,26 @@
   color: #39704a;
 }
 .amount span[data-status='FAILED'],
-.eventList span[data-status='REJECTED'] {
+.eventList span[data-status='REJECTED'],
+.eventList span[data-status='FAILED'] {
   background: #fff0f0;
   color: #953e3e;
+}
+.eventList span[data-status='RECEIVED'],
+.eventList span[data-status='PROCESSING'] {
+  background: #edf1ff;
+  color: #4f6098;
+}
+.amount span[data-status='REFUND_REQUIRED'],
+.amount span[data-status='REVIEW_REQUIRED'] {
+  background: #fff4df;
+  color: #765a21;
+}
+.guidance {
+  max-width: 240px;
+}
+.guidance small {
+  line-height: 1.5;
 }
 .reconcile {
   display: grid;
@@ -89,8 +110,9 @@
   color: #39704a !important;
 }
 .eventList article {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto minmax(170px, 0.45fr);
+  align-items: center;
   gap: 20px;
   padding: 16px 24px;
 }
@@ -118,7 +140,7 @@
     text-align: left;
   }
   .eventList article {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
   .eventList article > div:last-child {
     justify-items: start;

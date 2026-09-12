@@ -140,6 +140,11 @@ export type PaymentAttempt = {
   id: string;
   provider_reference: string;
   status: 'INITIALIZING' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  provider_status: 'UNVERIFIED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'ABANDONED' | 'REVERSED';
+  order_application_status:
+    'PENDING' | 'APPLIED' | 'SUPERSEDED' | 'DUPLICATE' | 'LATE_CANCELLED' | 'REVIEW_REQUIRED';
+  resolution_status:
+    'NONE' | 'REVIEW_REQUIRED' | 'REFUND_REQUIRED' | 'REFUND_PENDING' | 'REFUNDED' | 'RESOLVED';
   amount: number;
   currency: string;
   failure_code: string | null;

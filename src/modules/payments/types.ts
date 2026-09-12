@@ -61,6 +61,14 @@ export type PaymentOperation = {
   amount: number;
   currency: string;
   status: 'INITIALIZING' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  providerStatus: 'UNVERIFIED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'ABANDONED' | 'REVERSED';
+  orderApplicationStatus:
+    'PENDING' | 'APPLIED' | 'SUPERSEDED' | 'DUPLICATE' | 'LATE_CANCELLED' | 'REVIEW_REQUIRED';
+  resolutionStatus:
+    'NONE' | 'REVIEW_REQUIRED' | 'REFUND_REQUIRED' | 'REFUND_PENDING' | 'REFUNDED' | 'RESOLVED';
+  settlementAccount: string;
+  settlementFeeBearer: 'ACCOUNT' | 'SUBACCOUNT';
+  platformChargeSubunit: number;
   failureCode: string | null;
   initiatedAt: string;
   tenantName: string;
@@ -71,7 +79,9 @@ export type WebhookOperation = {
   id: string;
   eventType: string;
   providerReference: string;
-  processingStatus: 'PROCESSED' | 'IGNORED' | 'REJECTED';
+  processingStatus: 'RECEIVED' | 'PROCESSING' | 'PROCESSED' | 'IGNORED' | 'FAILED' | 'REJECTED';
   errorCode: string | null;
   receivedAt: string;
+  attempts: number;
+  nextRetryAt: string | null;
 };

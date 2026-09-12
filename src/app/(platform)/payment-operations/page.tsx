@@ -11,9 +11,13 @@ export default async function PaymentOperationsPage() {
       <PageHeader
         eyebrow="PLATFORM OPERATIONS"
         title="Payments"
-        description="Review Paystack attempts and safely ask the provider to verify an unresolved payment again. BusinessCare never marks an online payment paid from this screen alone."
+        description="Review provider receipts, resolve duplicate or late payments, and retry safely stored webhook events. BusinessCare changes payment state only after verified Paystack data."
       />
-      <PaymentOperations payments={operations.payments} webhooks={operations.webhooks} />
+      <PaymentOperations
+        payments={operations.payments}
+        attention={operations.attention}
+        webhooks={operations.webhooks}
+      />
     </>
   );
 }

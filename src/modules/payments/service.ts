@@ -16,7 +16,7 @@ type InitializationContext = {
   amountSubunit: number;
   currency: string;
   subaccountCode: string;
-  platformPercentage: number;
+  platformChargeSubunit: number;
   feeBearer: 'ACCOUNT' | 'SUBACCOUNT';
   status: string;
 };
@@ -115,7 +115,7 @@ export async function initializeStoredPaystackPayment(reference: string) {
   }
 }
 
-export async function verifyAndApplyPaystackPayment(reference: string) {
+export async function verifyAndApplyPaystackPaymentState(reference: string) {
   const verified = await paystackProvider.verifyPayment(reference);
   const admin = createAdminClient();
   const { data, error } = await admin.rpc('confirm_paystack_payment', {
@@ -128,7 +128,11 @@ export async function verifyAndApplyPaystackPayment(reference: string) {
       verified.paidAt && Number.isFinite(Date.parse(verified.paidAt)) ? verified.paidAt : null,
   });
   if (error) throw new PaymentProviderError('PAYMENT_RECONCILIATION_FAILED');
-  return String(data ?? 'UNKNOWN');
+  return { result: String(data ?? 'UNKNOWN'), providerStatus: verified.status.toLowerCase() };
+}
+
+export async function verifyAndApplyPaystackPayment(reference: string) {
+  return (await verifyAndApplyPaystackPaymentState(reference)).result;
 }
 
 export async function getPaystackCallbackContext(reference: string) {
@@ -158,8 +162,9 @@ export async function processPaystackWebhookPayload(payload: unknown) {
   )
     throw new PaymentProviderError('INVALID_WEBHOOK_EVENT');
   const admin = createAdminClient();
-  const { data: result, error } = await admin.rpc('process_paystack_webhook', {
-    p_event_key: `${eventType}:${transactionId}`,
+  const eventKey = `${eventType}:${transactionId}`;
+  const { error } = await admin.rpc('receive_paystack_webhook', {
+    p_event_key: eventKey,
     p_event_type: eventType,
     p_provider_reference: reference,
     p_paid_amount_subunit: amount,
@@ -178,5 +183,27 @@ export async function processPaystackWebhookPayload(payload: unknown) {
     },
   });
   if (error) throw new PaymentProviderError('WEBHOOK_STATE_WRITE_FAILED');
-  return String(result ?? 'UNKNOWN');
+  return processStoredPaystackWebhook(eventKey);
+}
+
+export async function processStoredPaystackWebhook(eventKey: string, force = false) {
+  if (!eventKey || eventKey.length > 200) throw new PaymentProviderError('INVALID_WEBHOOK_EVENT');
+  const admin = createAdminClient();
+  const { data: claimed, error: claimError } = await admin.rpc('claim_paystack_webhook', {
+    p_event_key: eventKey,
+    p_force: force,
+  });
+  if (claimError) throw new PaymentProviderError('WEBHOOK_STATE_WRITE_FAILED');
+  const claim = String(claimed ?? 'UNKNOWN');
+  if (claim === 'ALREADY_PROCESSED' || claim === 'PROCESSING') return claim;
+  if (claim !== 'CLAIMED') throw new PaymentProviderError('WEBHOOK_RETRY_PENDING');
+  const { data, error } = await admin.rpc('process_stored_paystack_webhook', {
+    p_event_key: eventKey,
+  });
+  if (!error) return String(data ?? 'UNKNOWN');
+  await admin.rpc('fail_paystack_webhook', {
+    p_event_key: eventKey,
+    p_error_code: 'WEBHOOK_PROCESSING_FAILED',
+  });
+  throw new PaymentProviderError('WEBHOOK_PROCESSING_FAILED');
 }
