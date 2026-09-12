@@ -51,6 +51,17 @@ Run `npm run typecheck` and the production build for structural changes. Run `np
 
 Meaningful UI regression checks inspect rendered behavior: visible borders and hit areas, separated labels, responsive columns, no horizontal overflow, and successful submission. Compilation alone cannot verify a form's appearance.
 
+## Follow a public business application
+
+1. `/get-started` composes the six-step consumer wizard. The unfinished form is browser-only, expires after 48 hours, and can be explicitly cleared; never put an unsubmitted applicant draft in shared storage without a separate product decision.
+2. `components/applications/application-wizard.tsx` owns step navigation and draft recovery. Asynchronous website-name results are cancelled when the value changes so stale availability cannot be shown for a newer name.
+3. `modules/applications/validation.ts` validates the complete application and logo constraints. The server repeats this validation and never treats browser state as authoritative.
+4. `modules/applications/actions.ts` calls `preflight_business_application` before any Cloudinary upload. The preflight applies duplicate, handle, shared-network, and hashed-email controls and returns a short-lived reservation bound to the non-file payload.
+5. Only an accepted preflight may upload a logo. `submit_reserved_business_application` consumes the reservation once, verifies the request fingerprint and payload digest, and then enters the existing atomic application write. Failed database submission removes the new provider asset where possible.
+6. The legacy complete-submission function is internal to the reserved path and has no anonymous or authenticated execute grant. Application tables, reservation rows, applicant details, and administrative actions remain unavailable to ordinary browser roles.
+7. Failures at preflight, logo upload, or reserved submission emit `business_application_submission_failed` with the operation, application UUID, correlation ID, and sanitized bounded diagnostics. Never log the submitted payload, contact details, credentials, request fingerprint, reservation token, or raw provider response.
+8. `scripts/test-application-ui.mjs` verifies expiry, recovery, deferred upload, stored request identity, reservation consumption, responsive UI, administrative review, atomic provisioning, and fixture/provider cleanup. Set `APPLICATION_UI_SKIP_LOGO=true` to exercise the same complete flow without Cloudinary.
+
 ## Follow a catalog mutation
 
 1. Routes under `app/t/[slug]/catalog` authorize and compose catalog components.
@@ -138,7 +149,21 @@ Application website styles are real storefront personality profiles stored in `t
 - The browser cart is tenant-scoped local convenience state. `get_public_checkout_quote` must succeed before checkout can continue, and order creation repeats every price, availability, delivery, and relationship check.
 - A customer's payment notice means “awaiting verification,” never “paid.” Only an authorized merchant transition or a future verified provider event may confirm payment.
 - Customer paid totals are derived from orders whose payment status is `PAID`. The deferred database trigger is the canonical summary writer; application code must not increment paid revenue optimistically.
-- Cancelling fulfilment restores tracked stock exactly once and does not rewrite an already verified payment. Refunds remain a separate Phase 6 operation.
+- Cancelling fulfilment restores tracked stock exactly once and does not rewrite an already verified payment. Refunds remain a separate, durable returns-workflow operation.
+
+## Follow a Paystack payment
+
+1. A tenant manager connects a settlement account in Checkout settings. The server resolves the account with Paystack, creates or updates the tenant subaccount, and stores only the provider code, verified account name, bank, and final four digits.
+2. Checkout creates the authoritative order and an `INITIALIZING` payment attempt in one database transaction before any provider request. Product totals, tenant, currency, inventory, and customer token come from PostgreSQL, not the browser.
+3. `modules/payments/service.ts` initializes hosted Paystack checkout through the provider abstraction. Provider URLs are accepted only from the exact HTTPS Paystack checkout host.
+4. The callback verifies the transaction server-side before redirecting to the token-protected customer status page. Provider status is recorded independently from whether that receipt may pay the order; a callback alone is never trusted without provider verification.
+5. The webhook route reads a bounded raw body, verifies its HMAC-SHA512 signature, and first commits a sanitized `RECEIVED` event. A separate claim applies the stored event, records processing failures durably, and supports authenticated replay. Duplicate delivery is harmless.
+6. Exact reference, amount, currency, tenant, order, and method matches may pay an eligible order. Duplicate success, success after cancellation, and mismatches remain provider-confirmed records with explicit refund/review states rather than disappearing or rewriting order history.
+7. Each attempt uses its immutable settlement-routing snapshot. A customer retry verifies the current provider transaction first, reuses a valid pending checkout when possible, and creates another attempt only after conservative database eligibility checks.
+8. Tenant staff can inspect attempts and request provider reconciliation, but cannot manually confirm Paystack payment. Super admins use `/payment-operations` for the attention queue, bounded cross-platform visibility, safe re-verification, and failed stored-webhook replay.
+9. `PaymentProvider.refundPayment` provides the validated provider capability. Do not expose it directly: the future returns/refunds workflow must add authorization, durable refund records, partial-refund accounting, notifications, and idempotency first.
+
+`PAYSTACK_SECRET_KEY` is server-only. The hosted checkout currently needs no browser SDK or public-key environment variable. Merchant payments remain separate from future BusinessCare subscription billing.
 - Payment instructions are copied onto the order. Replacing a store bank account must not alter what an existing customer was originally shown.
 
 ## Follow a storefront checkout

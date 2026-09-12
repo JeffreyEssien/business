@@ -1,12 +1,12 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-09
+Last updated: 2026-09-12
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: Paystack merchant payments (Phase 6)
+## Current stage: Phase 6 complete; Phase 7 awaiting owner confirmation
 
-Status: Phase 5 is complete and verified. Customers can use a responsive tenant-scoped cart, receive a database-authoritative quote, place a bank-transfer order, and report payment without self-confirming it. Businesses can configure checkout and delivery, filter and inspect their own orders, keep private notes, verify payment, advance fulfilment, and cancel fulfilment with exactly-once inventory restoration. Historical product, customer, delivery, price, and payment-instruction snapshots remain stable. Phase 6 is now active and will add provider-independent payments plus verified, idempotent Paystack processing. No real business, customer, product, or order was created by the agent; all test fixtures and uploaded media were removed.
+Status: Phases 0–6 are complete and verified. Customers choose manual transfer or hosted Paystack checkout, return to a token-protected payment-status page, and retry an unresolved online payment. Business owners reach these choices directly from the dashboard or `Checkout & payments`, where plain-language prerequisites prevent enabling an unusable method. Provider truth is recorded separately from its effect on the order: duplicate, late-after-cancellation, and mismatched receipts remain visible for resolution instead of being discarded or mislabelled. Signed webhook deliveries are persisted before processing, can be safely retried, and super admins have explicit payment-attention and failed-webhook queues. Phase 7 has not started. No real customer transaction or settlement subaccount was created by the agent; all automated database, Auth, and Cloudinary fixtures were removed.
 
 ### Customer application and approval flow
 
@@ -14,13 +14,17 @@ Status: Phase 5 is complete and verified. Customers can use a responsive tenant-
 - Public submission never provisions a tenant. Super Admin receives a searchable, filterable application queue and can edit all critical values while the immutable original submission and revision history remain available.
 - `Approve & create business` is one database transaction around the existing authoritative tenant provisioner. It applies the approved owner, plan, content, Cloudinary logo, contact/social details, theme preset, and all three real brand colours, and prepares requested pages as private drafts.
 - Page-backed homepage buttons automatically require their destination starter page at both the form and database layers. Provisioned Home navigation remains a typed `PAGE` relationship.
-- Public access is narrowed to submission and website-name availability functions. Server validation, file constraints, a honeypot, request-fingerprint throttling, email throttling, and duplicate controls protect intake; application tables and applicant details are Super-Admin-only.
+- Public access is narrowed to website-name availability plus a two-step preflight/reserved submission. Preflight validates the complete non-file payload and applies duplicate, slug, hashed-email, and shared-network controls before Cloudinary receives a logo. A ten-minute single-use reservation binds the accepted payload and request fingerprint to final submission; the older direct submission RPC is no longer browser-callable.
 - A dedicated browser regression proves browser draft recovery, responsive layouts, deferred Cloudinary upload, no tenant before approval, editable review, preserved original values, atomic provisioning, typed navigation, and fixture/media cleanup.
 - All six customer-facing website styles now produce distinct storefront typography, geometry, spacing, or composition while retaining the shared renderer and four stable base presets.
 - “Other” businesses receive a required plain-language explanation field. Approved product readiness and quantity tailor the owner checklist, and category names become private draft suggestions rather than public catalog records.
-- The browser draft preserves its application identity across refreshes and explains that browser security prevents restoring a selected logo file.
+- The browser draft preserves its application identity across refreshes, expires after 48 hours, has a clear-saved-application control, and explains that browser security prevents restoring a selected logo file. Website-name checks cancel stale responses so an earlier result cannot describe a newer value.
 - Publishing rejects visible internal buttons or menu links whose destination is disabled, missing, or not customer-ready. Storefront CTAs resolve internal paths inside the correct tenant store.
 - Failed application-logo cleanup remains non-fatal but now emits a bounded warning containing the request, application, provider, asset key, and operation for investigation and future retries.
+- Public submission failures now emit a correlated, bounded structured event identifying the current preflight, Cloudinary upload, or reserved-submission boundary. PostgreSQL/PostgREST codes, messages, and details are sanitized and truncated; application payloads, contact details, credentials, and provider responses are never logged. Routine duplicate, unavailable-name, rate-limit, and expired-reservation outcomes do not create operational-error noise.
+- The secondary-colour Store Design wrapper repeats tenant-editor authorization at its own database boundary rather than relying only on the function it delegates to.
+- Proposed plan wording describes likely fit without implying that the non-binding application answer is an entitlement or pricing commitment.
+- Migration `202609110003_application_intake_hardening.sql` is applied to development Supabase.
 
 Deferred deliberately: applicant accounts/status tracking, cross-device server drafts, application confirmation and owner-invitation email delivery (Phase 7 provider decision required), a managed challenge such as Turnstile if production abuse warrants it, bulk product import from an application, custom-domain selection, durable background retries for failed provider cleanup, and bespoke copy fields for every requested policy page. A standalone `APPROVED` holding state is also omitted because the chosen approval action provisions atomically; add it only if a later operational process requires approval and provisioning to happen at different times.
 
@@ -124,13 +128,30 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Customer order counts and verified paid totals are derived from authoritative order state at transaction completion, preventing unpaid orders or retries from inflating revenue.
 - Migration files 202609080006_orders_foundation.sql, 202609080007_checkout_order_workflow.sql, 202609080008_order_payment_snapshots.sql, and 202609080009_customer_paid_totals.sql applied to development Supabase.
 
+### Phase 6: Paystack merchant payments
+
+- Tenant checkout settings connect a Paystack-verified settlement account and store only the subaccount code plus masked settlement identity. Paystack availability cannot be enabled until that connection is active.
+- Checkout offers descriptive bank-transfer and secure-online choices. Paystack-required email collection is enforced in both the UI and database even when general email collection is off.
+- Orders and payment attempts are saved before redirect. Initialization is server-side through a provider abstraction, uses an allowlisted hosted-checkout URL, and keeps merchant payments separate from future SaaS billing.
+- The callback verifies with Paystack but is never authoritative by itself. The webhook verifies the raw-body HMAC-SHA512 signature and applies success only for an exact stored reference, amount, currency, tenant, and order.
+- Webhook delivery and payment application are idempotent. Stale attempts cannot pay an already-paid order; unresolved retries are token-bound, rate-limited, and capped.
+- Provider status, order-application status, and operational resolution status are independent. A second successful charge is retained as a duplicate requiring refund; a successful charge after cancellation is retained as a late payment requiring refund; and amount, currency, or method mismatches are retained for review without paying the order.
+- Every payment attempt snapshots its settlement subaccount, fee bearer, and platform charge before Paystack initialization. Later tenant-account changes cannot redirect an existing attempt.
+- Signed webhook deliveries are stored as `RECEIVED` before application is claimed in a separate transaction. Processing failures remain durable with attempt counts and error categories, and an authenticated Super Admin can safely replay a stored event.
+- Customer retry checks the existing Paystack transaction first, reuses a still-valid hosted checkout when it remains pending, and creates a replacement attempt only after conservative server-side eligibility checks.
+- Customers receive a responsive token-protected payment-status/retry page. Tenant staff see attempts and can ask Paystack to verify again but cannot manually confirm online payment.
+- Super admins have `/payment-operations` for payments requiring attention, the 50 latest attempts, 25 latest sanitized webhook outcomes, safe provider re-verification, and stored-event replay. No raw provider payload or customer contact data is displayed.
+- The provider contract includes validated refund initiation, but no refund UI is exposed until durable refund records, authorization, accounting, notification, and idempotency are implemented with the returns workflow.
+- Migration 202609110001_paystack_payments.sql applied to development Supabase.
+- Hardening migration 202609120001_payment_integrity_hardening.sql applied to development Supabase without editing the original migration.
+
 ## Validation
 
 - PASS: TypeScript and production Webpack build.
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all eighteen migrations are applied; checksums and migration history are intact.
+- PASS: all 29 migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
@@ -154,6 +175,12 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: Phase 5 SQL coverage verifies authoritative quotes/prices, inventory locking and decrement, out-of-stock rejection, immutable order/payment snapshots, payment-notice separation, merchant verification, accurate paid totals, exactly-once stock restoration, tenant A/B isolation, anonymous denial, and direct-write denial.
 - PASS: authenticated integration configures checkout, creates a real anonymous order, verifies trusted totals/inventory, records a manual-transfer notice, confirms payment as the merchant, denies tenant B and direct writes, and removes every fixture.
 - PASS: browser regression covers product-to-cart, responsive cart/checkout, order placement, bank-transfer confirmation, customer payment notice, merchant order filtering/detail, payment verification, and fulfilment progression. Desktop/mobile screenshots were inspected with no horizontal overflow or confusing technical labels.
+- PASS: Phase 6 SQL coverage verifies exact provider reference/amount/currency/method matching, durable receive-before-process webhook handling, failure and replay, routing snapshots, duplicate and late successful receipts, review-required mismatches, one normally applied attempt per order, token-bound retries, manual-confirmation denial, direct-write denial, and tenant isolation.
+- PASS: Paystack callback, webhook, customer status, tenant settlement/attempt, and platform payment-operation routes compile in the production build. The authenticated integration and complete desktop/mobile commerce regression pass with fixture cleanup.
+- PASS: the business dashboard links directly to `Checkout & payments`; desktop/mobile captures verify that payment choices are the first numbered settings section, configuration prerequisites are understandable, customer checkout presents the enabled method clearly, and neither admin nor customer layouts overflow horizontally.
+- PASS: application-intake SQL coverage verifies payload-bound single-use reservations, replay denial, legacy-RPC denial, duplicate/slug checks, and Super-Admin-only applicant data. The focused browser flow verifies 48-hour expiry, draft recovery, deferred Cloudinary upload, consumed reservation state, responsive rendering, approval/provisioning, and complete cleanup.
+- PASS: the configured development database directly exposes the expected preflight, reserved-submission, base-submission, and complete-submission signatures plus `business_applications.other_business_type`. A separate no-logo production-browser run completed submission, administrative review, atomic provisioning, and cleanup, isolating Cloudinary from the successful path.
+- PASS: the complete SQL, authenticated integration, and browser UI suites pass after intake hardening. Desktop and mobile application captures were inspected with no horizontal overflow or unclear technical terminology.
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
@@ -162,9 +189,9 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
 - New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
 - Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
-- Online card/payment-provider mode is not connected yet; this is the active Phase 6 scope. Manual bank transfer is functional. Email/SMS remain disabled.
+- Paystack merchant payments and integrity controls are implemented. A real hosted test-card payment still requires the owner to rotate the exposed test secret, connect a Paystack test settlement account, and run Paystack's external checkout; automated tests do not create persistent provider subaccounts or transactions. Email/SMS remain disabled.
 - Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
-- Domain-verification UI, Paystack processing, refunds, and advanced operational controls remain future work.
+- Domain-verification UI, the durable merchant refund workflow, and advanced operational controls remain future work.
 - The Store design editor is responsive and functional, but its long settings column should receive further progressive disclosure so first-time users see fewer controls at once.
 - `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
 - Plain PostgreSQL CI emulates only the Auth schema contract; real Supabase Auth is covered by the separate development integration script.
@@ -179,8 +206,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Theme and content      | 3          | Implemented and verified | Editor, pages, reordering, preview, atomic publishing       |
 | SEO                    | 4          | Implemented and verified | Global/record metadata and sharing images; DNS gate Phase 11 |
 | Orders and checkout    | 5          | Implemented and verified | Trusted totals, atomic inventory, bank transfer, order admin |
-| Paystack               | 6          | In progress              | Verified/idempotent payment processing                     |
-| Email                  | 7          | Planned                  | Branded delivery and logs                                  |
+| Paystack               | 6          | Implemented and verified | Verified/idempotent payment processing                     |
+| Email                  | 7          | Ready to begin           | Branded delivery and logs                                  |
 | SMS                    | 8          | Planned                  | Settings and entitlement enforcement                       |
 | Entitlements/plans     | 9          | Planned                  | Central resolution and server enforcement                  |
 | SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
@@ -193,7 +220,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Now: first business name/handle, owner name/email, template, and initial plan through the create form.
 - Now: sample products, categories, prices, images, and inventory preferences for real catalog review.
 - Content stage: logos, branding, homepage/about/policy copy.
-- Phase 6: Paystack test secret/public keys, the intended test callback base URL, and access to configure the environment-specific webhook endpoint. Never provide live keys for local or staging work.
+- Deployment: configure Paystack callback `/payments/paystack/callback` and webhook `/api/webhooks/paystack` on each environment, then complete one owner-observed test-mode payment before production approval.
 - Integrations: email/SMS providers and sender identities when those stages begin.
 - Billing: plan prices/limits, trial length, grace policy.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.
@@ -207,7 +234,7 @@ Credentials stay in local environment files, never this tracker. No production d
 - Evaluate `pg_trgm` with realistic `EXPLAIN ANALYZE` evidence before adding fuzzy-search indexes. Current bounded name search does not justify indiscriminate extensions.
 - Publish quotas belong to Phase 9 entitlements and require an explicit pricing decision. Draft editing and preview must remain available regardless of any future publish allowance.
 - Audit archive/export requires background jobs, private object storage, verification, redaction, retention policy, email delivery, and retry state. Archive first, verify second, purge hot rows last.
-- Choose external error tracking and provider dashboards after the production host is known. Durable payment/webhook events, idempotency, retries, and failed-event visibility remain release blockers before Paystack.
+- Choose external error tracking and provider dashboards after the production host is known. Durable payment/webhook events, idempotency, bounded retries, and failed-event visibility are now implemented locally; production alert delivery and operational ownership remain release gates.
 
 ## UI repair and modularity refactor — 2026-09-06
 

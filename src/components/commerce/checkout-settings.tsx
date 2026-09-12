@@ -8,8 +8,9 @@ import {
   FormSection,
   FormStack,
 } from '@/components/ui/form-layout';
-import { TextAreaField, TextField } from '@/components/ui/form-fields';
+import { SelectField, TextAreaField, TextField } from '@/components/ui/form-fields';
 import {
+  connectPaystackSettlement,
   removeShippingRate,
   saveBankAccount,
   saveCheckoutSettings,
@@ -20,7 +21,9 @@ import type {
   CheckoutSettings,
   StoredBankAccount,
   StoredShippingRate,
+  TenantPaymentSettings,
 } from '@/modules/commerce/types';
+import type { SettlementBank } from '@/modules/payments/types';
 import styles from './order-admin.module.css';
 
 const initial = { error: '', message: '' };
@@ -61,7 +64,7 @@ export function BankAccountForm({
           />
           <TextField
             name="accountNumber"
-            label="Account number"
+            label="Bank-transfer account number"
             inputMode="numeric"
             required
             minLength={6}
@@ -97,15 +100,52 @@ export function BankAccountForm({
 export function CheckoutSettingsForm({
   slug,
   settings,
+  bankAccountReady,
 }: {
   slug: string;
   settings: CheckoutSettings;
+  bankAccountReady: boolean;
 }) {
   const [state, action, pending] = useActionState(saveCheckoutSettings.bind(null, slug), initial);
   return (
     <FormStack action={action}>
       <FormSection
-        title="Information to collect"
+        title="Choose the payment methods shown at checkout"
+        description="Customers will choose from the methods you enable here. At least one method must remain available."
+      >
+        <div className={styles.checks}>
+          <label>
+            <input
+              type="checkbox"
+              name="bankTransfer"
+              defaultChecked={settings.bank_transfer_enabled}
+              disabled={!bankAccountReady}
+            />{' '}
+            Accept orders paid by manual bank transfer
+          </label>
+          {!bankAccountReady && (
+            <p className={styles.fieldNotice}>
+              Save your bank-transfer account below before turning on manual transfers.
+            </p>
+          )}
+          <label>
+            <input
+              type="checkbox"
+              name="paystack"
+              defaultChecked={settings.paystack_enabled}
+              disabled={!settings.paystack_account_ready}
+            />{' '}
+            Accept card, bank, and other secure online payments through Paystack
+          </label>
+          {!settings.paystack_account_ready && (
+            <p className={styles.fieldNotice}>
+              Connect a Paystack settlement account below before turning on secure online payments.
+            </p>
+          )}
+        </div>
+      </FormSection>
+      <FormSection
+        title="Customer information and confirmation"
         description="Only ask customers for information needed to prepare and deliver their orders."
       >
         <div className={styles.checks}>
@@ -133,14 +173,6 @@ export function CheckoutSettingsForm({
             />{' '}
             Let customers add an order note
           </label>
-          <label>
-            <input
-              type="checkbox"
-              name="bankTransfer"
-              defaultChecked={settings.bank_transfer_enabled}
-            />{' '}
-            Accept orders paid by bank transfer
-          </label>
         </div>
         <TextAreaField
           name="successMessage"
@@ -151,11 +183,83 @@ export function CheckoutSettingsForm({
         />
       </FormSection>
       <Result {...state} />
-      <FormActions note="These choices affect the live checkout immediately. Turning off bank transfer stops new checkouts until another payment method is available.">
+      <FormActions note="These choices affect the live checkout immediately. BusinessCare will not save the form unless at least one fully configured payment method remains enabled.">
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving checkout…' : 'Save checkout choices'}
         </Button>
       </FormActions>
+    </FormStack>
+  );
+}
+
+export function PaystackSettlementForm({
+  slug,
+  settings,
+  banks,
+}: {
+  slug: string;
+  settings: TenantPaymentSettings;
+  banks: SettlementBank[];
+}) {
+  const [state, action, pending] = useActionState(
+    connectPaystackSettlement.bind(null, slug),
+    initial,
+  );
+  const connected = settings.connection_status === 'ACTIVE';
+  return (
+    <FormStack action={action}>
+      <FormSection
+        title={connected ? 'Settlement account connected' : 'Connect your settlement account'}
+        description="Paystack verifies this account and sends your share of each online payment to it. BusinessCare stores only the account name and final four digits."
+      >
+        {connected && (
+          <div className={styles.settlementSummary}>
+            <strong>{settings.settlement_account_name}</strong>
+            <span>
+              {settings.settlement_bank_name} · account ending {settings.settlement_account_last4}
+            </span>
+          </div>
+        )}
+        {banks.length ? (
+          <FormGrid>
+            <SelectField
+              name="bankCode"
+              label="Settlement bank"
+              options={banks.map((bank) => ({ value: bank.code, label: bank.name }))}
+              defaultValue={settings.settlement_bank_code}
+              required
+            />
+            <TextField
+              name="settlementAccountNumber"
+              label={connected ? 'New account number' : 'Account number'}
+              hint={connected ? 'Enter all 10 digits to replace the connected account.' : undefined}
+              inputMode="numeric"
+              autoComplete="off"
+              minLength={10}
+              maxLength={10}
+              pattern="[0-9]{10}"
+              required
+            />
+          </FormGrid>
+        ) : (
+          <p className={styles.fieldNotice}>
+            Paystack bank verification is temporarily unavailable. Your existing payment choices
+            have not changed.
+          </p>
+        )}
+      </FormSection>
+      <Result {...state} />
+      {banks.length > 0 && (
+        <FormActions note="Paystack will confirm the account name before BusinessCare saves the connection.">
+          <Button type="submit" disabled={pending}>
+            {pending
+              ? 'Verifying settlement account…'
+              : connected
+                ? 'Verify and replace account'
+                : 'Verify and connect account'}
+          </Button>
+        </FormActions>
+      )}
     </FormStack>
   );
 }

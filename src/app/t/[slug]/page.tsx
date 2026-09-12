@@ -41,6 +41,9 @@ export default async function TenantWorkspacePage({
         <ButtonLink href={`/t/${slug}/design`} variant="secondary">
           Design storefront
         </ButtonLink>{' '}
+        <ButtonLink href={`/t/${slug}/orders/settings`} variant="secondary">
+          Choose payment methods
+        </ButtonLink>{' '}
         <ButtonLink href="/workspace" variant="secondary">
           ← Your businesses
         </ButtonLink>

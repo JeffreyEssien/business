@@ -16,6 +16,12 @@ import type { ApplicationActionState } from './types';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const allowedLogoTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const expectedApplicationResults = new Set([
+  'RATE_LIMITED',
+  'DUPLICATE_APPLICATION',
+  'WEBSITE_NAME_UNAVAILABLE',
+  'INVALID_RESERVATION',
+]);
 
 function publicError(code?: string) {
   if (code === 'RATE_LIMITED')
@@ -24,7 +30,61 @@ function publicError(code?: string) {
     return 'We already have a recent application for this email or website name. Contact BusinessCare if you need to update it.';
   if (code === 'WEBSITE_NAME_UNAVAILABLE' || code === '23505')
     return 'That website name has just been taken. Choose another and submit again.';
+  if (code === 'INVALID_RESERVATION')
+    return 'Your secure submission check expired. Your answers are still here, so please submit again.';
+  if (code === 'INVALID_APPLICATION' || code === '22023')
+    return 'Some answers did not pass our final safety check. Review the highlighted information and submit again.';
   return 'We could not submit your application safely. Your answers are still here, so please try again.';
+}
+
+function safeDiagnosticText(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const sanitized = value
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
+    .replace(/\b(?:sk|pk)_(?:test|live)_[A-Za-z0-9]+\b/g, '[redacted-provider-key]')
+    .replace(/https?:\/\/\S+/gi, '[redacted-url]')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return sanitized ? sanitized.slice(0, 500) : undefined;
+}
+
+function isExpectedApplicationResult(code: string) {
+  return expectedApplicationResults.has(code);
+}
+
+async function logApplicationSubmissionFailure({
+  applicationId,
+  operation,
+  error,
+  errorCode,
+  provider,
+}: {
+  applicationId: string;
+  operation: string;
+  error?: unknown;
+  errorCode?: string;
+  provider?: 'cloudinary';
+}) {
+  const diagnostic =
+    error && typeof error === 'object'
+      ? (error as { code?: unknown; name?: unknown; message?: unknown; details?: unknown })
+      : null;
+  await logServerEvent({
+    event: 'business_application_submission_failed',
+    level: 'error',
+    operation,
+    resourceType: 'business_application',
+    resourceId: applicationId,
+    success: false,
+    provider,
+    errorCode:
+      errorCode ??
+      (typeof diagnostic?.code === 'string' ? diagnostic.code : undefined) ??
+      (typeof diagnostic?.name === 'string' ? diagnostic.name : undefined) ??
+      'UNKNOWN',
+    errorMessage: safeDiagnosticText(diagnostic?.message),
+    errorDetails: safeDiagnosticText(diagnostic?.details),
+  });
 }
 
 function safeRequestFingerprint(headerList: Headers) {
@@ -118,14 +178,53 @@ export async function submitBusinessApplication(
     return { error: error instanceof Error ? error.message : 'Choose a valid logo.' };
   }
   let upload: UploadedMedia | null = null;
+  let activeOperation = 'prepare_business_application_submission';
   try {
-    if (file) upload = await uploadApplicationLogo(file, applicationId, randomUUID());
     const requestHeaders = await headers();
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc('submit_business_application_complete', {
+    const requestFingerprint = safeRequestFingerprint(requestHeaders);
+    const preflightPayload = { ...input, logo: null };
+    activeOperation = 'preflight_business_application';
+    const { data: preflightData, error: preflightError } = await supabase.rpc(
+      'preflight_business_application',
+      {
+        application_id: applicationId,
+        payload: preflightPayload,
+        request_fingerprint: requestFingerprint,
+      },
+    );
+    const preflight = preflightData as {
+      ok?: boolean;
+      code?: string;
+      reservationToken?: string;
+      reference?: string;
+      existing?: boolean;
+    } | null;
+    if (preflightError || !preflight?.ok) {
+      const failureCode = preflight?.code ?? preflightError?.code ?? 'UNEXPECTED_RPC_RESULT';
+      if (preflightError || !isExpectedApplicationResult(failureCode))
+        await logApplicationSubmissionFailure({
+          applicationId,
+          operation: activeOperation,
+          error: preflightError,
+          errorCode: failureCode,
+        });
+      return { error: publicError(preflight?.code ?? preflightError?.code), fieldErrors: {} };
+    }
+    if (preflight.existing && preflight.reference)
+      return { error: '', reference: preflight.reference };
+    if (!preflight.reservationToken)
+      return { error: publicError('INVALID_RESERVATION'), fieldErrors: {} };
+    if (file) {
+      activeOperation = 'upload_application_logo';
+      upload = await uploadApplicationLogo(file, applicationId, randomUUID());
+    }
+    activeOperation = 'submit_reserved_business_application';
+    const { data, error } = await supabase.rpc('submit_reserved_business_application', {
       application_id: applicationId,
       payload: { ...input, logo: logoPayload(upload, file) },
-      request_fingerprint: safeRequestFingerprint(requestHeaders),
+      request_fingerprint: requestFingerprint,
+      reservation_token: preflight.reservationToken,
     });
     const result = data as {
       ok?: boolean;
@@ -134,6 +233,14 @@ export async function submitBusinessApplication(
       existing?: boolean;
     } | null;
     if (error || !result?.ok || !result.reference) {
+      const failureCode = result?.code ?? error?.code ?? 'UNEXPECTED_RPC_RESULT';
+      if (error || !isExpectedApplicationResult(failureCode))
+        await logApplicationSubmissionFailure({
+          applicationId,
+          operation: activeOperation,
+          error,
+          errorCode: failureCode,
+        });
       if (upload)
         await cleanupApplicationLogo(upload.publicId, applicationId, 'submission_rollback');
       return { error: publicError(result?.code ?? error?.code), fieldErrors: {} };
@@ -141,7 +248,13 @@ export async function submitBusinessApplication(
     if (result.existing && upload)
       await cleanupApplicationLogo(upload.publicId, applicationId, 'duplicate_upload');
     return { error: '', reference: result.reference };
-  } catch {
+  } catch (error) {
+    await logApplicationSubmissionFailure({
+      applicationId,
+      operation: activeOperation,
+      error,
+      provider: activeOperation === 'upload_application_logo' ? 'cloudinary' : undefined,
+    });
     if (upload) await cleanupApplicationLogo(upload.publicId, applicationId, 'submission_rollback');
     return {
       error:

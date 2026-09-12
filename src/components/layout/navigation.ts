@@ -2,6 +2,7 @@ export const platformNavigation = [
   { href: '/', label: 'Overview', icon: '◫' },
   { href: '/businesses', label: 'Businesses', icon: '▦' },
   { href: '/businesses/applications', label: 'Applications', icon: '◇' },
+  { href: '/payment-operations', label: 'Payments', icon: '◎' },
   { href: '/setup', label: 'Launch checklist', icon: '☷' },
 ] as const;
 

@@ -3,9 +3,13 @@ import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FormActions, FormError } from '@/components/ui/form-layout';
 import { TextAreaField } from '@/components/ui/form-fields';
-import { performOrderAction, updateOrderNote } from '@/modules/commerce/actions';
+import {
+  performOrderAction,
+  reconcilePaystackOrder,
+  updateOrderNote,
+} from '@/modules/commerce/actions';
 import { formatMoney } from '@/modules/commerce/money';
-import type { OrderDetail as Order, OrderItem } from '@/modules/commerce/types';
+import type { OrderDetail as Order, OrderItem, PaymentAttempt } from '@/modules/commerce/types';
 import { OrderStatus } from './order-list';
 import styles from './order-admin.module.css';
 
@@ -21,10 +25,12 @@ export function OrderDetail({
   slug,
   order,
   items,
+  payments,
 }: {
   slug: string;
   order: Order;
   items: OrderItem[];
+  payments: PaymentAttempt[];
 }) {
   const next = nextFulfillmentAction(order.fulfillment_status);
   const initial = { error: '', message: '' };
@@ -34,6 +40,10 @@ export function OrderDetail({
   );
   const [paymentState, paymentAction, paymentPending] = useActionState(
     performOrderAction.bind(null, slug, order.id, 'CONFIRM_PAYMENT'),
+    initial,
+  );
+  const [reconcileState, reconcileAction, reconcilePending] = useActionState(
+    reconcilePaystackOrder.bind(null, slug, order.id),
     initial,
   );
   const [fulfillmentState, fulfillmentAction, fulfillmentPending] = useActionState(
@@ -141,6 +151,54 @@ export function OrderDetail({
             </div>
           </section>
         )}
+        {order.payment_method === 'PAYSTACK' && (
+          <section className={styles.section}>
+            <div className={styles.sectionHeading}>
+              <h2>Secure payment attempts</h2>
+              <span>Paystack</span>
+            </div>
+            {payments.length ? (
+              <div className={styles.paymentAttempts}>
+                {payments.map((attempt) => (
+                  <div key={attempt.id}>
+                    <div>
+                      <strong>
+                        {attempt.order_application_status === 'DUPLICATE'
+                          ? 'Duplicate payment received'
+                          : attempt.order_application_status === 'LATE_CANCELLED'
+                            ? 'Payment received after cancellation'
+                            : attempt.resolution_status === 'REVIEW_REQUIRED'
+                              ? 'Payment needs review'
+                              : attempt.order_application_status === 'APPLIED'
+                                ? 'Payment confirmed'
+                                : 'Payment attempt'}
+                      </strong>
+                      <small>{attempt.provider_reference}</small>
+                      {attempt.resolution_status !== 'NONE' && (
+                        <small>
+                          BusinessCare support must resolve this receipt before the case is closed.
+                        </small>
+                      )}
+                    </div>
+                    <div>
+                      <OrderStatus
+                        value={attempt.provider_status === 'SUCCESS' ? 'PAID' : attempt.status}
+                      />
+                      <small>
+                        {new Intl.DateTimeFormat('en-NG', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(attempt.paid_at ?? attempt.initiated_at))}
+                      </small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.emptyMessage}>No payment attempt has been recorded.</p>
+            )}
+          </section>
+        )}
       </div>
       <aside className={styles.actionsPanel}>
         <div>
@@ -169,14 +227,28 @@ export function OrderDetail({
             Save private note
           </Button>
         </form>
-        {order.payment_status !== 'PAID' && order.payment_status !== 'CANCELLED' && (
-          <form action={paymentAction} className={styles.singleAction}>
-            <FormError message={paymentState.error} />
-            <Button type="submit" disabled={paymentPending}>
-              Confirm bank payment
-            </Button>
-          </form>
-        )}
+        {order.payment_method === 'BANK_TRANSFER' &&
+          order.payment_status !== 'PAID' &&
+          order.payment_status !== 'CANCELLED' && (
+            <form action={paymentAction} className={styles.singleAction}>
+              <FormError message={paymentState.error} />
+              {paymentState.message && <p className={styles.saved}>{paymentState.message}</p>}
+              <Button type="submit" disabled={paymentPending}>
+                Confirm bank payment
+              </Button>
+            </form>
+          )}
+        {order.payment_method === 'PAYSTACK' &&
+          order.payment_status !== 'PAID' &&
+          order.payment_status !== 'CANCELLED' && (
+            <form action={reconcileAction} className={styles.singleAction}>
+              <FormError message={reconcileState.error} />
+              {reconcileState.message && <p className={styles.saved}>{reconcileState.message}</p>}
+              <Button type="submit" disabled={reconcilePending}>
+                {reconcilePending ? 'Checking Paystack…' : 'Check payment with Paystack'}
+              </Button>
+            </form>
+          )}
         {next && (
           <form action={fulfillmentAction} className={styles.singleAction}>
             <FormError message={fulfillmentState.error} />
@@ -198,7 +270,13 @@ export function OrderDetail({
             </Button>
           </form>
         )}
-        <FormActions note="Confirm payment only after checking the bank transfer. Cancelling fulfilment returns tracked stock but does not erase a verified payment; refunds will be handled separately when online payments are connected. Every status change is recorded in the activity log.">
+        <FormActions
+          note={
+            order.payment_method === 'PAYSTACK'
+              ? 'Paystack payment cannot be confirmed manually. Use “Check payment with Paystack” if the automatic update is delayed. Cancelling fulfilment does not refund a confirmed payment. Every status change is recorded.'
+              : 'Confirm payment only after checking the bank transfer. Cancelling fulfilment returns tracked stock but does not erase a verified payment. Every status change is recorded.'
+          }
+        >
           <span />
         </FormActions>
       </aside>

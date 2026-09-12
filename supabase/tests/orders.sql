@@ -37,7 +37,10 @@ select public.save_bank_account((select id from order_fixture where k='tenant-a'
 insert into order_fixture(k,id) select 'rate-a',public.save_shipping_rate(
  (select id from order_fixture where k='tenant-a'),null,'Lagos','Lagos delivery',1000,array['Lagos'],false
 );
-select public.save_checkout_settings((select id from order_fixture where k='tenant-a'),true,true,true,true,true,'Order received safely.');
+select public.save_checkout_settings_complete(
+ (select id from order_fixture where k='tenant-a'),true,true,true,true,true,false,
+ 'Order received safely.'
+);
 select public.publish_site((select id from order_fixture where k='tenant-a'));
 reset role;
 insert into order_fixture(k,id) values('product-a',gen_random_uuid());

@@ -36,6 +36,7 @@ type Values = Omit<BusinessApplicationInput, 'productCategories'> & {
   productCategories: string;
 };
 const storageKey = 'businesscare-application-draft-v1';
+const draftLifetimeMs = 48 * 60 * 60 * 1000;
 
 function ChoiceCards({
   name,
@@ -116,7 +117,16 @@ export function ApplicationWizard() {
         const parsed = JSON.parse(saved) as {
           applicationId?: unknown;
           values?: Partial<Values>;
+          savedAt?: unknown;
         } & Partial<Values>;
+        if (
+          typeof parsed.savedAt !== 'number' ||
+          !Number.isFinite(parsed.savedAt) ||
+          Date.now() - parsed.savedAt > draftLifetimeMs
+        ) {
+          localStorage.removeItem(storageKey);
+          throw new Error('EXPIRED_BROWSER_DRAFT');
+        }
         const savedValues = parsed.values ?? parsed;
         setValues({
           ...defaultApplicationValues,
@@ -139,7 +149,10 @@ export function ApplicationWizard() {
   }, []);
   useEffect(() => {
     if (ready && applicationId && !state.reference)
-      localStorage.setItem(storageKey, JSON.stringify({ applicationId, values }));
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ applicationId, values, savedAt: Date.now() }),
+      );
   }, [applicationId, ready, state.reference, values]);
   useEffect(() => {
     if (state.reference) localStorage.removeItem(storageKey);
@@ -187,11 +200,15 @@ export function ApplicationWizard() {
       return;
     }
     setWebsiteState('checking');
+    let cancelled = false;
     const timer = window.setTimeout(async () => {
       const result = await checkWebsiteName(values.preferredSlug);
-      setWebsiteState(result.available ? 'available' : 'unavailable');
+      if (!cancelled) setWebsiteState(result.available ? 'available' : 'unavailable');
     }, 450);
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [values.preferredSlug]);
   useEffect(
     () => () => {
@@ -217,6 +234,12 @@ export function ApplicationWizard() {
   )
     ? values.primaryActionDestination
     : null;
+
+  function clearSavedApplication() {
+    if (!window.confirm('Clear every saved answer in this browser and start again?')) return;
+    localStorage.removeItem(storageKey);
+    window.location.reload();
+  }
 
   function canContinue() {
     if (
@@ -289,7 +312,7 @@ export function ApplicationWizard() {
         </div>
         <div className={styles.trustNote}>
           <strong>No technical knowledge needed.</strong>
-          <span>Your answers stay saved in this browser until you submit.</span>
+          <span>Your answers stay in this browser for up to 48 hours unless you clear them.</span>
         </div>
       </aside>
       <main className={styles.wizardMain}>
@@ -300,7 +323,12 @@ export function ApplicationWizard() {
             </span>
             <strong>{steps[step].title}</strong>
           </div>
-          <span>{Math.round(((step + 1) / steps.length) * 100)}%</span>
+          <div className={styles.progressTools}>
+            <span>{Math.round(((step + 1) / steps.length) * 100)}%</span>
+            <button type="button" onClick={clearSavedApplication}>
+              Clear saved application
+            </button>
+          </div>
         </div>
         <div className={styles.progressTrack}>
           <span style={{ width: progress }} />

@@ -1,17 +1,40 @@
 import 'server-only';
 import { notFound } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import {
   FULFILLMENT_STATUSES,
   ORDER_PAGE_SIZE,
   PAYMENT_STATUSES,
+  type PaymentAttempt,
+  type PublicPaystackOrder,
   type CheckoutSettings,
   type OrderDetail,
   type OrderItem,
   type OrderSummary,
   type StoredBankAccount,
   type StoredShippingRate,
+  type TenantPaymentSettings,
 } from './types';
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function getPublicPaystackOrder(slug: string, reference: string, accessToken: string) {
+  if (
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
+    !/^BC-[A-Z0-9-]{8,40}$/.test(reference) ||
+    !uuidPattern.test(accessToken)
+  )
+    return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('get_public_paystack_order', {
+    store_slug: slug,
+    order_reference: reference,
+    access_token: accessToken,
+  });
+  if (error || !data) return null;
+  return data as PublicPaystackOrder;
+}
 
 export async function getOrdersWorkspace(
   slug: string,
@@ -64,11 +87,11 @@ export async function getOrdersWorkspace(
 
 export async function getOrderDetail(slug: string, orderId: string) {
   const workspace = await getTenantWorkspace(slug);
-  const [orderResult, itemResult] = await Promise.all([
+  const [orderResult, itemResult, paymentResult] = await Promise.all([
     workspace.supabase
       .from('orders')
       .select(
-        'id,reference,customer_name_snapshot,customer_email_snapshot,customer_phone_snapshot,subtotal,delivery_fee,total,currency,payment_status,fulfillment_status,shipping_address_jsonb,delivery_method_snapshot,delivery_instructions_snapshot,payment_instructions_snapshot,customer_note,internal_note,created_at,paid_at,fulfilled_at',
+        'id,reference,customer_name_snapshot,customer_email_snapshot,customer_phone_snapshot,subtotal,delivery_fee,total,currency,payment_method,payment_status,fulfillment_status,shipping_address_jsonb,delivery_method_snapshot,delivery_instructions_snapshot,payment_instructions_snapshot,customer_note,internal_note,created_at,paid_at,fulfilled_at',
       )
       .eq('tenant_id', workspace.tenant.id)
       .eq('id', orderId)
@@ -79,23 +102,34 @@ export async function getOrderDetail(slug: string, orderId: string) {
       .eq('tenant_id', workspace.tenant.id)
       .eq('order_id', orderId)
       .order('created_at'),
+    workspace.supabase
+      .from('payments')
+      .select(
+        'id,provider_reference,status,provider_status,order_application_status,resolution_status,amount,currency,failure_code,initiated_at,paid_at',
+      )
+      .eq('tenant_id', workspace.tenant.id)
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
-  if (orderResult.error || itemResult.error) throw new Error('Order details could not be loaded.');
+  if (orderResult.error || itemResult.error || paymentResult.error)
+    throw new Error('Order details could not be loaded.');
   if (!orderResult.data) notFound();
   return {
     ...workspace,
     order: orderResult.data as OrderDetail,
     items: (itemResult.data ?? []) as OrderItem[],
+    payments: (paymentResult.data ?? []) as PaymentAttempt[],
   };
 }
 
 export async function getCheckoutWorkspace(slug: string) {
   const workspace = await getTenantWorkspace(slug);
-  const [settingsResult, bankResult, ratesResult] = await Promise.all([
+  const [settingsResult, bankResult, ratesResult, paymentResult] = await Promise.all([
     workspace.supabase
       .from('tenant_checkout_settings')
       .select(
-        'collect_phone,collect_email,collect_delivery_address,order_notes_enabled,bank_transfer_enabled,success_message',
+        'collect_phone,collect_email,collect_delivery_address,order_notes_enabled,bank_transfer_enabled,paystack_enabled,success_message',
       )
       .eq('tenant_id', workspace.tenant.id)
       .single(),
@@ -111,13 +145,24 @@ export async function getCheckoutWorkspace(slug: string) {
       .eq('tenant_id', workspace.tenant.id)
       .eq('status', 'ACTIVE')
       .order('amount'),
+    workspace.supabase
+      .from('tenant_payment_settings')
+      .select(
+        'connection_status,subaccount_code,settlement_bank_code,settlement_bank_name,settlement_account_last4,settlement_account_name,connected_at',
+      )
+      .eq('tenant_id', workspace.tenant.id)
+      .single(),
   ]);
-  if (settingsResult.error || bankResult.error || ratesResult.error)
+  if (settingsResult.error || bankResult.error || ratesResult.error || paymentResult.error)
     throw new Error('Checkout settings could not be loaded.');
   return {
     ...workspace,
-    settings: settingsResult.data as CheckoutSettings,
+    settings: {
+      ...settingsResult.data,
+      paystack_account_ready: paymentResult.data.connection_status === 'ACTIVE',
+    } as CheckoutSettings,
     bankAccount: bankResult.data as StoredBankAccount | null,
     shippingRates: (ratesResult.data ?? []) as unknown as StoredShippingRate[],
+    paymentSettings: paymentResult.data as TenantPaymentSettings,
   };
 }

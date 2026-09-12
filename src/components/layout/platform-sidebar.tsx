@@ -44,7 +44,7 @@ export function PlatformSidebar({
         })}
       </nav>
       <p className="nav-label upcoming-label">COMING NEXT</p>
-      {['Commerce', 'Subscriptions', 'Domains', 'Communications'].map((label) => (
+      {['Subscriptions', 'Domains', 'Communications'].map((label) => (
         <div className="future-link" key={label}>
           <span className="future-dot" />
           {label}

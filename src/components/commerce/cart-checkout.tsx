@@ -1,7 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { startTransition, useActionState, useEffect, useMemo, useState } from 'react';
-import { createOrder, quoteCart, submitTransferNotice } from '@/modules/commerce/actions';
+import {
+  createOrder,
+  quoteCart,
+  retryPaystackPayment,
+  submitTransferNotice,
+} from '@/modules/commerce/actions';
 import { readCart, saveCart } from '@/modules/commerce/cart';
 import { formatMoney } from '@/modules/commerce/money';
 import type { CheckoutQuote, CreatedOrder, StoredCartLine } from '@/modules/commerce/types';
@@ -44,6 +49,16 @@ function TransferNotice({ slug, order }: { slug: string; order: CreatedOrder }) 
 }
 
 function OrderConfirmation({ slug, order }: { slug: string; order: CreatedOrder }) {
+  const [paymentState, paymentAction, paymentPending] = useActionState(
+    retryPaystackPayment.bind(null, slug, order.reference, order.accessToken),
+    { error: '', message: '', authorizationUrl: '' },
+  );
+  useEffect(() => {
+    const destination = order.paymentAuthorizationUrl || paymentState.authorizationUrl;
+    if (destination?.startsWith('https://checkout.paystack.com/'))
+      window.location.assign(destination);
+  }, [order.paymentAuthorizationUrl, paymentState.authorizationUrl]);
+
   return (
     <section className={styles.confirmation} aria-labelledby="order-confirmation-heading">
       <p className={styles.step}>Order received</p>
@@ -59,28 +74,59 @@ function OrderConfirmation({ slug, order }: { slug: string; order: CreatedOrder 
           <dd>{formatMoney(order.total, order.currency)}</dd>
         </div>
       </dl>
-      <div className={styles.bankDetails}>
-        <h2>Pay by bank transfer</h2>
-        <p>
-          Use the order reference <strong>{order.reference}</strong> when making your transfer.
-        </p>
-        <dl>
-          <div>
-            <dt>Bank</dt>
-            <dd>{order.bankAccount.bankName}</dd>
+      {order.paymentMethod === 'BANK_TRANSFER' && order.bankAccount ? (
+        <>
+          <div className={styles.bankDetails}>
+            <h2>Pay by bank transfer</h2>
+            <p>
+              Use the order reference <strong>{order.reference}</strong> when making your transfer.
+            </p>
+            <dl>
+              <div>
+                <dt>Bank</dt>
+                <dd>{order.bankAccount.bankName}</dd>
+              </div>
+              <div>
+                <dt>Account number</dt>
+                <dd>{order.bankAccount.accountNumber}</dd>
+              </div>
+              <div>
+                <dt>Account name</dt>
+                <dd>{order.bankAccount.accountName}</dd>
+              </div>
+            </dl>
+            {order.bankAccount.instructions && <p>{order.bankAccount.instructions}</p>}
           </div>
-          <div>
-            <dt>Account number</dt>
-            <dd>{order.bankAccount.accountNumber}</dd>
-          </div>
-          <div>
-            <dt>Account name</dt>
-            <dd>{order.bankAccount.accountName}</dd>
-          </div>
-        </dl>
-        {order.bankAccount.instructions && <p>{order.bankAccount.instructions}</p>}
-      </div>
-      <TransferNotice slug={slug} order={order} />
+          <TransferNotice slug={slug} order={order} />
+        </>
+      ) : (
+        <div className={styles.bankDetails}>
+          <h2>
+            {order.paymentAuthorizationUrl ? 'Opening secure payment…' : 'Complete your payment'}
+          </h2>
+          <p>
+            Your order is saved. Paystack will securely collect your payment and return you here
+            with the result.
+          </p>
+          {(order.paymentError || paymentState.error) && (
+            <p className={styles.error} role="alert">
+              {paymentState.error || order.paymentError}
+            </p>
+          )}
+          {paymentState.message && (
+            <p className={styles.success} role="status">
+              {paymentState.message}
+            </p>
+          )}
+          {!order.paymentAuthorizationUrl && (
+            <form action={paymentAction}>
+              <button type="submit" disabled={paymentPending}>
+                {paymentPending ? 'Opening secure payment…' : 'Try secure payment again'}
+              </button>
+            </form>
+          )}
+        </div>
+      )}
       <Link className={styles.secondaryLink} href={`/store/${slug}`}>
         Continue shopping
       </Link>
@@ -94,6 +140,7 @@ export function CartCheckout({ slug, step }: { slug: string; step: 'cart' | 'che
   const [quoteError, setQuoteError] = useState('');
   const [loading, setLoading] = useState(true);
   const [shippingRate, setShippingRate] = useState('');
+  const [paymentChoice, setPaymentChoice] = useState<'BANK_TRANSFER' | 'PAYSTACK'>('BANK_TRANSFER');
   const [state, formAction, submitting] = useActionState(createOrder.bind(null, slug), {
     error: '',
     order: null,
@@ -122,6 +169,12 @@ export function CartCheckout({ slug, step }: { slug: string; step: 'cart' | 'che
     if (!state.order) return;
     saveCart(slug, []);
   }, [slug, state.order]);
+  useEffect(() => {
+    if (!quote) return;
+    if (!quote.settings.bankTransferEnabled && quote.settings.paystackEnabled)
+      setPaymentChoice('PAYSTACK');
+    else if (!quote.settings.paystackEnabled) setPaymentChoice('BANK_TRANSFER');
+  }, [quote]);
 
   const chosenRate = quote?.shippingRates.find((rate) => rate.id === shippingRate);
   const currency =
@@ -241,10 +294,13 @@ export function CartCheckout({ slug, step }: { slug: string; step: 'cart' | 'che
                 Full name
                 <input name="name" autoComplete="name" required maxLength={160} />
               </label>
-              {quote?.settings.collectEmail && (
+              {(quote?.settings.collectEmail || paymentChoice === 'PAYSTACK') && (
                 <label>
                   Email address
                   <input name="email" type="email" autoComplete="email" required maxLength={254} />
+                  {paymentChoice === 'PAYSTACK' && !quote?.settings.collectEmail && (
+                    <small>Paystack uses this email to identify your secure payment.</small>
+                  )}
                 </label>
               )}
               {quote?.settings.collectPhone && (
@@ -342,16 +398,43 @@ export function CartCheckout({ slug, step }: { slug: string; step: 'cart' | 'che
               </label>
             )}
             <fieldset>
-              <legend>Payment</legend>
-              <label className={styles.paymentChoice}>
-                <input type="radio" checked readOnly />
-                <span>
-                  <strong>Bank transfer</strong>
-                  <small>
-                    Your order is only marked paid after the store verifies your transfer.
-                  </small>
-                </span>
-              </label>
+              <legend>How would you like to pay?</legend>
+              <div className={styles.paymentChoices}>
+                {quote?.settings.paystackEnabled && (
+                  <label className={styles.paymentChoice}>
+                    <input
+                      type="radio"
+                      name="paymentChoice"
+                      value="PAYSTACK"
+                      checked={paymentChoice === 'PAYSTACK'}
+                      onChange={() => setPaymentChoice('PAYSTACK')}
+                    />
+                    <span>
+                      <strong>Pay securely online</strong>
+                      <small>
+                        Pay with Paystack now. Your order updates automatically after confirmation.
+                      </small>
+                    </span>
+                  </label>
+                )}
+                {quote?.settings.bankTransferEnabled && (
+                  <label className={styles.paymentChoice}>
+                    <input
+                      type="radio"
+                      name="paymentChoice"
+                      value="BANK_TRANSFER"
+                      checked={paymentChoice === 'BANK_TRANSFER'}
+                      onChange={() => setPaymentChoice('BANK_TRANSFER')}
+                    />
+                    <span>
+                      <strong>Transfer to the store’s bank account</strong>
+                      <small>
+                        Your order is marked paid after the store verifies your transfer.
+                      </small>
+                    </span>
+                  </label>
+                )}
+              </div>
             </fieldset>
             {state.error && (
               <p className={styles.error} role="alert">
@@ -362,7 +445,12 @@ export function CartCheckout({ slug, step }: { slug: string; step: 'cart' | 'che
               className={styles.placeOrder}
               type="submit"
               disabled={
-                submitting || loading || unavailable || !quote?.settings.bankTransferEnabled
+                submitting ||
+                loading ||
+                unavailable ||
+                (paymentChoice === 'BANK_TRANSFER'
+                  ? !quote?.settings.bankTransferEnabled
+                  : !quote?.settings.paystackEnabled)
               }
             >
               {submitting
