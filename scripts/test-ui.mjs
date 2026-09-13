@@ -87,6 +87,25 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/payment-operations-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify platform email operations';
+  await page.goto(`${base}/communications`);
+  await expect(page.getByRole('heading', { name: 'Customer email delivery' })).toBeVisible();
+  await expect(
+    page.getByText(/Messages remain safely queued until Resend is configured/),
+  ).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/email-operations-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Email operations has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/email-operations-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify platform SMS operations';
+  await page.goto(`${base}/sms-operations`);
+  await expect(page.getByRole('heading', { name: 'Customer text-message delivery' })).toBeVisible();
+  await expect(page.getByText('No businesses have requested a sender name yet.')).toBeVisible();
+  await expect(page.getByText(/No customer text messages have been queued yet/)).toBeVisible();
   stage = 'Open create-business page';
   await page.goto(`${base}/businesses/new`);
   await expect(page.getByRole('heading', { name: 'Create a business.' })).toBeVisible();
@@ -345,6 +364,70 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/checkout-settings-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Configure customer emails';
+  await page.goto(`${base}/t/${slug}`);
+  await expect(page.getByRole('link', { name: 'Choose customer emails' })).toBeVisible();
+  await page.getByRole('link', { name: 'Choose customer emails' }).click();
+  await expect(page.getByRole('heading', { name: 'Customer emails' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '1. Choose automatic order updates' }),
+  ).toBeVisible();
+  const emailPreview = page.locator('iframe[title="Example customer order email"]');
+  await expect(emailPreview.contentFrame().getByText('UI verification business')).toBeVisible();
+  await expect(emailPreview.contentFrame().getByText('Example product × 1')).toBeVisible();
+  await page.getByLabel('Send automatic order updates to customers').check();
+  await page.getByRole('button', { name: 'Save customer email choices' }).click();
+  await expect(page.getByText('Automatic customer email choices saved.')).toBeVisible({
+    timeout: 30000,
+  });
+  await page.screenshot({ path: 'artifacts/ui/customer-emails-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Customer email settings has no mobile overflow',
+  );
+  await emailPreview.scrollIntoViewIfNeeded();
+  await expect(emailPreview.contentFrame().getByText('UI verification business')).toBeVisible();
+  await expect(emailPreview.contentFrame().getByText('Example product × 1')).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/customer-emails-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Request a tenant SMS sender name';
+  await sql`update public.tenants set plan_id=(select id from public.plans where slug='growth') where id=${tenant.id}`;
+  await page.goto(`${base}/t/${slug}`);
+  await expect(page.getByRole('link', { name: 'Choose customer text messages' })).toBeVisible();
+  await page.getByRole('link', { name: 'Choose customer text messages' }).click();
+  await expect(page.getByRole('heading', { name: 'Customer text messages' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '1. Choose the business name customers will see' }),
+  ).toBeVisible();
+  await page.getByLabel('Short name customers will see').fill('UITESTSMS');
+  await page.getByRole('button', { name: 'Submit sender name for review' }).click();
+  await expect(page.getByText(/Sender name submitted to BusinessCare for review/)).toBeVisible({
+    timeout: 30000,
+  });
+  await expect(page.getByText(/BusinessCare is reviewing this sender name/)).toBeVisible();
+  await expect(page.getByLabel('Send automatic order updates by text message')).toBeDisabled();
+  await page.screenshot({ path: 'artifacts/ui/customer-sms-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Customer SMS settings has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/customer-sms-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Review tenant SMS sender request as platform owner';
+  await page.goto(`${base}/sms-operations`);
+  await expect(page.getByText('UI verification business', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('UITESTSMS', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve and send to Termii' })).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/sms-operations-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'SMS operations has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/sms-operations-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Verify public storefront layouts';
   await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
   await expect(
@@ -432,6 +515,12 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/order-details-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify durable customer email activity';
+  await page.goto(`${base}/t/${slug}/communications/email`);
+  await expect(page.getByText(`We received order ${placedOrder.reference}`)).toBeVisible();
+  await expect(page.getByText(`Payment received for ${placedOrder.reference}`)).toBeVisible();
+  await expect(page.getByText('c***@example.invalid').first()).toBeVisible();
+  await expect(page.getByText('Queued').first()).toBeVisible();
   await page.goto(`${base}/store/${slug}/products?search=UI%20verification`);
   await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
   await expect(page.getByLabel("Search this store's products")).toHaveValue('UI verification');

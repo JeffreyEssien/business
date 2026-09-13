@@ -175,3 +175,25 @@ Application website styles are real storefront personality profiles stored in `t
 5. Successful creation returns only the reference, totals, snapshotted bank instructions, and an opaque order-access token. The token may submit a payment notice but cannot read tenant tables or confirm payment.
 6. Routes under `/t/[slug]/orders` use membership-authorized bounded queries. Settings and every status/note mutation re-resolve tenant access on the server and call tenant-checking RPCs.
 7. Order administration keeps payment and fulfilment as separate state machines. All transitions are audited, and customer/order/item snapshots remain immutable.
+
+## Follow a transactional customer email
+
+1. `202609120002_email_notifications.sql` owns notification settings, the private durable queue, delivery events, tenant/platform log projections, and the order lifecycle trigger. Order events are queued in the same transaction as their authoritative state change.
+2. `modules/email/templates.ts` is the single tenant-branded HTML/plain-text renderer. The settings preview calls this exact renderer; do not create a second preview-only template.
+3. `modules/email/provider.ts` owns the provider contract, Resend adapter, test-recipient restriction, sender validation, and provider idempotency key. No browser component imports it.
+4. `modules/email/service.ts` claims a bounded batch and sends its messages concurrently. Provider failure records a safe code and retry time without changing the order or invitation.
+5. New orders and order transitions attempt due delivery after the database transaction. `/api/jobs/email-delivery` provides the protected retry boundary for a deployment scheduler. Super Admin can also process or retry from `/communications`.
+6. `/api/webhooks/resend` verifies the signature against the untouched raw request body and stores only event ID, type, provider message ID, timestamp, and bounded failure category. It never stores the provider payload.
+7. Tenant controls live at `/t/{slug}/communications/email`. Direct queue access is unavailable to tenants; authorized log projections mask recipient addresses. Service-only RPCs own claims and provider state writes.
+8. `EMAIL_DELIVERY_MODE=disabled` is the safe default. Test mode permits exactly `EMAIL_TEST_RECIPIENT`; live mode must not be enabled until `EMAIL_FROM_ADDRESS` belongs to a verified domain.
+
+## Follow a transactional customer SMS
+
+1. `202609130001_sms_notifications.sql` owns tenant SMS settings, the two-stage sender-name state machine, private queue, webhook events, usage, masked projections, and order lifecycle trigger. `202609130002_sms_sender_review.sql` is the additive correction; never edit either applied migration.
+2. The database queues SMS only when the tenant plan includes `sms_notifications`, the tenant master switch and specific event are enabled, the sender name is approved, and the customer phone normalizes successfully. Application checks are explanatory, not authoritative.
+3. A tenant request stops at `PENDING_REVIEW`. Only Super Admin can return it for correction or explicitly submit it to Termii. Provider approval is synchronized separately before the tenant can enable delivery.
+4. `modules/sms/provider.ts` owns the provider contract, Termii host allowlist, disabled/test/live modes, exact test-recipient restriction, sender-name operations, sending, and raw webhook-signature verification. No client component may import it.
+5. `modules/sms/service.ts` claims bounded batches and sends concurrently. Retry only failures known to have happened before provider acceptance; an ambiguous outcome is `DELIVERY_UNKNOWN` and requires investigation rather than automatic resend.
+6. `/api/webhooks/termii` verifies `X-Termii-Signature` over the untouched raw request body before parsing and stores only bounded delivery metadata. `/api/jobs/sms-delivery` is protected by `CRON_SECRET` and claims at most 25 messages.
+7. Tenant controls live at `/t/{slug}/communications/sms`; `/sms-operations` is the Super-Admin review and delivery workspace. Both use masked recipient projections and never query private queue tables directly.
+8. `SMS_DELIVERY_MODE=disabled` is the safe default. Test mode permits only `SMS_TEST_RECIPIENT`; live mode requires an approved sender name, deployed webhook, and an owner-observed test delivery.

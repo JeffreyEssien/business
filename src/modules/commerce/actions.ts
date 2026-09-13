@@ -3,6 +3,8 @@ import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logServerEvent } from '@/lib/observability/server';
 import { createClient } from '@/lib/supabase/server';
+import { dispatchQueuedEmails } from '@/modules/email/service';
+import { dispatchQueuedSms } from '@/modules/sms/service';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import {
   listPaystackBanks,
@@ -64,13 +66,25 @@ export async function createOrder(
   });
   if (error) return { error: commerceErrorMessage(error.message), order: null };
   const order = data as CreatedOrder;
-  if (order.paymentMethod !== 'PAYSTACK' || !order.paymentReference) return { error: '', order };
-  try {
-    order.paymentAuthorizationUrl = await initializeStoredPaystackPayment(order.paymentReference);
-  } catch {
-    order.paymentError =
-      'Your order was saved, but secure payment could not open. You can try payment again below.';
+  const notificationDispatch = Promise.allSettled([
+    dispatchQueuedEmails({ limit: 5 }),
+    dispatchQueuedSms({ limit: 5 }),
+  ]);
+  if (order.paymentMethod !== 'PAYSTACK' || !order.paymentReference) {
+    await notificationDispatch;
+    return { error: '', order };
   }
+  await Promise.all([
+    initializeStoredPaystackPayment(order.paymentReference)
+      .then((url) => {
+        order.paymentAuthorizationUrl = url;
+      })
+      .catch(() => {
+        order.paymentError =
+          'Your order was saved, but secure payment could not open. You can try payment again below.';
+      }),
+    notificationDispatch,
+  ]);
   return { error: '', order };
 }
 
@@ -423,6 +437,10 @@ async function runOrderAction(
     note,
   });
   if (error) return { error: commerceErrorMessage(error.message), message: '' };
+  await Promise.allSettled([
+    dispatchQueuedEmails({ tenantId: workspace.tenant.id, limit: 5 }),
+    dispatchQueuedSms({ tenantId: workspace.tenant.id, limit: 5 }),
+  ]);
   revalidatePath(`/t/${slug}/orders`);
   revalidatePath(`/t/${slug}/orders/${orderId}`);
   return { error: '', message: 'Order updated.' };

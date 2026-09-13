@@ -4,11 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { requirePlatformAdmin } from '@/modules/auth/authorization';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { dispatchQueuedEmails, queueOwnerInvitationEmail } from '@/modules/email/service';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type InvitationLinkState = { error: string; link: string; message?: string };
 export async function generateOwnerLink(
-  _state: { error: string; link: string },
+  _state: InvitationLinkState,
   form: FormData,
-): Promise<{ error: string; link: string }> {
+): Promise<InvitationLinkState> {
   const { supabase } = await requirePlatformAdmin();
   const id = String(form.get('id') ?? '');
   if (!uuid.test(id)) return { error: 'Invalid invitation.', link: '' };
@@ -61,7 +63,25 @@ export async function generateOwnerLink(
     });
     if (auditError)
       return { error: 'Could not record the invitation event. Please retry.', link: '' };
-    return { error: '', link: link.toString() };
+    const invitationUrl = link.toString();
+    try {
+      await queueOwnerInvitationEmail(id, invitationUrl);
+      const delivery = await dispatchQueuedEmails({ tenantId: invitation.tenant_id, limit: 5 });
+      return {
+        error: '',
+        link: invitationUrl,
+        message: delivery.disabled
+          ? 'Invitation link created. Automatic email delivery is not configured yet, so share the link privately.'
+          : 'Invitation link created and queued for secure email delivery.',
+      };
+    } catch {
+      return {
+        error: '',
+        link: invitationUrl,
+        message:
+          'Invitation link created, but email could not be queued. Share the link privately.',
+      };
+    }
   } catch {
     return { error: 'Invitation service is unavailable. Please retry.', link: '' };
   }

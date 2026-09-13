@@ -1,12 +1,12 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-12
+Last updated: 2026-09-13
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: Phase 6 complete; Phase 7 awaiting owner confirmation
+## Current stage: Phase 8 implemented; provider activation awaiting deployment verification
 
-Status: Phases 0–6 are complete and verified. Customers choose manual transfer or hosted Paystack checkout, return to a token-protected payment-status page, and retry an unresolved online payment. Business owners reach these choices directly from the dashboard or `Checkout & payments`, where plain-language prerequisites prevent enabling an unusable method. Provider truth is recorded separately from its effect on the order: duplicate, late-after-cancellation, and mismatched receipts remain visible for resolution instead of being discarded or mislabelled. Signed webhook deliveries are persisted before processing, can be safely retried, and super admins have explicit payment-attention and failed-webhook queues. Phase 7 has not started. No real customer transaction or settlement subaccount was created by the agent; all automated database, Auth, and Cloudinary fixtures were removed.
+Status: Phases 0–8 are implemented and verified locally. Transactional email and SMS use separate provider abstractions and durable PostgreSQL queues. SMS is gated by plan entitlement, tenant choices, and an approved tenant-specific sender name; tenant owners see masked activity while Super Admin reviews sender requests and delivery state. Termii activation still requires deployment environment configuration, webhook registration, provider approval of a test sender, and one owner-observed test delivery. No real customer email, SMS, transaction, sender request, or settlement subaccount was created by the agent; automated database, Auth, and Cloudinary fixtures were removed.
 
 ### Customer application and approval flow
 
@@ -26,7 +26,7 @@ Status: Phases 0–6 are complete and verified. Customers choose manual transfer
 - Proposed plan wording describes likely fit without implying that the non-binding application answer is an entitlement or pricing commitment.
 - Migration `202609110003_application_intake_hardening.sql` is applied to development Supabase.
 
-Deferred deliberately: applicant accounts/status tracking, cross-device server drafts, application confirmation and owner-invitation email delivery (Phase 7 provider decision required), a managed challenge such as Turnstile if production abuse warrants it, bulk product import from an application, custom-domain selection, durable background retries for failed provider cleanup, and bespoke copy fields for every requested policy page. A standalone `APPROVED` holding state is also omitted because the chosen approval action provisions atomically; add it only if a later operational process requires approval and provisioning to happen at different times.
+Deferred deliberately: applicant accounts/status tracking, cross-device server drafts, public application confirmation email, a managed challenge such as Turnstile if production abuse warrants it, bulk product import from an application, custom-domain selection, durable background retries for failed provider cleanup, and bespoke copy fields for every requested policy page. Owner-invitation email is now part of Phase 7. A standalone `APPROVED` holding state is also omitted because the chosen approval action provisions atomically; add it only if a later operational process requires approval and provisioning to happen at different times.
 
 ## Completed
 
@@ -145,13 +145,38 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Migration 202609110001_paystack_payments.sql applied to development Supabase.
 - Hardening migration 202609120001_payment_integrity_hardening.sql applied to development Supabase without editing the original migration.
 
+### Phase 7: transactional customer email
+
+- `EmailProvider` isolates provider delivery from notification orchestration. The first adapter uses Resend's official SDK, a sending-only server key, stable provider idempotency keys, and sanitized operational errors.
+- PostgreSQL queues owner invitations and enabled order lifecycle messages durably. Order creation, verified payment, ready, shipped, and delivered events are unique per order; sending happens outside the order transaction in bounded parallel batches.
+- Every queued message snapshots tenant identity, colours, logo URL, sender name, reply address, subject, recipient, and secure invitation destination where applicable. Order products and totals come from immutable order snapshots.
+- One responsive HTML/plain-text renderer serves every tenant and every supported transactional event. The tenant preview runs that exact production renderer rather than maintaining a separate imitation.
+- Tenant owners reach `Customer emails` directly from their dashboard and workspace navigation. They can turn automatic updates on or off, choose individual events, set the sender display name and reply address, preview their branding, and inspect masked recent activity.
+- Super Admin has `/communications` for masked cross-tenant delivery state, bounded queue processing, failures, and controlled retries. Provider-disabled and test-only modes are explicit rather than silently discarding messages.
+- `/api/webhooks/resend` verifies the raw-body signature before storing sanitized, idempotent delivery events. Out-of-order `sent` events cannot regress a delivered, bounced, or complained message.
+- `/api/jobs/email-delivery` is protected by `CRON_SECRET` and processes a maximum of 25 due messages. Immediate delivery attempts also run after relevant application actions; transient failures retain exponential retry timing without changing orders.
+- Owner invitations now queue for email after the existing secure invitation link is generated. When delivery is disabled, the interface clearly tells Super Admin to share the generated link privately.
+- Migration `202609120002_email_notifications.sql` applied to development Supabase. All earlier migrations remain unchanged.
+
+### Phase 8: transactional customer SMS
+
+- `SmsProvider` isolates delivery from Termii. Delivery mode defaults to disabled, test mode can send only to one exact configured recipient, provider hosts must be HTTPS Termii domains, and no browser module receives provider credentials.
+- Tenant-specific sender names follow a two-stage workflow: a Growth or Pro tenant submits a clear business/use-case request for internal review, then Super Admin may return it for correction or explicitly submit it to Termii. Nothing contacts Termii merely because a tenant saved the form.
+- Only provider-approved sender names can enable automatic messages. Sender names, canonical recipient numbers, message text, event, and estimated segment counts are snapshotted into the durable private queue.
+- Order received, verified payment, ready, shipped, and delivered events queue exactly once inside the authoritative order transaction. The database independently requires the plan entitlement, master setting, selected event, approved sender, and a valid phone number.
+- Due messages are claimed in bounded batches and sent concurrently. Safe pre-delivery failures receive bounded backoff; ambiguous provider/network outcomes become `DELIVERY_UNKNOWN` and are not automatically retried, preventing accidental duplicate texts.
+- `/api/webhooks/termii` verifies the HMAC-SHA512 signature against the untouched, size-limited raw body before recording a sanitized idempotent delivery event. Out-of-order updates cannot regress a final delivery state.
+- Tenant controls live at `/t/{slug}/communications/sms`; Super Admin uses `/sms-operations` for sender review, approval synchronization, masked delivery activity, queue processing, and explicitly safe retries.
+- `/api/jobs/sms-delivery` reuses the protected scheduler secret and processes no more than 25 due messages. Immediate SMS and email delivery attempts run concurrently after successful order/payment commits.
+- Migrations `202609130001_sms_notifications.sql` and additive correction `202609130002_sms_sender_review.sql` are applied to development Supabase. Earlier applied migrations remain unchanged.
+
 ## Validation
 
 - PASS: TypeScript and production Webpack build.
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all 29 migrations are applied; checksums and migration history are intact.
+- PASS: all 32 migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
@@ -178,6 +203,11 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: Phase 6 SQL coverage verifies exact provider reference/amount/currency/method matching, durable receive-before-process webhook handling, failure and replay, routing snapshots, duplicate and late successful receipts, review-required mismatches, one normally applied attempt per order, token-bound retries, manual-confirmation denial, direct-write denial, and tenant isolation.
 - PASS: Paystack callback, webhook, customer status, tenant settlement/attempt, and platform payment-operation routes compile in the production build. The authenticated integration and complete desktop/mobile commerce regression pass with fixture cleanup.
 - PASS: the business dashboard links directly to `Checkout & payments`; desktop/mobile captures verify that payment choices are the first numbered settings section, configuration prerequisites are understandable, customer checkout presents the enabled method clearly, and neither admin nor customer layouts overflow horizontally.
+- PASS: Phase 7 SQL coverage verifies exactly-once order lifecycle messages, immutable tenant branding, masked tenant/platform logs, outsider and anonymous denial, service-only queue access, complete delivery context, and idempotent out-of-order webhooks.
+- PASS: the complete authenticated integration regression passes after Phase 7. The browser regression configures customer emails, renders the real branded production template, queues order/payment messages, exposes only masked recipients, and verifies responsive tenant/platform screens with fixture cleanup.
+- PASS: Phase 8 SQL coverage verifies plan and tenant-setting gates, two-stage sender review, exactly-once order lifecycle messages, immutable sender/phone/message snapshots, segment usage, masked logs, outsider/anonymous denial, service-only queue access, webhook replay, and out-of-order delivery handling.
+- PASS: the complete authenticated integration regression passes after Phase 8, including real Auth sessions, two-tenant isolation, catalog/media, content/search, checkout/orders, direct-write denial, and fixture cleanup.
+- PASS: the complete browser regression upgrades only its disposable fixture to Growth, submits a sender name for internal review without contacting Termii, verifies the tenant and platform workflows, and checks desktop/mobile layouts for overflow. All fixtures were removed.
 - PASS: application-intake SQL coverage verifies payload-bound single-use reservations, replay denial, legacy-RPC denial, duplicate/slug checks, and Super-Admin-only applicant data. The focused browser flow verifies 48-hour expiry, draft recovery, deferred Cloudinary upload, consumed reservation state, responsive rendering, approval/provisioning, and complete cleanup.
 - PASS: the configured development database directly exposes the expected preflight, reserved-submission, base-submission, and complete-submission signatures plus `business_applications.other_business_type`. A separate no-logo production-browser run completed submission, administrative review, atomic provisioning, and cleanup, isolating Cloudinary from the successful path.
 - PASS: the complete SQL, authenticated integration, and browser UI suites pass after intake hardening. Desktop and mobile application captures were inspected with no horizontal overflow or unclear technical terminology.
@@ -189,8 +219,10 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
 - New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
 - Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
-- Paystack merchant payments and integrity controls are implemented. A real hosted test-card payment still requires the owner to rotate the exposed test secret, connect a Paystack test settlement account, and run Paystack's external checkout; automated tests do not create persistent provider subaccounts or transactions. Email/SMS remain disabled.
-- Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
+- Paystack merchant payments and integrity controls are implemented. A real hosted test-card payment still requires the owner to rotate the exposed test secret, connect a Paystack test settlement account, and run Paystack's external checkout; automated tests do not create persistent provider subaccounts or transactions.
+- Owner invitations are durably queued, but no provider message is sent while email delivery is disabled. Localhost invitation links work only on the same computer; configure the deployed app URL before remote owner onboarding.
+- Resend delivery is intentionally `disabled` until the owner provides a sending-only API key and the Resend account email for test mode. `resend.dev` testing can reach only that account email; live owner/customer delivery requires a verified sending domain and webhook secret.
+- Termii SMS implementation is complete, but delivery must remain `disabled` until the updated environment is deployed, the webhook is registered, a tenant sender name is approved by Termii, and one exact-recipient test-mode delivery is observed. Automated verification did not contact Termii or send a text.
 - Domain-verification UI, the durable merchant refund workflow, and advanced operational controls remain future work.
 - The Store design editor is responsive and functional, but its long settings column should receive further progressive disclosure so first-time users see fewer controls at once.
 - `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
@@ -207,8 +239,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | SEO                    | 4          | Implemented and verified | Global/record metadata and sharing images; DNS gate Phase 11 |
 | Orders and checkout    | 5          | Implemented and verified | Trusted totals, atomic inventory, bank transfer, order admin |
 | Paystack               | 6          | Implemented and verified | Verified/idempotent payment processing                     |
-| Email                  | 7          | Ready to begin           | Branded delivery and logs                                  |
-| SMS                    | 8          | Planned                  | Settings and entitlement enforcement                       |
+| Email                  | 7          | Implemented; activation gated | Branded queue, templates, settings, logs, retries       |
+| SMS                    | 8          | Implemented; activation gated | Sender review, durable queue, settings, logs, webhooks  |
 | Entitlements/plans     | 9          | Planned                  | Central resolution and server enforcement                  |
 | SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
 | Domains                | 11         | Planned                  | Verified hostname/TLS lifecycle                            |
@@ -221,7 +253,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Now: sample products, categories, prices, images, and inventory preferences for real catalog review.
 - Content stage: logos, branding, homepage/about/policy copy.
 - Deployment: configure Paystack callback `/payments/paystack/callback` and webhook `/api/webhooks/paystack` on each environment, then complete one owner-observed test-mode payment before production approval.
-- Integrations: email/SMS providers and sender identities when those stages begin.
+- Email activation: create a Resend sending-only API key, provide the Resend account email for test mode, create a webhook signing secret, and later verify an owned sending domain before live delivery.
+- SMS activation: deploy the Termii variables, register `/api/webhooks/termii`, configure the protected `/api/jobs/sms-delivery` schedule, request and approve one tenant sender name, then observe one test-recipient delivery before live mode.
 - Billing: plan prices/limits, trial length, grace policy.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.
 

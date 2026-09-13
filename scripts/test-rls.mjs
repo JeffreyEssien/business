@@ -15,6 +15,8 @@ try {
         console.error(`Failed suite: ${file}`);
         if (String(error.code ?? '').startsWith('42') || error.code === 'P0001') {
           console.error(`SQL test error: ${error.message}`);
+          if (error.position) console.error(`SQL character position: ${error.position}`);
+          if (error.where) console.error(`SQL context: ${error.where}`);
         }
         throw error;
       }

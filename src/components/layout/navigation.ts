@@ -3,6 +3,8 @@ export const platformNavigation = [
   { href: '/businesses', label: 'Businesses', icon: '▦' },
   { href: '/businesses/applications', label: 'Applications', icon: '◇' },
   { href: '/payment-operations', label: 'Payments', icon: '◎' },
+  { href: '/communications', label: 'Email delivery', icon: '✉' },
+  { href: '/sms-operations', label: 'SMS delivery', icon: '◉' },
   { href: '/setup', label: 'Launch checklist', icon: '☷' },
 ] as const;
 

@@ -25,6 +25,8 @@ DEV_DATABASE_URL
 DEV_CLOUDINARY_CLOUD_NAME
 DEV_CLOUDINARY_API_KEY
 DEV_CLOUDINARY_API_SECRET
+DEV_RESEND_API_KEY
+DEV_RESEND_WEBHOOK_SECRET
 ```
 
 Then create this repository variable:
@@ -46,3 +48,42 @@ Pull request dependency review
 ```
 
 The live development check runs after a successful push to `develop`, rather than as a secret-bearing pull-request check. Configure required reviewers on the GitHub `development` environment if manual approval is desired before that job accesses its secrets.
+# Transactional email delivery
+
+BusinessCare defaults to `EMAIL_DELIVERY_MODE=disabled`. For Resend account-only testing, configure a sending-only `RESEND_API_KEY`, the webhook signing secret, `EMAIL_DELIVERY_MODE=test`, `EMAIL_FROM_ADDRESS=onboarding@resend.dev`, and `EMAIL_TEST_RECIPIENT` as the email on the Resend account. Never expose these values with `NEXT_PUBLIC_`.
+
+Register `/api/webhooks/resend` for email sent, delivered, delivery delayed, failed, bounced, suppressed, and complained events. The handler verifies the raw-body Svix signature and persists only bounded metadata.
+
+Invoke `/api/jobs/email-delivery` with `Authorization: Bearer <CRON_SECRET>` from the deployment scheduler. Each invocation claims at most 25 due messages. Change to `EMAIL_DELIVERY_MODE=live` only after `EMAIL_FROM_ADDRESS` belongs to a verified sending domain and a real owner-observed delivery passes.
+
+# Transactional SMS delivery
+
+BusinessCare defaults to `SMS_DELIVERY_MODE=disabled`. Configure these as server-only deployment variables; never prefix them with `NEXT_PUBLIC_`:
+
+```text
+TERMII_API_KEY
+TERMII_BASE_URL
+TERMII_WEBHOOK_SECRET
+TERMII_SMS_CHANNEL=generic
+SMS_DELIVERY_MODE=disabled
+SMS_TEST_RECIPIENT
+CRON_SECRET
+```
+
+Use the account-specific HTTPS base URL shown in Termii's API-token settings. `TERMII_WEBHOOK_SECRET` is the secret used to verify Termii's `X-Termii-Signature`; when it is omitted, the adapter uses `TERMII_API_KEY`, matching Termii's signing documentation. Keep the explicit variable when the dashboard provides a separate webhook secret.
+
+Register this delivery-report endpoint in the Termii dashboard:
+
+```text
+https://business-psi-umber.vercel.app/api/webhooks/termii
+```
+
+The route verifies HMAC-SHA512 over the untouched raw body, rejects bodies over 64 KB, and persists only sanitized event identifiers, message status, timestamp, cost, and channel. It does not retain the provider payload or customer phone number.
+
+Invoke this delivery worker from the deployment scheduler with `Authorization: Bearer <CRON_SECRET>`:
+
+```text
+https://business-psi-umber.vercel.app/api/jobs/sms-delivery
+```
+
+Each run claims at most 25 messages. Keep delivery disabled while deploying and registering the webhook. Then use `test` mode with one canonical international `SMS_TEST_RECIPIENT`, submit a disposable tenant sender request, review it in `/sms-operations`, and wait for Termii approval. Send and observe one order update before switching to `live`. A tenant request alone never contacts Termii; the Super-Admin “Approve & send to Termii” action is the explicit provider side effect.
