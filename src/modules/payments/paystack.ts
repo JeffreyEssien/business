@@ -163,28 +163,47 @@ export const paystackProvider: PaymentProvider = {
 
 let bankCache: { expiresAt: number; banks: SettlementBank[] } | null = null;
 
+function uniqueSettlementBanks(data: unknown[]): SettlementBank[] {
+  const candidates = data
+    .map(object)
+    .filter((bank): bank is Record<string, unknown> => Boolean(bank))
+    .filter((bank) => bank.type === 'nuban' && bank.active === true && bank.is_deleted === false)
+    .map((bank) => ({
+      code: String(bank.code ?? '').trim(),
+      name: String(bank.name ?? '').trim(),
+    }))
+    .filter(
+      (bank) =>
+        /^[0-9A-Za-z_-]{2,30}$/.test(bank.code) && bank.name.length >= 2 && bank.name.length <= 120,
+    );
+  const byCode = new Map<string, SettlementBank | null>();
+  for (const bank of candidates) {
+    const existing = byCode.get(bank.code);
+    if (!byCode.has(bank.code)) byCode.set(bank.code, bank);
+    else if (existing?.name !== bank.name) byCode.set(bank.code, null);
+  }
+  return [...byCode.values()]
+    .filter((bank): bank is SettlementBank => bank !== null)
+    .sort((first, second) => first.name.localeCompare(second.name));
+}
+
 export async function listPaystackBanks(): Promise<SettlementBank[]> {
   if (bankCache && bankCache.expiresAt > Date.now()) return bankCache.banks;
-  const response = await fetch(`${PAYSTACK_API}/bank?country=nigeria&currency=NGN&perPage=100`, {
-    headers: { Authorization: `Bearer ${secretKey()}` },
-    cache: 'no-store',
-    signal: AbortSignal.timeout(12_000),
-  }).catch(() => null);
+  const response = await fetch(
+    `${PAYSTACK_API}/bank?country=nigeria&currency=NGN&type=nuban&perPage=100`,
+    {
+      headers: { Authorization: `Bearer ${secretKey()}` },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(12_000),
+    },
+  ).catch(() => null);
   const payload = response ? object(await response.json().catch(() => null)) : null;
   const data = Array.isArray(payload?.data) ? payload.data : null;
   if (!response?.ok || payload?.status !== true || !data)
     throw new PaymentProviderError(
       response ? `PAYSTACK_HTTP_${response.status}` : 'PAYSTACK_UNREACHABLE',
     );
-  const banks = data
-    .map(object)
-    .filter((bank): bank is Record<string, unknown> => Boolean(bank))
-    .map((bank) => ({ code: String(bank.code ?? ''), name: String(bank.name ?? '') }))
-    .filter(
-      (bank) =>
-        /^[0-9A-Za-z_-]{2,30}$/.test(bank.code) && bank.name.length >= 2 && bank.name.length <= 120,
-    )
-    .sort((first, second) => first.name.localeCompare(second.name));
+  const banks = uniqueSettlementBanks(data);
   if (!banks.length) throw new PaymentProviderError('PAYSTACK_INVALID_RESPONSE');
   bankCache = { expiresAt: Date.now() + 60 * 60 * 1000, banks };
   return banks;

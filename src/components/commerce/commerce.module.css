@@ -8,9 +8,9 @@
   justify-content: center;
   padding: 11px 18px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--store-control-radius, 999px);
   background: var(--store-primary, var(--primary));
-  color: var(--store-background, #fff);
+  color: var(--store-on-primary, var(--surface));
   font: inherit;
   font-size: 14px;
   font-weight: 700;
@@ -25,6 +25,7 @@
   margin-top: 14px;
 }
 .addButton:active,
+.primaryLink:active,
 .placeOrder:active,
 .transferNotice button:active {
   transform: scale(0.98);
@@ -58,7 +59,7 @@
 .emptyCart h1,
 .confirmation h1 {
   margin: 0;
-  font-family: Georgia, serif;
+  font-family: var(--store-heading-font, inherit);
   font-size: clamp(36px, 6vw, 58px);
   line-height: 1.05;
   letter-spacing: -0.035em;
@@ -81,7 +82,7 @@
 .cartLines {
   display: grid;
   gap: 0;
-  border-top: 1px solid color-mix(in srgb, var(--store-text, #111) 16%, transparent);
+  border-top: 1px solid var(--store-border, var(--border));
 }
 .cartLine {
   display: grid;
@@ -89,14 +90,14 @@
   align-items: center;
   gap: 20px;
   padding-block: 22px;
-  border-bottom: 1px solid color-mix(in srgb, var(--store-text, #111) 16%, transparent);
+  border-bottom: 1px solid var(--store-border, var(--border));
 }
 .cartLine img,
 .mediaPlaceholder {
   width: 88px;
   aspect-ratio: 4 / 5;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--store-text, #111) 8%, transparent);
+  border-radius: var(--store-media-radius, 10px);
+  background: var(--store-surface-muted, var(--surface-muted));
   object-fit: cover;
 }
 .cartLine h2 {
@@ -112,7 +113,7 @@
   display: grid;
   grid-template-columns: 44px 36px 44px;
   align-items: center;
-  border: 1px solid color-mix(in srgb, var(--store-text, #111) 20%, transparent);
+  border: 1px solid var(--store-border, var(--border));
   border-radius: 999px;
   text-align: center;
 }
@@ -134,9 +135,9 @@
   position: sticky;
   top: 24px;
   padding: 28px;
-  border: 1px solid color-mix(in srgb, var(--store-text, #111) 16%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--store-background, #fff) 95%, var(--store-text, #111));
+  border: 1px solid var(--store-border, var(--border));
+  border-radius: var(--store-media-radius, 16px);
+  background: var(--store-surface-muted, var(--surface-muted));
 }
 .orderSummary h2,
 .bankDetails h2 {
@@ -155,7 +156,7 @@
 }
 .summaryList dt,
 .bankDetails dt {
-  color: color-mix(in srgb, var(--store-text, #111) 68%, transparent);
+  color: color-mix(in srgb, var(--store-text, var(--foreground)) 68%, transparent);
 }
 .summaryList dd,
 .bankDetails dd {
@@ -166,7 +167,7 @@
 .summaryList .total {
   margin-top: 8px;
   padding-top: 18px;
-  border-top: 1px solid color-mix(in srgb, var(--store-text, #111) 16%, transparent);
+  border-top: 1px solid var(--store-border, var(--border));
   font-size: 18px;
 }
 .orderSummary .primaryLink,
@@ -197,15 +198,22 @@
   line-height: 1.6;
 }
 .loading {
-  background: color-mix(in srgb, var(--store-primary, #6655d7) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--store-primary, var(--primary)) 20%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--store-primary, var(--primary)) 9%,
+    var(--store-background, var(--surface))
+  );
 }
 .error {
-  background: #fff1f1;
-  color: #8a2d2d !important;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-surface);
+  color: var(--danger-text) !important;
 }
 .success {
-  background: #edf8f0;
-  color: #28623a !important;
+  border: 1px solid var(--success-border);
+  background: var(--success-surface);
+  color: var(--success-text) !important;
 }
 .checkoutForm {
   display: grid;
@@ -218,7 +226,7 @@
   margin: 0;
   padding: 28px 0 0;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--store-text, #111) 16%, transparent);
+  border-top: 1px solid var(--store-border, var(--border));
 }
 .checkoutForm legend {
   margin-bottom: 20px;
@@ -237,20 +245,20 @@
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--store-text, #111) 24%, transparent);
-  border-radius: 10px;
-  background: var(--store-background, #fff);
-  color: var(--store-text, #111);
+  border: 1px solid var(--store-border, var(--border-strong));
+  border-radius: 12px;
+  background: var(--store-surface, var(--surface));
+  color: var(--store-text, var(--foreground));
   font: inherit;
 }
 .checkoutForm textarea {
   min-height: 110px;
   resize: vertical;
 }
-.checkoutForm input:focus,
-.checkoutForm textarea:focus {
+.checkoutForm input:focus-visible,
+.checkoutForm textarea:focus-visible {
   border-color: var(--store-primary, var(--primary));
-  outline: 3px solid color-mix(in srgb, var(--store-primary, #6655d7) 20%, transparent);
+  outline: 3px solid color-mix(in srgb, var(--store-primary, var(--primary)) 20%, transparent);
   outline-offset: 2px;
 }
 .formGrid {
@@ -274,9 +282,24 @@
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  border: 1px solid color-mix(in srgb, var(--store-text, #111) 20%, transparent);
-  border-radius: 12px;
+  border: 1px solid var(--store-border, var(--border));
+  border-radius: 16px;
+  background: var(--store-surface, transparent);
   cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out);
+}
+.deliveryChoices label:hover,
+.paymentChoice:hover,
+.deliveryChoices label:has(input:checked),
+.paymentChoice:has(input:checked) {
+  border-color: var(--store-primary, var(--primary));
+  background: color-mix(
+    in srgb,
+    var(--store-primary, var(--primary)) 7%,
+    var(--store-background, var(--surface))
+  );
 }
 .deliveryChoices input,
 .paymentChoice input {
@@ -292,7 +315,7 @@
 }
 .deliveryChoices small,
 .paymentChoice small {
-  color: color-mix(in srgb, var(--store-text, #111) 65%, transparent);
+  color: color-mix(in srgb, var(--store-text, var(--foreground)) 65%, transparent);
   font-weight: 400;
   line-height: 1.5;
 }
@@ -314,8 +337,9 @@
 .transferNotice {
   margin-top: 32px;
   padding: 24px;
-  border: 1px solid color-mix(in srgb, var(--store-text, #111) 16%, transparent);
-  border-radius: 14px;
+  border: 1px solid var(--store-border, var(--border));
+  border-radius: var(--store-media-radius, 14px);
+  background: var(--store-surface, transparent);
   text-align: left;
 }
 .bankDetails p,

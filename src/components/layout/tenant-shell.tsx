@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { SignOutForm } from '@/components/auth/sign-out-form';
+import { SkipLink } from '@/components/ui/skip-link';
+import { useMobileNavigation } from './use-mobile-navigation';
 
 type TenantNavigationGroup = {
   label: string;
@@ -54,42 +56,34 @@ function workspaceTitle(pathname: string, root: string) {
 export function TenantShell({ slug, children }: { slug: string; children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const navigationRef = useRef<HTMLElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const root = `/t/${slug}`;
   const title = workspaceTitle(pathname, root);
+  const closeNavigation = useCallback(() => setOpen(false), []);
 
   useEffect(() => setOpen(false), [pathname]);
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', close);
-    return () => document.removeEventListener('keydown', close);
-  }, [open]);
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [open]);
+  useMobileNavigation({
+    open,
+    onClose: closeNavigation,
+    panelRef: navigationRef,
+    triggerRef: menuTriggerRef,
+  });
 
   if (pathname === `${root}/design/preview`) return children;
 
   return (
     <div className="tenant-shell">
-      <a className="skip-link" href="#tenant-main">
-        Skip to content
-      </a>
+      <SkipLink className="skip-link" href="#tenant-main" />
       <button
         className={`tenant-backdrop ${open ? 'is-visible' : ''}`}
         type="button"
         aria-label="Close business navigation"
         tabIndex={open ? 0 : -1}
-        onClick={() => setOpen(false)}
+        onClick={closeNavigation}
       />
       <aside
+        ref={navigationRef}
         id="tenant-navigation"
         className={`tenant-sidebar ${open ? 'is-open' : ''}`}
         aria-label="Business workspace navigation"
@@ -104,7 +98,7 @@ export function TenantShell({ slug, children }: { slug: string; children: React.
           className="sidebar-close"
           type="button"
           aria-label="Close navigation"
-          onClick={() => setOpen(false)}
+          onClick={closeNavigation}
         >
           <span aria-hidden="true">×</span>
         </button>
@@ -155,6 +149,7 @@ export function TenantShell({ slug, children }: { slug: string; children: React.
       <div className="tenant-main-shell">
         <header className="tenant-topbar">
           <button
+            ref={menuTriggerRef}
             className="mobile-menu"
             type="button"
             aria-label="Open navigation"

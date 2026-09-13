@@ -120,7 +120,7 @@ function OrderConfirmation({ slug, order }: { slug: string; order: CreatedOrder 
           )}
           {!order.paymentAuthorizationUrl && (
             <form action={paymentAction}>
-              <button type="submit" disabled={paymentPending}>
+              <button className={styles.primaryLink} type="submit" disabled={paymentPending}>
                 {paymentPending ? 'Opening secure payment…' : 'Try secure payment again'}
               </button>
             </form>

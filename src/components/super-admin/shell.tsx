@@ -1,47 +1,46 @@
 'use client';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PlatformSidebar } from '@/components/layout/platform-sidebar';
 import { PlatformTopbar } from '@/components/layout/platform-topbar';
+import { SkipLink } from '@/components/ui/skip-link';
+import { useMobileNavigation } from '@/components/layout/use-mobile-navigation';
 
 /** The shell coordinates mobile navigation only; page data and authorization stay server-side. */
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigationRef = useRef<HTMLElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const closeNavigation = useCallback(() => setMenuOpen(false), []);
   useEffect(() => setMenuOpen(false), [pathname]);
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false);
-    };
-    document.addEventListener('keydown', close);
-    return () => document.removeEventListener('keydown', close);
-  }, [menuOpen]);
-  useEffect(() => {
-    if (!menuOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [menuOpen]);
+  useMobileNavigation({
+    open: menuOpen,
+    onClose: closeNavigation,
+    panelRef: navigationRef,
+    triggerRef: menuTriggerRef,
+  });
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
+      <SkipLink className="skip-link" href="#main" />
       <button
         className={`platform-backdrop ${menuOpen ? 'is-visible' : ''}`}
         type="button"
         aria-label="Close platform navigation"
         tabIndex={menuOpen ? 0 : -1}
-        onClick={() => setMenuOpen(false)}
+        onClick={closeNavigation}
       />
-      <PlatformSidebar pathname={pathname} open={menuOpen} onNavigate={() => setMenuOpen(false)} />
+      <PlatformSidebar
+        navigationRef={navigationRef}
+        pathname={pathname}
+        open={menuOpen}
+        onNavigate={closeNavigation}
+      />
       <div className="main-shell">
         <PlatformTopbar
           pathname={pathname}
           menuOpen={menuOpen}
+          menuTriggerRef={menuTriggerRef}
           onToggleMenu={() => setMenuOpen(!menuOpen)}
         />
         <main id="main">{children}</main>

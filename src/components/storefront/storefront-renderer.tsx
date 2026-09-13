@@ -2,9 +2,11 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { AddToCartButton } from '@/components/commerce/add-to-cart-button';
-import { CartLink } from '@/components/commerce/cart-link';
 import type { PublicProduct } from '@/modules/catalog/types';
+import { themePresets } from '@/modules/content/presets';
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
+import { SkipLink } from '@/components/ui/skip-link';
+import { StoreNavigation } from './store-navigation';
 import { StructuredData } from './structured-data';
 import styles from './storefront.module.css';
 
@@ -44,6 +46,10 @@ function storefrontPersonality(configuration: SiteConfiguration) {
       general: 'clean-minimal',
     }[configuration.theme.presetKey] ?? 'clean-minimal'
   );
+}
+
+function themeColor(value: string | undefined, fallback: string) {
+  return value && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 }
 
 function rgbChannels(color: string) {
@@ -86,15 +92,21 @@ function accessibleForeground(background: string) {
 
 function storefrontStyle(configuration: SiteConfiguration) {
   const tokens = configuration.theme.tokens;
+  const fallback = themePresets.general.tokens;
+  const primary = themeColor(tokens.primary, fallback.primary);
+  const accent = themeColor(tokens.accent, fallback.accent);
+  const secondary = themeColor(tokens.secondary, accent);
+  const background = themeColor(tokens.background, fallback.background);
+  const foreground = themeColor(tokens.text, fallback.text);
   return {
-    '--store-primary': tokens.primary,
-    '--store-secondary': tokens.secondary ?? tokens.accent,
-    '--store-accent': tokens.accent,
-    '--store-background': tokens.background,
-    '--store-text': tokens.text,
-    '--store-on-primary': accessibleForeground(tokens.primary),
-    '--store-link':
-      contrastRatio(tokens.primary, tokens.background) >= 4.5 ? tokens.primary : tokens.text,
+    '--store-primary': primary,
+    '--store-secondary': secondary,
+    '--store-accent': accent,
+    '--store-background': background,
+    '--store-text': foreground,
+    '--store-on-primary': accessibleForeground(primary),
+    '--store-on-secondary': accessibleForeground(secondary),
+    '--store-link': contrastRatio(primary, background) >= 4.5 ? primary : foreground,
   } as CSSProperties;
 }
 
@@ -103,24 +115,15 @@ function StoreHeader({ slug, configuration }: { slug: string; configuration: Sit
     (item) => item.enabled && item.location === 'HEADER',
   );
   return (
-    <header className={styles.header}>
-      <Link className={styles.brand} href={`/store/${slug}`}>
-        {configuration.business.logo ? (
-          // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
-          <img src={configuration.business.logo.url} alt={configuration.business.logo.alt ?? ''} />
-        ) : (
-          <strong>{configuration.business.name}</strong>
-        )}
-      </Link>
-      <nav aria-label="Store navigation">
-        {headerLinks.map((item) => (
-          <Link key={`${item.label}-${item.target}`} href={publicStoreHref(slug, item.target)}>
-            {item.label}
-          </Link>
-        ))}
-        <CartLink slug={slug} />
-      </nav>
-    </header>
+    <StoreNavigation
+      slug={slug}
+      businessName={configuration.business.name}
+      logo={configuration.business.logo}
+      links={headerLinks.map((item) => ({
+        label: item.label,
+        href: publicStoreHref(slug, item.target),
+      }))}
+    />
   );
 }
 
@@ -157,14 +160,15 @@ export function StorefrontShell({
       data-preset={configuration.theme.presetKey}
       data-style={storefrontPersonality(configuration)}
     >
+      <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       {children}
-      <StoreFooter configuration={configuration} />
+      <StoreFooter slug={slug} configuration={configuration} />
     </div>
   );
 }
 
-function StoreFooter({ configuration }: { configuration: SiteConfiguration }) {
+function StoreFooter({ slug, configuration }: { slug: string; configuration: SiteConfiguration }) {
   const socialLinks = [
     ['Instagram', configuration.business.instagram, 'https://instagram.com/'],
     ['Facebook', configuration.business.facebook, 'https://facebook.com/'],
@@ -172,6 +176,9 @@ function StoreFooter({ configuration }: { configuration: SiteConfiguration }) {
   ] as const;
   const destination = (value: string, prefix: string) =>
     value.startsWith('https://') ? value : `${prefix}${value.replace(/^@/, '')}`;
+  const footerLinks = configuration.navigation.filter(
+    (item) => item.enabled && item.location === 'FOOTER',
+  );
   return (
     <footer className={styles.footer}>
       <div>
@@ -204,6 +211,15 @@ function StoreFooter({ configuration }: { configuration: SiteConfiguration }) {
             ) : null,
           )}
         </div>
+        {!!footerLinks.length && (
+          <nav className={styles.footerNavigation} aria-label="Footer navigation">
+            {footerLinks.map((item) => (
+              <Link key={`${item.label}-${item.target}`} href={publicStoreHref(slug, item.target)}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
       </div>
     </footer>
   );
@@ -227,6 +243,7 @@ export function StorefrontRenderer({
       data-preset={configuration.theme.presetKey}
       data-style={storefrontPersonality(configuration)}
     >
+      <SkipLink className={styles.skipLink} href="#store-main" />
       <StructuredData
         value={{
           '@context': 'https://schema.org',
@@ -244,7 +261,7 @@ export function StorefrontRenderer({
         </div>
       )}
       <StoreHeader slug={slug} configuration={configuration} />
-      <main>
+      <main id="store-main">
         {configuration.sections
           .filter((section) => section.enabled)
           .map((section) => {
@@ -298,7 +315,12 @@ export function StorefrontRenderer({
                       ))}
                     </div>
                   ) : (
-                    <p>No products are available yet.</p>
+                    <div className={styles.emptyProducts}>
+                      <h3>New products are on the way</h3>
+                      <p>
+                        This store has not published anything to buy yet. Please check back soon.
+                      </p>
+                    </div>
                   )}
                   {products.length > 0 && (
                     <Link className={styles.viewAllProducts} href={`/store/${slug}/products`}>
@@ -311,7 +333,7 @@ export function StorefrontRenderer({
             return null;
           })}
       </main>
-      <StoreFooter configuration={configuration} />
+      <StoreFooter slug={slug} configuration={configuration} />
     </div>
   );
 }
@@ -332,14 +354,15 @@ export function StorefrontContentPage({
       data-preset={configuration.theme.presetKey}
       data-style={storefrontPersonality(configuration)}
     >
+      <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
-      <main className={styles.informationPage}>
+      <main id="store-main" className={styles.informationPage}>
         <p className={styles.eyebrow}>{page.name}</p>
         <h1>{page.title}</h1>
         {page.introduction && <p className={styles.pageIntroduction}>{page.introduction}</p>}
         <div className={styles.pageBody}>{page.body}</div>
       </main>
-      <StoreFooter configuration={configuration} />
+      <StoreFooter slug={slug} configuration={configuration} />
     </div>
   );
 }
@@ -352,6 +375,8 @@ export function StorefrontCategoryPage({
   products,
   beforeContent,
   afterProducts,
+  emptyTitle = 'No products here yet',
+  emptyDescription = 'Explore the rest of the store or check back when new products are published.',
 }: {
   slug: string;
   configuration: SiteConfiguration;
@@ -360,6 +385,8 @@ export function StorefrontCategoryPage({
   products: PublicProduct[];
   beforeContent?: ReactNode;
   afterProducts?: ReactNode;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   return (
     <div
@@ -368,9 +395,10 @@ export function StorefrontCategoryPage({
       data-preset={configuration.theme.presetKey}
       data-style={storefrontPersonality(configuration)}
     >
+      <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       {beforeContent}
-      <main className={styles.informationPage}>
+      <main id="store-main" className={`${styles.informationPage} ${styles.collectionPage}`}>
         <p className={styles.eyebrow}>PRODUCT COLLECTION</p>
         <h1>{name}</h1>
         {description && <p className={styles.pageIntroduction}>{description}</p>}
@@ -381,11 +409,17 @@ export function StorefrontCategoryPage({
             ))}
           </div>
         ) : (
-          <p>No products are available in this collection yet.</p>
+          <div className={styles.emptyProducts}>
+            <h2>{emptyTitle}</h2>
+            <p>{emptyDescription}</p>
+            <Link className={styles.viewAllProducts} href={`/store/${slug}`}>
+              Return to store home
+            </Link>
+          </div>
         )}
         {afterProducts}
       </main>
-      <StoreFooter configuration={configuration} />
+      <StoreFooter slug={slug} configuration={configuration} />
     </div>
   );
 }

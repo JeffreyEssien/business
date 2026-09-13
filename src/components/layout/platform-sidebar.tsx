@@ -1,17 +1,25 @@
 import Link from 'next/link';
+import type { RefObject } from 'react';
 import { SignOutForm } from '@/components/auth/sign-out-form';
 import { platformNavigation, platformNavigationGroups, isNavigationActive } from './navigation';
 export function PlatformSidebar({
+  navigationRef,
   pathname,
   open,
   onNavigate,
 }: {
+  navigationRef: RefObject<HTMLElement | null>;
   pathname: string;
   open: boolean;
   onNavigate: () => void;
 }) {
   return (
-    <aside id="platform-navigation" className={`sidebar ${open ? 'is-open' : ''}`}>
+    <aside
+      ref={navigationRef}
+      id="platform-navigation"
+      className={`sidebar ${open ? 'is-open' : ''}`}
+      aria-label="Platform workspace navigation"
+    >
       <Link href="/" className="brand" onClick={onNavigate}>
         <span className="brand-mark">
           b<span>c</span>

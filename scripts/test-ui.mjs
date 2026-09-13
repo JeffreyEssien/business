@@ -25,6 +25,7 @@ let userId, browser;
 let mediaAssets = [];
 let stage = 'Create temporary account';
 const pageErrors = [];
+const duplicateKeyWarnings = [];
 
 async function checkFormLayout(page, mobile) {
   for (const name of ['name', 'slug', 'owner', 'email', 'template', 'plan', 'payment']) {
@@ -66,6 +67,10 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   page.on('pageerror', (error) => pageErrors.push(error.name));
+  page.on('console', (message) => {
+    if (message.text().includes('Encountered two children with the same key'))
+      duplicateKeyWarnings.push(message.text());
+  });
   stage = 'Load login';
   await page.goto(`${base}/login`);
   stage = 'Sign in through the browser';
@@ -473,6 +478,7 @@ try {
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     'Checkout has no mobile overflow',
   );
+  await page.evaluate(() => scrollTo(0, 0));
   await page.screenshot({ path: 'artifacts/ui/checkout-mobile.png', fullPage: true });
   await page.getByRole('button', { name: /Place order/ }).click();
   await expect(page.getByRole('heading', { name: 'Thank you for your order.' })).toBeVisible({
@@ -538,13 +544,42 @@ try {
   await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Verify published customer page after checkout';
   await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('heading', { name: 'A storefront shaped by its owner' }),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'About our business' }).click();
   await expect(page.getByRole('heading', { name: 'A business customers can trust' })).toBeVisible();
   await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('heading', { name: 'A storefront shaped by its owner' }),
+  ).toBeVisible();
   await page.screenshot({ path: 'artifacts/ui/storefront-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
+  const storeMenu = page.getByRole('button', { name: 'Open store navigation' });
+  await expect(storeMenu).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Cart' })).toBeVisible();
+  await page.evaluate(() =>
+    document.activeElement instanceof HTMLElement ? document.activeElement.blur() : null,
+  );
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await storeMenu.click();
+  const storeNavigation = page.locator('#store-navigation');
+  await expect(storeNavigation.getByRole('link', { name: 'About our business' })).toBeVisible();
+  await expect(
+    storeNavigation.getByRole('button', { name: 'Close store navigation' }),
+  ).toBeFocused();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'artifacts/ui/store-navigation-mobile.png' });
+  await page.keyboard.press('Escape');
+  await expect(storeNavigation).toBeHidden();
+  await expect(storeMenu).toBeFocused();
+  await page.evaluate(() =>
+    document.activeElement instanceof HTMLElement ? document.activeElement.blur() : null,
+  );
   assert.ok(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     'Storefront has no mobile overflow',
@@ -587,6 +622,7 @@ try {
     )
     .toBe(true);
   assert.equal(pageErrors.length, 0, 'No browser runtime errors');
+  assert.equal(duplicateKeyWarnings.length, 0, 'No duplicate React keys');
   console.log(
     'PASS: browser login, bounded catalog browsing, cart and checkout, bank-transfer notice, order administration, website-page editing, social/search publishing, structured data, compact mobile navigation, Cloudinary lifecycle, and responsive public storefront.',
   );

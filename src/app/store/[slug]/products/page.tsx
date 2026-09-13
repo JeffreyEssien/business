@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { StorefrontCategoryPage } from '@/components/storefront/storefront-renderer';
+import { ProductSearchForm } from '@/components/storefront/product-search-form';
 import { getPublicProducts } from '@/modules/catalog/queries';
 import { storefrontUrl } from '@/modules/seo/public';
 import styles from '@/components/catalog/catalog.module.css';
@@ -32,21 +33,12 @@ export default async function PublicProductsPage({
           : 'Browse everything available from this store.'
       }
       products={store.products}
-      beforeContent={
-        <form className={styles.publicSearch}>
-          <label htmlFor="shop-search">Search this store&apos;s products</label>
-          <div>
-            <input
-              id="shop-search"
-              name="search"
-              type="search"
-              maxLength={100}
-              defaultValue={filters.search}
-              placeholder="What are you looking for?"
-            />
-            <button type="submit">Search products</button>
-          </div>
-        </form>
+      beforeContent={<ProductSearchForm defaultValue={filters.search} />}
+      emptyTitle={filters.search ? 'No matching products' : 'No products here yet'}
+      emptyDescription={
+        filters.search
+          ? 'Try a shorter or more general search, or return to the store home.'
+          : 'This store has not published any products yet. Please check back soon.'
       }
       afterProducts={
         nextAddress ? (

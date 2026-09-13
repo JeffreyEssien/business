@@ -12,7 +12,7 @@ export default async function CartPage({ params }: { params: Promise<{ slug: str
   if (!store.site) notFound();
   return (
     <StorefrontShell slug={slug} configuration={store.site}>
-      <main>
+      <main id="store-main">
         <CartCheckout slug={slug} step="cart" />
       </main>
     </StorefrontShell>

@@ -88,6 +88,7 @@ Cloudinary is the production media provider (ADR 003). `lib/cloudinary/server.ts
 6. `publish_site` atomically archives the old live version and saves a complete normalized snapshot. A saved draft cannot change anonymous output until this RPC succeeds.
 7. `components/storefront/storefront-renderer.tsx` renders both the authenticated draft preview and public homepage. Never create a second preview-only rendering implementation.
 8. `get_public_storefront` exposes active catalog products and only the current published site snapshot to anonymous visitors.
+9. `components/storefront/store-navigation.tsx` keeps store identity and cart access visible while adapting secondary customer navigation into a dismissible mobile sheet. The shared mobile-navigation hook contains keyboard focus, restores the trigger on dismissal, supports Escape, and locks background scrolling for both application and storefront drawers.
 
 Store Design does not own navigation. `save_site_draft` intentionally leaves menu records untouched; use the dedicated Store menus flow below for every navigation change.
 
@@ -102,6 +103,8 @@ Store Design does not own navigation. `save_site_draft` intentionally leaves men
 7. Saving a menu remains private until `publish_site` copies the ordered links into the immutable public snapshot. Store Design never deletes or recreates them.
 
 Keep tenant colors in validated tokens and pass them to storefront components through CSS variables. Marketing copy belongs in content records; only system UX labels may remain in code.
+
+Storefront controls, checkout surfaces, status feedback, focus rings, borders, and loading structures must derive from those tenant variables with semantic application-token fallbacks. The customer interface uses a system-legible body stack; personality profiles may deliberately vary display typography and geometry without changing control meaning or accessibility behavior.
 
 Application website styles are real storefront personality profiles stored in `theme.tokens.styleKey`. They layer typography, shape, spacing, and composition over the four base business presets without creating a second renderer. Store Design preserves the profile while its base preset is unchanged and selects the corresponding profile when an owner deliberately changes presets.
 
