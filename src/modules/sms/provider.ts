@@ -175,6 +175,7 @@ class TermiiSmsProvider implements SmsProvider {
 }
 
 export function verifyTermiiSignature(rawBody: string, suppliedSignature: string | null) {
+  // Termii Messaging DLRs document X-Termii-Signature as HMAC-SHA512 over the raw payload.
   const secret = String(
     process.env.TERMII_WEBHOOK_SECRET ?? process.env.TERMII_API_KEY ?? '',
   ).trim();

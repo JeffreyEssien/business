@@ -1,5 +1,4 @@
 import { CATALOG_PAGE_SIZE, getCatalogWorkspace } from '@/modules/catalog/queries';
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { CatalogList } from '@/components/catalog/catalog-list';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -25,7 +24,6 @@ export default async function CatalogPage({
     });
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CATALOG"
         title="Products"

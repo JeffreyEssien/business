@@ -1,6 +1,7 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logServerEvent } from '@/lib/observability/server';
+import { configuredApplicationBaseUrl } from '@/lib/application-url';
 import { dispatchQueuedEmails } from '@/modules/email/service';
 import { dispatchQueuedSms } from '@/modules/sms/service';
 import { paystackProvider, PaymentProviderError } from './paystack';
@@ -30,21 +31,11 @@ function record(value: unknown): Record<string, unknown> | null {
 }
 
 export function applicationBaseUrl() {
-  const configured = process.env.NEXT_PUBLIC_APP_URL;
-  if (!configured) throw new PaymentProviderError('APPLICATION_URL_NOT_CONFIGURED');
-  let url: URL;
   try {
-    url = new URL(configured);
+    return configuredApplicationBaseUrl();
   } catch {
     throw new PaymentProviderError('APPLICATION_URL_NOT_CONFIGURED');
   }
-  const local = ['localhost', '127.0.0.1'].includes(url.hostname);
-  if (
-    (!local && url.protocol !== 'https:') ||
-    (local && !['http:', 'https:'].includes(url.protocol))
-  )
-    throw new PaymentProviderError('APPLICATION_URL_NOT_CONFIGURED');
-  return new URL('/', url).toString();
 }
 
 async function initializationContext(reference: string) {

@@ -56,6 +56,8 @@ Register `/api/webhooks/resend` for email sent, delivered, delivery delayed, fai
 
 Invoke `/api/jobs/email-delivery` with `Authorization: Bearer <CRON_SECRET>` from the deployment scheduler. Each invocation claims at most 25 due messages. Change to `EMAIL_DELIVERY_MODE=live` only after `EMAIL_FROM_ADDRESS` belongs to a verified sending domain and a real owner-observed delivery passes.
 
+The worker safely reclaims an email left in `SENDING` for more than 15 minutes and retries it with the same Resend idempotency key. `NEXT_PUBLIC_APP_URL` is required and must be an HTTPS origin outside local development; invalid configuration prevents customer email delivery instead of producing localhost links.
+
 # Transactional SMS delivery
 
 BusinessCare defaults to `SMS_DELIVERY_MODE=disabled`. Configure these as server-only deployment variables; never prefix them with `NEXT_PUBLIC_`:
@@ -80,6 +82,8 @@ https://business-psi-umber.vercel.app/api/webhooks/termii
 
 The route verifies HMAC-SHA512 over the untouched raw body, rejects bodies over 64 KB, and persists only sanitized event identifiers, message status, timestamp, cost, and channel. It does not retain the provider payload or customer phone number.
 
+This algorithm and header are the current Termii Messaging delivery-report contract: https://developers.termii.com/events-and-reports. The Termii marketing site's separate HMAC-SHA256 statement does not define the Messaging DLR contract.
+
 Invoke this delivery worker from the deployment scheduler with `Authorization: Bearer <CRON_SECRET>`:
 
 ```text
@@ -87,3 +91,5 @@ https://business-psi-umber.vercel.app/api/jobs/sms-delivery
 ```
 
 Each run claims at most 25 messages. Keep delivery disabled while deploying and registering the webhook. Then use `test` mode with one canonical international `SMS_TEST_RECIPIENT`, submit a disposable tenant sender request, review it in `/sms-operations`, and wait for Termii approval. Send and observe one order update before switching to `live`. A tenant request alone never contacts Termii; the Super-Admin “Approve & send to Termii” action is the explicit provider side effect.
+
+An SMS left in `SENDING` for more than 15 minutes is quarantined as `DELIVERY_UNKNOWN`; it is never reclaimed automatically. Wait for a provider delivery report or investigate the provider message before using a controlled retry, because Termii's send endpoint does not accept BusinessCare's local idempotency key.

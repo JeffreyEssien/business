@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { PublishSiteForm } from '@/components/content/publish-site-form';
 import { SiteEditorForm } from '@/components/content/site-editor-form';
 import { SectionOrderManager } from '@/components/content/section-order-manager';
@@ -16,7 +15,6 @@ export default async function StorefrontDesignPage({
   const editor = await getSiteEditor(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={editor.workspace.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="THEME & CONTENT"
         title="Design your storefront"

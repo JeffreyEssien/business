@@ -1,5 +1,4 @@
 import { getCategoryWorkspace } from '@/modules/catalog/queries';
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { ProductForm } from '@/components/catalog/product-form';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -10,7 +9,6 @@ export default async function NewProductPage({ params }: { params: Promise<{ slu
   const { tenant, categories } = await getCategoryWorkspace(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CATALOG"
         title="Add a product"

@@ -2,7 +2,7 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logServerEvent } from '@/lib/observability/server';
 import { emailDeliveryConfiguration, emailProvider, EmailProviderError } from './provider';
-import { renderTransactionalEmail } from './templates';
+import { EmailTemplateError, renderTransactionalEmail } from './templates';
 import type { EmailNotificationContext } from './types';
 
 async function deliverOne(id: string) {
@@ -34,8 +34,11 @@ async function deliverOne(id: string) {
     if (completeError) throw new EmailProviderError('EMAIL_STATE_WRITE_FAILED');
     return true;
   } catch (caught) {
-    const code = caught instanceof EmailProviderError ? caught.code : 'EMAIL_SEND_FAILED';
-    await admin.rpc('fail_email_notification', {
+    const code =
+      caught instanceof EmailProviderError || caught instanceof EmailTemplateError
+        ? caught.code
+        : 'EMAIL_SEND_FAILED';
+    const { error: failureWriteError } = await admin.rpc('fail_email_notification', {
       target_notification: id,
       failure_code: code,
     });
@@ -48,7 +51,8 @@ async function deliverOne(id: string) {
       resourceId: context.id,
       provider: 'resend',
       success: false,
-      errorCode: code,
+      errorCode: failureWriteError ? 'EMAIL_FAILURE_STATE_WRITE_FAILED' : code,
+      errorDetails: failureWriteError ? `original=${code}` : undefined,
     });
     return false;
   }

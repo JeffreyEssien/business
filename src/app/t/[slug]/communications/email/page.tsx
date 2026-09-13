@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { EmailLogList } from '@/components/email/email-log-list';
 import { EmailPreview } from '@/components/email/email-preview';
 import { EmailSettingsForm } from '@/components/email/email-settings-form';
@@ -17,7 +16,6 @@ export default async function CustomerEmailsPage({
   const data = await getTenantEmailWorkspace(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CUSTOMER COMMUNICATION"
         title="Customer emails"

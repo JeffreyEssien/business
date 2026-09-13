@@ -1,5 +1,4 @@
 import { getProductEditor } from '@/modules/catalog/queries';
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { ProductForm } from '@/components/catalog/product-form';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -14,7 +13,6 @@ export default async function EditProductPage({
   const { tenant, categories, product } = await getProductEditor(slug, id);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CATALOG"
         title={`Edit ${product.name}`}

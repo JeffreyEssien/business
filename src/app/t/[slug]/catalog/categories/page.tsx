@@ -1,5 +1,4 @@
 import { getCategoryWorkspace } from '@/modules/catalog/queries';
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { CategoryManager } from '@/components/catalog/category-manager';
 import { ButtonLink } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -11,7 +10,6 @@ export default async function CategoriesPage({ params }: { params: Promise<{ slu
   const { tenant, categories } = await getCategoryWorkspace(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CATALOG"
         title="Categories"

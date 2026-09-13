@@ -176,10 +176,22 @@ select public.record_termii_sms_webhook(
 select public.record_termii_sms_webhook(
  'termii-sent-late','termii-sms-1','MESSAGE SENT',now()-interval '1 minute',null,'generic'
 );
+insert into sms_fixture(k,id,value)
+select 'stale_claim',notification_id,'' from public.claim_sms_notifications(
+ 1,(select id from sms_fixture where k='growth_tenant')) limit 1;
+reset role;
+update private.sms_notifications set last_attempt_at=now()-interval '16 minutes'
+where id=(select id from sms_fixture where k='stale_claim');
+select * from public.claim_sms_notifications(
+ 25,(select id from sms_fixture where k='growth_tenant'));
 do $$ begin
  if public.record_termii_sms_webhook(
   'termii-delivered','termii-sms-1','DELIVERED',now(),2.5,'generic')<>'ALREADY_PROCESSED' then
   raise exception 'Duplicate SMS webhook was not idempotent'; end if;
+ if (select row(status,attempt_count,last_error_code) from private.sms_notifications
+   where id=(select id from sms_fixture where k='stale_claim'))
+   <>row('DELIVERY_UNKNOWN'::text,1,'SMS_STALE_CLAIM_DELIVERY_UNKNOWN'::text) then
+  raise exception 'Stale SMS claim was automatically resent instead of quarantined'; end if;
 end $$;
 reset role;
 do $$ begin

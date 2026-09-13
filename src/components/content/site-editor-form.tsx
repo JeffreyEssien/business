@@ -134,86 +134,92 @@ export function SiteEditorForm({
           />
         </FormGrid>
       </FormSection>
-      <FormSection title="Announcement">
-        <label className={styles.checkbox}>
-          <input
-            name="announcementEnabled"
-            type="checkbox"
-            defaultChecked={section(configuration, 'announcement')?.enabled}
-          />{' '}
-          Show announcement bar
-        </label>
-        <TextField
-          name="announcement"
-          label="Announcement text"
-          maxLength={160}
-          defaultValue={value(configuration, 'announcement', 'text')}
-        />
-      </FormSection>
-      <FormSection title="Main welcome area">
-        <FormGrid>
-          <SelectField
-            name="heroVariant"
-            label="Welcome area layout"
-            defaultValue={section(configuration, 'hero')?.variant ?? 'centered'}
-            options={[
-              { value: 'centered', label: 'Text centered on the page' },
-              { value: 'split', label: 'Text beside the main image' },
-              { value: 'image-overlay', label: 'Text placed over the main image' },
-            ]}
-          />
-          <TextField
-            name="heroEyebrow"
-            label="Short label above the heading"
-            maxLength={80}
-            defaultValue={value(configuration, 'hero', 'eyebrow')}
-          />
-          <TextField
-            name="heroHeadline"
-            label="Main welcome heading"
-            required
-            maxLength={160}
-            defaultValue={value(configuration, 'hero', 'headline')}
-          />
-          <TextAreaField
-            name="heroSubheadline"
-            label="Supporting welcome text"
-            maxLength={320}
-            defaultValue={value(configuration, 'hero', 'subheadline')}
-          />
-          <TextField
-            name="heroCtaLabel"
-            label="Main button text"
-            maxLength={60}
-            defaultValue={ctaLabel(configuration)}
-          />
-        </FormGrid>
-      </FormSection>
-      <FormSection title="Product collection">
-        <label className={styles.checkbox}>
-          <input
-            name="productsEnabled"
-            type="checkbox"
-            defaultChecked={section(configuration, 'products')?.enabled ?? true}
-          />{' '}
-          Show products
-        </label>
-        <TextField
-          name="productsHeading"
-          label="Heading above your products"
-          required
-          maxLength={120}
-          defaultValue={value(configuration, 'products', 'heading') || 'Products'}
-        />
-      </FormSection>
-      <FormSection title="Footer">
-        <TextAreaField
-          name="footerDescription"
-          label="Footer description"
-          maxLength={500}
-          defaultValue={value(configuration, 'footer', 'description')}
-        />
-      </FormSection>
+      <details className={styles.advancedEditor}>
+        <summary>Homepage content and footer</summary>
+        <p>Open these controls when you want to change storefront wording and sections.</p>
+        <div className={styles.advancedEditorBody}>
+          <FormSection title="Announcement">
+            <label className={styles.checkbox}>
+              <input
+                name="announcementEnabled"
+                type="checkbox"
+                defaultChecked={section(configuration, 'announcement')?.enabled}
+              />{' '}
+              Show announcement bar
+            </label>
+            <TextField
+              name="announcement"
+              label="Announcement text"
+              maxLength={160}
+              defaultValue={value(configuration, 'announcement', 'text')}
+            />
+          </FormSection>
+          <FormSection title="Main welcome area">
+            <FormGrid>
+              <SelectField
+                name="heroVariant"
+                label="Welcome area layout"
+                defaultValue={section(configuration, 'hero')?.variant ?? 'centered'}
+                options={[
+                  { value: 'centered', label: 'Text centered on the page' },
+                  { value: 'split', label: 'Text beside the main image' },
+                  { value: 'image-overlay', label: 'Text placed over the main image' },
+                ]}
+              />
+              <TextField
+                name="heroEyebrow"
+                label="Short label above the heading"
+                maxLength={80}
+                defaultValue={value(configuration, 'hero', 'eyebrow')}
+              />
+              <TextField
+                name="heroHeadline"
+                label="Main welcome heading"
+                required
+                maxLength={160}
+                defaultValue={value(configuration, 'hero', 'headline')}
+              />
+              <TextAreaField
+                name="heroSubheadline"
+                label="Supporting welcome text"
+                maxLength={320}
+                defaultValue={value(configuration, 'hero', 'subheadline')}
+              />
+              <TextField
+                name="heroCtaLabel"
+                label="Main button text"
+                maxLength={60}
+                defaultValue={ctaLabel(configuration)}
+              />
+            </FormGrid>
+          </FormSection>
+          <FormSection title="Product collection">
+            <label className={styles.checkbox}>
+              <input
+                name="productsEnabled"
+                type="checkbox"
+                defaultChecked={section(configuration, 'products')?.enabled ?? true}
+              />{' '}
+              Show products
+            </label>
+            <TextField
+              name="productsHeading"
+              label="Heading above your products"
+              required
+              maxLength={120}
+              defaultValue={value(configuration, 'products', 'heading') || 'Products'}
+            />
+          </FormSection>
+          <FormSection title="Footer">
+            <TextAreaField
+              name="footerDescription"
+              label="Footer description"
+              maxLength={500}
+              defaultValue={value(configuration, 'footer', 'description')}
+            />
+          </FormSection>
+        </div>
+      </details>
       <FormActions note="Saving updates your private preview only. Customers keep seeing the currently published version.">
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving your changes…' : 'Save without changing the live store'}

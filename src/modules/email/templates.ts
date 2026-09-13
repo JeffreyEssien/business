@@ -1,5 +1,13 @@
 import 'server-only';
+import { configuredApplicationBaseUrl } from '@/lib/application-url';
 import type { EmailEventType, EmailNotificationContext } from './types';
+
+export class EmailTemplateError extends Error {
+  constructor(public readonly code: string) {
+    super(code);
+    this.name = 'EmailTemplateError';
+  }
+}
 
 function escapeHtml(value: unknown) {
   return String(value ?? '')
@@ -24,8 +32,11 @@ function safeHttpsImage(value: string) {
 }
 
 function applicationUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  return new URL(path, base).toString();
+  try {
+    return new URL(path, configuredApplicationBaseUrl()).toString();
+  } catch {
+    throw new EmailTemplateError('EMAIL_CONFIGURATION_INVALID');
+  }
 }
 
 function money(amount: number, currency: string) {

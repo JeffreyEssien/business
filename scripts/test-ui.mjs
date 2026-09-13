@@ -116,9 +116,9 @@ try {
   stage = 'Mobile layout';
   await checkFormLayout(page, true);
   await page.screenshot({ path: 'artifacts/ui/create-business-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: 'Toggle navigation' }).click();
+  await page.getByRole('button', { name: 'Open navigation' }).click();
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
-  await page.getByRole('button', { name: 'Toggle navigation' }).click();
+  await page.getByRole('button', { name: 'Close navigation' }).click();
   await page.getByLabel('Business name', { exact: true }).fill('UI verification business');
   await page.getByLabel('Store handle', { exact: true }).fill('admin');
   await page.getByLabel('Owner name', { exact: true }).fill('Test owner');
@@ -273,6 +273,7 @@ try {
   await expect(page.getByRole('heading', { name: 'Design your storefront' })).toBeVisible();
   await page.getByLabel('Short description').fill('A tenant-controlled UI test storefront.');
   await page.getByLabel('Public phone').fill('+234 800 000 0000');
+  await page.getByText('Homepage content and footer', { exact: true }).click();
   await page.getByLabel('Short label above the heading').fill('Browser verified');
   await page
     .getByLabel('Main welcome heading', { exact: true })
@@ -366,8 +367,8 @@ try {
   await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Configure customer emails';
   await page.goto(`${base}/t/${slug}`);
-  await expect(page.getByRole('link', { name: 'Choose customer emails' })).toBeVisible();
-  await page.getByRole('link', { name: 'Choose customer emails' }).click();
+  await expect(page.getByRole('link', { name: 'Customer emails', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Customer emails', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Customer emails' })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: '1. Choose automatic order updates' }),
@@ -394,8 +395,10 @@ try {
   stage = 'Request a tenant SMS sender name';
   await sql`update public.tenants set plan_id=(select id from public.plans where slug='growth') where id=${tenant.id}`;
   await page.goto(`${base}/t/${slug}`);
-  await expect(page.getByRole('link', { name: 'Choose customer text messages' })).toBeVisible();
-  await page.getByRole('link', { name: 'Choose customer text messages' }).click();
+  await expect(
+    page.getByRole('link', { name: 'Customer text messages', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Customer text messages', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Customer text messages' })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: '1. Choose the business name customers will see' }),

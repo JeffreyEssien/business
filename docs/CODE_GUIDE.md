@@ -20,7 +20,7 @@ The default is readable, modular code. Routes compose features; they do not cont
 | `components/auth`        | Authentication-specific compositions                                     | AuthLayout, LoginForm, PasswordForm                  |
 | `components/businesses`  | Business-specific presentation and form orchestration                    | BusinessSummary, BusinessFilters, CreateBusinessForm |
 | `components/commerce`    | Cart, checkout, settings, order lists, and order-detail presentation      | CartCheckout, CheckoutSettings, OrderDetail          |
-| `components/layout`      | Application navigation and framing                                       | PlatformSidebar, PlatformTopbar                      |
+| `components/layout`      | Application navigation and framing                                       | PlatformSidebar, PlatformTopbar, TenantShell         |
 | `components/super-admin` | Platform views composed from UI components                               | Shell, BusinessList, LaunchCard                      |
 | `modules/tenants`        | Data access, validation, configuration, domain types, authorized actions | queries, workspace-query, actions                    |
 | `lib/supabase`           | SDK construction and cookie handling                                     | server, admin                                        |
@@ -38,6 +38,10 @@ Use explicit prop types and descriptive names such as `submitAction`, `isPending
 - Feature-specific rules live beside the feature, such as `create-business-form.module.css`.
 
 A page should never need to remember a special global class to make a TextField visible. The component imports the styling it requires. Form sections use fieldsets and legends; labels target stable control IDs; help and error text is associated with aria-describedby.
+
+Platform routes share the persistent shell in `app/(platform)/layout.tsx`. Business-owner routes share `app/t/[slug]/layout.tsx` and `components/layout/tenant-shell.tsx`; individual tenant pages must not recreate workspace navigation. Both shells use grouped desktop sidebars and dismissible mobile drawers with an in-drawer close control, backdrop dismissal, Escape handling, and scroll containment. Keep only implemented destinations in navigation.
+
+`components/ui/loading-skeleton.tsx` is the shared structured route fallback. Platform and tenant `loading.tsx` files preserve their application shells while page data changes. Prefer extending this skeleton hierarchy over introducing blank screens or full-page spinners.
 
 ## Comments and explanations
 

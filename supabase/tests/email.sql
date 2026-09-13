@@ -108,6 +108,22 @@ end $$;
 select public.complete_email_notification((select id from email_fixture where k='claimed'),'resend-email-1');
 select public.record_resend_webhook('webhook-delivered','email.delivered','resend-email-1',now(),'');
 select public.record_resend_webhook('webhook-sent-late','email.sent','resend-email-1',now()-interval '1 minute','');
+
+insert into email_fixture(k,id,email)
+select 'stale_claim',notification_id,'' from public.claim_email_notifications(
+ 1,(select id from email_fixture where k='tenant')) limit 1;
+reset role;
+update private.email_notifications set last_attempt_at=now()-interval '16 minutes'
+where id=(select id from email_fixture where k='stale_claim');
+select * from public.claim_email_notifications(
+ 25,(select id from email_fixture where k='tenant'));
+do $$ begin
+ if (select row(status,attempt_count,last_error_code) from private.email_notifications
+   where id=(select id from email_fixture where k='stale_claim'))
+   <>row('SENDING'::text,2,'EMAIL_STALE_CLAIM_RECOVERED'::text) then
+  raise exception 'Stale email claim was not safely reclaimed with its idempotency key';
+ end if;
+end $$;
 reset role;
 do $$ begin
  if (select status from private.email_notifications where id=(select id from email_fixture where k='claimed'))<>'DELIVERED' then

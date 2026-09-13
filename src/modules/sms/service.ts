@@ -29,7 +29,7 @@ async function deliverOne(id: string) {
       caught instanceof SmsProviderError
         ? caught
         : new SmsProviderError('SMS_SEND_UNKNOWN', false, true);
-    await admin.rpc('fail_sms_notification', {
+    const { error: failureWriteError } = await admin.rpc('fail_sms_notification', {
       target_notification: id,
       failure_code: failure.code,
       retryable: failure.retryable,
@@ -44,7 +44,8 @@ async function deliverOne(id: string) {
       resourceId: context.id,
       provider: 'termii',
       success: false,
-      errorCode: failure.code,
+      errorCode: failureWriteError ? 'SMS_FAILURE_STATE_WRITE_FAILED' : failure.code,
+      errorDetails: failureWriteError ? `original=${failure.code}` : undefined,
     });
     return false;
   }

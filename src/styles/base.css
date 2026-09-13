@@ -1,24 +1,44 @@
 /* Global tokens, element defaults, and accessibility. */
 
 :root {
-  --background: #f7f8fa;
-  --surface: #fff;
-  --foreground: #242630;
-  --muted: #7a7f8c;
-  --border: #e9ebef;
+  --background: #f8f9fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f3f6;
+  --foreground: #1b1d24;
+  --text-secondary: #5f6570;
+  --muted: #68707d;
+  --border: #e5e7ec;
+  --border-strong: #d5d8e0;
   --primary: #6655d7;
+  --primary-hover: #5544c2;
+  --primary-soft: #efedfc;
+  --focus-ring: #6655d733;
+  --radius-small: 6px;
+  --radius-medium: 10px;
   --radius: 14px;
+  --radius-large: 20px;
+  --shadow-soft: 0 1px 2px #17152b0a;
+  --shadow-floating: 0 16px 40px #17152b1a;
+  --motion-fast: 150ms;
+  --motion-standard: 220ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --success-surface: #edf8f0;
   --success-border: #bddfc5;
   --success-text: #356442;
+  --warning-surface: #fff8e8;
+  --warning-border: #ead5a4;
+  --warning-text: #765b22;
   --danger-surface: #fff5f5;
   --danger-border: #efc5c5;
   --danger-text: #963737;
+  --info-surface: #eef4ff;
+  --info-border: #c8d8f1;
+  --info-text: #365d8d;
 }
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -27,7 +47,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
@@ -37,13 +57,16 @@ a {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 button,
 a,
 input,
-select {
+select,
+textarea,
+summary {
   outline-offset: 4px;
 }
 button {
@@ -52,13 +75,15 @@ button {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
   outline: 2px solid var(--primary);
 }
 button {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-medium);
   padding: 8px 12px;
 }
 p {
@@ -85,7 +110,7 @@ h3 {
   font-size: 14px;
 }
 small {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 th:first-child,
@@ -100,5 +125,16 @@ td:first-child {
 @media (max-width: 600px) {
   h1 {
     font-size: 27px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

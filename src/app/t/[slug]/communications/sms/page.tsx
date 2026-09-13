@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { SmsLogList } from '@/components/sms/sms-log-list';
 import { SmsSenderRequestForm, SmsSettingsForm } from '@/components/sms/sms-settings-form';
 import { PageHeader } from '@/components/ui/page-header';
@@ -12,7 +11,6 @@ export default async function CustomerSmsPage({ params }: { params: Promise<{ sl
   const data = await getTenantSmsWorkspace(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CUSTOMER COMMUNICATION"
         title="Customer text messages"

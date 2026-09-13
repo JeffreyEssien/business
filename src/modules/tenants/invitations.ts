@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requirePlatformAdmin } from '@/modules/auth/authorization';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { configuredApplicationBaseUrl } from '@/lib/application-url';
 import { dispatchQueuedEmails, queueOwnerInvitationEmail } from '@/modules/email/service';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type InvitationLinkState = { error: string; link: string; message?: string };
@@ -29,8 +30,7 @@ export async function generateOwnerLink(
   if (!tenant || !['PROVISIONING', 'TRIAL', 'ACTIVE'].includes(tenant.status))
     return { error: 'Reactivate the business before generating an invitation.', link: '' };
   try {
-    const base = new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000');
-    const link = new URL('/invite', base);
+    const link = new URL('/invite', configuredApplicationBaseUrl());
     link.searchParams.set('id', id);
     const admin = createAdminClient();
     const { data: profile, error: lookupError } = await supabase

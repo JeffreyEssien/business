@@ -13,12 +13,13 @@ export function PlatformTopbar({
       <div className="breadcrumbs">
         <button
           className="mobile-menu"
-          aria-label="Toggle navigation"
+          type="button"
+          aria-label="Open navigation"
           aria-expanded={menuOpen}
           aria-controls="platform-navigation"
           onClick={onToggleMenu}
         >
-          ☰
+          <span aria-hidden="true">☰</span>
         </button>
         <span>Workspace</span>
         <span aria-hidden="true">/</span>

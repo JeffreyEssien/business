@@ -1,28 +1,9 @@
-.workspaceNav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 34px;
-}
-.navLinks,
 .rowActions,
 .categoryTags {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-}
-.navLinks a {
-  color: var(--primary);
-  font-size: 13px;
-  text-decoration: none;
-}
-.navLinks a:hover {
-  text-decoration: underline;
-}
-.mobileWorkspaceMenu {
-  display: none;
 }
 .summary {
   display: grid;
@@ -242,10 +223,6 @@
   text-decoration: none;
 }
 @media (max-width: 760px) {
-  .workspaceNav {
-    align-items: flex-start;
-    flex-direction: column;
-  }
   .summary,
   .productGrid {
     grid-template-columns: 1fr 1fr;
@@ -256,40 +233,6 @@
   }
   .catalogFilters {
     grid-template-columns: 1fr;
-  }
-  .navLinks {
-    display: none;
-  }
-  .mobileWorkspaceMenu {
-    display: block;
-    width: 100%;
-  }
-  .mobileWorkspaceMenu summary {
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface);
-    color: var(--primary);
-    cursor: pointer;
-    font-weight: 600;
-  }
-  .mobileWorkspaceMenu nav {
-    display: grid;
-    margin-top: 8px;
-    padding: 8px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
-  }
-  .mobileWorkspaceMenu a {
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    color: var(--primary);
   }
 }
 @media (max-width: 520px) {

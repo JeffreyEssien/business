@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { SignOutForm } from '@/components/auth/sign-out-form';
-import { platformNavigation, isNavigationActive } from './navigation';
+import { platformNavigation, platformNavigationGroups, isNavigationActive } from './navigation';
 export function PlatformSidebar({
   pathname,
   open,
@@ -18,6 +18,14 @@ export function PlatformSidebar({
         </span>
         BusinessCare<span className="brand-dot">.</span>
       </Link>
+      <button
+        className="sidebar-close"
+        type="button"
+        aria-label="Close navigation"
+        onClick={onNavigate}
+      >
+        <span aria-hidden="true">×</span>
+      </button>
       <div className="workspace">
         <span className="workspace-icon">B</span>
         <div>
@@ -25,40 +33,30 @@ export function PlatformSidebar({
           <small>Super admin</small>
         </div>
       </div>
-      <p className="nav-label">WORKSPACE</p>
       <nav aria-label="Main navigation">
-        {platformNavigation.map((item) => {
-          const active = isNavigationActive(pathname, item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={`nav-link ${active ? 'active' : ''}`}
-              onClick={onNavigate}
-            >
-              <span aria-hidden="true">{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
+        {platformNavigationGroups.map((group) => (
+          <div className="platform-nav-group" key={group}>
+            <p className="nav-label">{group}</p>
+            {platformNavigation
+              .filter((item) => item.group === group)
+              .map((item) => {
+                const active = isNavigationActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`nav-link ${active ? 'active' : ''}`}
+                    onClick={onNavigate}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+          </div>
+        ))}
       </nav>
-      <p className="nav-label upcoming-label">COMING NEXT</p>
-      {['Subscriptions', 'Domains'].map((label) => (
-        <div className="future-link" key={label}>
-          <span className="future-dot" />
-          {label}
-          <span className="soon">Soon</span>
-        </div>
-      ))}
       <div className="sidebar-bottom">
-        <div className="build-card">
-          <strong>Your platform starts here.</strong>
-          <p>A shared foundation for every business you bring online.</p>
-          <Link href="/setup" onClick={onNavigate}>
-            View launch checklist ↗
-          </Link>
-        </div>
         <div className="profile">
           <span className="avatar">BC</span>
           <div>

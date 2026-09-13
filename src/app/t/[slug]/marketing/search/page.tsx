@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { SearchAppearanceForm } from '@/components/seo/search-appearance-form';
 import { SearchContentList } from '@/components/seo/search-content-list';
 import { PageHeader } from '@/components/ui/page-header';
@@ -19,7 +18,6 @@ export default async function SearchAppearancePage({
   const data = await getSeoWorkspace(slug, filters.productSearch, Number(filters.productPage) || 1);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.workspace.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="HELP CUSTOMERS FIND YOU"
         title="Search appearance"
