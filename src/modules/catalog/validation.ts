@@ -54,7 +54,7 @@ export function validateProduct(form: FormData) {
 
 export function catalogErrorMessage(code?: string, message?: string) {
   if (code === '23505') return 'That handle or SKU is already in use.';
-  if (message?.includes('PRODUCT_LIMIT_REACHED'))
+  if (message?.includes('PRODUCT_LIMIT_REACHED') || message?.includes('USAGE_LIMIT_EXCEEDED'))
     return 'This business has reached its product limit.';
   if (message?.includes('FORBIDDEN')) return 'You do not have permission to change this catalog.';
   return 'The catalog could not be saved. Please review the details and try again.';

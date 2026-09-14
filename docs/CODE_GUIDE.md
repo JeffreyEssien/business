@@ -204,3 +204,12 @@ Application website styles are real storefront personality profiles stored in `t
 6. `/api/webhooks/termii` verifies `X-Termii-Signature` over the untouched raw request body before parsing and stores only bounded delivery metadata. `/api/jobs/sms-delivery` is protected by `CRON_SECRET` and claims at most 25 messages.
 7. Tenant controls live at `/t/{slug}/communications/sms`; `/sms-operations` is the Super-Admin review and delivery workspace. Both use masked recipient projections and never query private queue tables directly.
 8. `SMS_DELIVERY_MODE=disabled` is the safe default. Test mode permits only `SMS_TEST_RECIPIENT`; live mode requires an approved sender name, deployed webhook, and an owner-observed test delivery.
+
+## Follow a feature entitlement
+
+1. `features` owns feature metadata and value types; `plan_features` owns the normal Starter, Growth, and Pro values. Do not branch on a plan slug in application code.
+2. `private.get_effective_feature` is authoritative. A global boolean shutdown wins first, followed by a non-expired tenant override, the tenant plan value, and the catalog default.
+3. `get_tenant_entitlements` exposes the resolved map only to a tenant member or Super Admin. Tenant layouts and feature screens consume this map for explanatory navigation and controls.
+4. Backend mutations independently call `private.assert_feature` or `private.assert_usage_within_limit`. UI locks are guidance, never authorization.
+5. Super Admin mutations use validated security-definer RPCs. Browser roles cannot write plan values, overrides, or global state directly; every change creates an audit event.
+6. Numeric limits may be JSON null for unlimited. Product creation serializes count checks with a tenant-specific transaction lock so concurrent requests cannot exceed the effective allowance.

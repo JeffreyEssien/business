@@ -150,6 +150,54 @@ try {
   await sql`insert into public.tenant_memberships(tenant_id,user_id,role) values(${tenant.id},${profile.id},'TENANT_OWNER') on conflict(tenant_id,user_id) do nothing`;
   await sql`update public.tenants set status='TRIAL' where id=${tenant.id}`;
   await sql`update public.tenant_onboarding set owner_accepted=true where tenant_id=${tenant.id}`;
+  await sql`
+    insert into public.tenant_feature_overrides(
+      tenant_id,feature_key,value,reason,expires_at,created_by
+    ) values(
+      ${tenant.id},'custom_domain','true'::jsonb,'Expired browser regression',
+      now()-interval '1 minute',${profile.id}
+    )
+  `;
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify plan and feature management';
+  await page.goto(`${base}/features`);
+  await expect(
+    page.getByRole('heading', { name: 'Plans and features', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Plan feature matrix' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Emergency controls' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Business overrides' })).toBeVisible();
+  await expect(page.getByLabel('Business', { exact: true })).toBeVisible();
+  await page.getByLabel('Find a business').fill('UI verification business');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByLabel('Business', { exact: true }).selectOption(tenant.id);
+  await page.getByLabel('Feature', { exact: true }).selectOption('sms_notifications');
+  await page.getByLabel('Override value').selectOption('true');
+  await page.getByLabel('Reason', { exact: true }).fill('Temporary browser regression');
+  await page.getByRole('button', { name: 'Save business override' }).click();
+  await expect(page.getByText('Business override saved.')).toBeVisible({ timeout: 30000 });
+  const browserOverride = page.getByText(
+    'Customer text messages: Included · Temporary browser regression',
+    { exact: true },
+  );
+  await expect(browserOverride).toBeVisible();
+  await expect(page.getByText('Expired', { exact: true })).toBeVisible();
+  await expect(page.getByText(/The plan value is active now/)).toBeVisible();
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Feature management has no desktop overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/features-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Feature management has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/features-mobile.png', fullPage: true });
+  await browserOverride.locator('../..').getByRole('button', { name: 'Return to plan' }).click();
+  await expect(page.getByText('Business returned to its plan value.')).toBeVisible({
+    timeout: 30000,
+  });
   await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Create category through tenant workspace';
   await page.goto(`${base}/t/${slug}/catalog/categories`);

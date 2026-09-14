@@ -1,12 +1,12 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: Phase 8 implemented; provider activation awaiting deployment verification
+## Current stage: Phase 9 implemented; provider activation and pricing inputs pending
 
-Status: Phases 0–8 are implemented and verified locally. Transactional email and SMS use separate provider abstractions and durable PostgreSQL queues. SMS is gated by plan entitlement, tenant choices, and an approved tenant-specific sender name; tenant owners see masked activity while Super Admin reviews sender requests and delivery state. Termii activation still requires deployment environment configuration, webhook registration, provider approval of a test sender, and one owner-observed test delivery. No real customer email, SMS, transaction, sender request, or settlement subaccount was created by the agent; automated database, Auth, and Cloudinary fixtures were removed.
+Status: Phases 0–9 are implemented and verified. Feature access resolves centrally from global safety state, an active tenant override, the tenant plan, and finally the catalog default. Super Admin can change plan values, pause boolean features, and manage documented expiring business overrides without a deployment. SMS and product limits use the same database authority, while tenant navigation and catalog usage explain effective access. Transactional email and SMS still require provider activation in the deployed environment. No real customer email, SMS, transaction, sender request, or settlement subaccount was created by the agent; automated database, Auth, and Cloudinary fixtures were removed.
 
 ### Customer application and approval flow
 
@@ -172,6 +172,15 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - `/api/jobs/sms-delivery` reuses the protected scheduler secret and processes no more than 25 due messages. Immediate SMS and email delivery attempts run concurrently after successful order/payment commits.
 - Migrations `202609130001_sms_notifications.sql`, `202609130002_sms_sender_review.sql`, and shared additive recovery migration `202609130003_communications_claim_recovery.sql` are applied to development Supabase. Earlier applied migrations remain unchanged.
 
+### Phase 9: feature entitlements and plan controls
+
+- Feature definitions now include customer-facing metadata, value types, categories, active state, and timestamps while preserving stable feature keys.
+- One database resolver owns precedence: global emergency shutdown, non-expired tenant override, plan value, then feature default.
+- Super Admin has a responsive `/features` workspace for the Starter/Growth/Pro matrix, reason-required emergency controls, searchable business targeting, explicit expired-override state, and documented optional-expiry business overrides.
+- Direct override/global-state writes remain unavailable to browser roles. Authorized RPCs validate value types, tenant scope, expiry, reasons, and missing removals, then write bounded audit events that identify the affected feature.
+- SMS database checks and tenant UI now use effective entitlements. Product creation and archive restoration use the effective numeric limit with a per-tenant transaction lock; archived products do not consume capacity. Catalog screens show usage, explain exhaustion and downgrade behavior, and block direct new-product URLs at the limit.
+- Migrations `202609140001_feature_entitlements.sql` and additive hardening migration `202609140002_feature_entitlement_hardening.sql` are applied to development Supabase. Migration idempotency, the complete rollback-only SQL/RLS suite, a real two-connection product-limit race regression, production build, and full desktop/mobile browser regression pass.
+
 ## Validation
 
 - PASS: TypeScript and production Webpack build.
@@ -223,7 +232,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
 - New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
-- Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
+- Plans and tenant overrides are operational, but plan prices, recurring charges, trial/grace policy, and SaaS billing remain Phase 10.
 - Paystack merchant payments and integrity controls are implemented. A real hosted test-card payment still requires the owner to rotate the exposed test secret, connect a Paystack test settlement account, and run Paystack's external checkout; automated tests do not create persistent provider subaccounts or transactions.
 - Owner invitations are durably queued, but no provider message is sent while email delivery is disabled. Localhost invitation links work only on the same computer; configure the deployed app URL before remote owner onboarding.
 - Resend delivery is intentionally `disabled` until the owner provides a sending-only API key and the Resend account email for test mode. `resend.dev` testing can reach only that account email; live owner/customer delivery requires a verified sending domain and webhook secret.
@@ -247,7 +256,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Paystack               | 6          | Implemented and verified | Verified/idempotent payment processing                     |
 | Email                  | 7          | Implemented; activation gated | Branded queue, templates, settings, logs, retries       |
 | SMS                    | 8          | Implemented; activation gated | Sender review, durable queue, settings, logs, webhooks  |
-| Entitlements/plans     | 9          | Planned                  | Central resolution and server enforcement                  |
+| Entitlements/plans     | 9          | Implemented and verified | Central resolution, overrides, kill switches, usage limits |
 | SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
 | Domains                | 11         | Planned                  | Verified hostname/TLS lifecycle                            |
 | Observability          | 12         | Planned                  | Audited platform visibility/monitoring                     |
@@ -271,7 +280,7 @@ Credentials stay in local environment files, never this tracker. No production d
 - Add cross-request published-version caching only after deployment topology is selected. Cache immutable design/navigation/SEO by version; never make cached storefront stock authoritative for checkout.
 - Verify Supabase production pooler configuration during deployment. The application currently uses Supabase HTTP clients and does not open a PostgreSQL connection per browser request.
 - Evaluate `pg_trgm` with realistic `EXPLAIN ANALYZE` evidence before adding fuzzy-search indexes. Current bounded name search does not justify indiscriminate extensions.
-- Publish quotas belong to Phase 9 entitlements and require an explicit pricing decision. Draft editing and preview must remain available regardless of any future publish allowance.
+- Publish quotas require an explicit future pricing decision before they are added to the entitlement catalog. Draft editing and preview must remain available regardless of any future publish allowance.
 - Audit archive/export requires background jobs, private object storage, verification, redaction, retention policy, email delivery, and retry state. Archive first, verify second, purge hot rows last.
 - Choose external error tracking and provider dashboards after the production host is known. Durable payment/webhook events, idempotency, bounded retries, and failed-event visibility are now implemented locally; production alert delivery and operational ownership remain release gates.
 

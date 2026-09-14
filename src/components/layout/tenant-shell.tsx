@@ -9,7 +9,7 @@ import { useMobileNavigation } from './use-mobile-navigation';
 
 type TenantNavigationGroup = {
   label: string;
-  links: ReadonlyArray<{ href: string; label: string }>;
+  links: ReadonlyArray<{ href: string; label: string; feature?: string }>;
 };
 
 const navigationGroups: ReadonlyArray<TenantNavigationGroup> = [
@@ -29,7 +29,11 @@ const navigationGroups: ReadonlyArray<TenantNavigationGroup> = [
     label: 'Customer updates',
     links: [
       { href: '/communications/email', label: 'Customer emails' },
-      { href: '/communications/sms', label: 'Customer text messages' },
+      {
+        href: '/communications/sms',
+        label: 'Customer text messages',
+        feature: 'sms_notifications',
+      },
     ],
   },
   {
@@ -53,7 +57,15 @@ function workspaceTitle(pathname: string, root: string) {
 }
 
 /** Persistent merchant navigation with a compact, dismissible mobile drawer. */
-export function TenantShell({ slug, children }: { slug: string; children: React.ReactNode }) {
+export function TenantShell({
+  slug,
+  entitlements,
+  children,
+}: {
+  slug: string;
+  entitlements: Record<string, unknown>;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const navigationRef = useRef<HTMLElement>(null);
@@ -112,6 +124,7 @@ export function TenantShell({ slug, children }: { slug: string; children: React.
               <p className="nav-label">{group.label}</p>
               {group.links.map((link) => {
                 const address = `${root}${link.href}`;
+                const locked = link.feature ? entitlements[link.feature] !== true : false;
                 const exactCompetitor = group.links.some(
                   (candidate) =>
                     candidate.href.length > link.href.length &&
@@ -125,11 +138,12 @@ export function TenantShell({ slug, children }: { slug: string; children: React.
                 return (
                   <Link
                     href={address}
-                    className={`tenant-nav-link ${active ? 'active' : ''}`}
+                    className={`tenant-nav-link ${active ? 'active' : ''} ${locked ? 'locked' : ''}`}
                     aria-current={active ? 'page' : undefined}
                     key={address}
                   >
-                    {link.label}
+                    <span>{link.label}</span>
+                    {locked && <small>Growth</small>}
                   </Link>
                 );
               })}

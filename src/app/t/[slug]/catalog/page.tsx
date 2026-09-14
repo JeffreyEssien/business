@@ -16,23 +16,40 @@ export default async function CatalogPage({
 }) {
   const { slug } = await params;
   const filters = await searchParams;
-  const { tenant, products, categories, total, activeTotal, page, search, status } =
-    await getCatalogWorkspace(slug, {
-      page: Number(filters.page) || 1,
-      search: filters.search,
-      status: filters.status,
-    });
+  const {
+    tenant,
+    products,
+    categories,
+    total,
+    activeTotal,
+    usageTotal,
+    productLimit,
+    page,
+    search,
+    status,
+  } = await getCatalogWorkspace(slug, {
+    page: Number(filters.page) || 1,
+    search: filters.search,
+    status: filters.status,
+  });
   return (
     <main className="tenant-home">
       <PageHeader
         eyebrow="CATALOG"
         title="Products"
         description="Manage what customers can browse in your public store."
-        action={<ButtonLink href={`/t/${slug}/catalog/products/new`}>Add product</ButtonLink>}
+        action={
+          productLimit === null || usageTotal < productLimit ? (
+            <ButtonLink href={`/t/${slug}/catalog/products/new`}>Add product</ButtonLink>
+          ) : undefined
+        }
       />
       <div className={styles.summary}>
         <div className={styles.metric}>
-          Matching products<strong>{total}</strong>
+          Products used
+          <strong>
+            {usageTotal} of {productLimit ?? 'unlimited'}
+          </strong>
         </div>
         <div className={styles.metric}>
           Active<strong>{activeTotal}</strong>

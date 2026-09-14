@@ -24,12 +24,9 @@ export async function getTenantSmsWorkspace(slug: string) {
       .select('business_name')
       .eq('tenant_id', workspace.tenant.id)
       .single(),
-    workspace.supabase
-      .from('plan_features')
-      .select('value')
-      .eq('plan_id', workspace.tenant.plan_id)
-      .eq('feature_key', 'sms_notifications')
-      .maybeSingle(),
+    workspace.supabase.rpc('get_tenant_entitlements', {
+      target_tenant: workspace.tenant.id,
+    }),
   ]);
   if (settingsResult.error || logsResult.error || businessResult.error || entitlementResult.error)
     throw new Error('Customer text-message settings could not be loaded.');
@@ -39,7 +36,9 @@ export async function getTenantSmsWorkspace(slug: string) {
     settings: settingsResult.data as SmsSettings,
     logs: (logsResult.data ?? []) as SmsLog[],
     businessName: businessResult.data.business_name,
-    entitled: entitlementResult.data?.value === true,
+    entitled:
+      Boolean(entitlementResult.data) &&
+      (entitlementResult.data as Record<string, unknown>).sms_notifications === true,
     delivery: { mode: delivery.mode, configured: delivery.configured },
   };
 }

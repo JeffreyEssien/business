@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { database, reportError } from './database.mjs';
+import { testProductLimitConcurrency } from './test-entitlement-concurrency.mjs';
 let sql;
 try {
   sql = database();
@@ -23,6 +24,8 @@ try {
     }
     console.log(`PASS: ${file}; all fixtures rolled back.`);
   }
+  await testProductLimitConcurrency();
+  console.log('PASS: concurrent product creation preserves the effective usage limit.');
 } catch (error) {
   reportError(error);
 } finally {
