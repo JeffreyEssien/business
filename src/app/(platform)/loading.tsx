@@ -1,7 +1,5 @@
+import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
+
 export default function Loading() {
-  return (
-    <p role="status" style={{ padding: 32 }}>
-      Loading your workspace…
-    </p>
-  );
+  return <LoadingSkeleton label="Loading platform workspace" />;
 }

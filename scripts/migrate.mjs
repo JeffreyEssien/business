@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { database, reportError } from './database.mjs';
 let sql;
+let activeMigration;
 try {
   sql = database();
   await sql.begin(async (tx) => {
@@ -13,6 +14,7 @@ try {
       .filter((f) => /^\d+_[a-z0-9_]+\.sql$/.test(f))
       .sort();
     for (const name of files) {
+      activeMigration = name;
       const source = await readFile(`supabase/migrations/${name}`, 'utf8');
       const checksum = createHash('sha256').update(source).digest('hex');
       const [existing] =
@@ -26,9 +28,11 @@ try {
       await tx`insert into businesscare_migrations.history(name, checksum) values(${name},${checksum})`;
       console.log(`Prepared: ${name}`);
     }
+    activeMigration = undefined;
   });
   console.log('Migration transaction committed.');
 } catch (error) {
+  if (activeMigration) console.error(`Migration failed: ${activeMigration}`);
   reportError(error);
 } finally {
   if (sql) await sql.end();

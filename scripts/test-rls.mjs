@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { database, reportError } from './database.mjs';
+import { testProductLimitConcurrency } from './test-entitlement-concurrency.mjs';
 let sql;
 try {
   sql = database();
@@ -15,12 +16,16 @@ try {
         console.error(`Failed suite: ${file}`);
         if (String(error.code ?? '').startsWith('42') || error.code === 'P0001') {
           console.error(`SQL test error: ${error.message}`);
+          if (error.position) console.error(`SQL character position: ${error.position}`);
+          if (error.where) console.error(`SQL context: ${error.where}`);
         }
         throw error;
       }
     }
     console.log(`PASS: ${file}; all fixtures rolled back.`);
   }
+  await testProductLimitConcurrency();
+  console.log('PASS: concurrent product creation preserves the effective usage limit.');
 } catch (error) {
   reportError(error);
 } finally {

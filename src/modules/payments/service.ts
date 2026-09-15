@@ -1,6 +1,9 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logServerEvent } from '@/lib/observability/server';
+import { configuredApplicationBaseUrl } from '@/lib/application-url';
+import { dispatchQueuedEmails } from '@/modules/email/service';
+import { dispatchQueuedSms } from '@/modules/sms/service';
 import { paystackProvider, PaymentProviderError } from './paystack';
 
 const paymentReferencePattern = /^[A-Za-z0-9._=-]{6,100}$/;
@@ -28,21 +31,11 @@ function record(value: unknown): Record<string, unknown> | null {
 }
 
 export function applicationBaseUrl() {
-  const configured = process.env.NEXT_PUBLIC_APP_URL;
-  if (!configured) throw new PaymentProviderError('APPLICATION_URL_NOT_CONFIGURED');
-  let url: URL;
   try {
-    url = new URL(configured);
+    return configuredApplicationBaseUrl();
   } catch {
     throw new PaymentProviderError('APPLICATION_URL_NOT_CONFIGURED');
   }
-  const local = ['localhost', '127.0.0.1'].includes(url.hostname);
-  if (
-    (!local && url.protocol !== 'https:') ||
-    (local && !['http:', 'https:'].includes(url.protocol))
-  )
-    throw new PaymentProviderError('APPLICATION_URL_NOT_CONFIGURED');
-  return new URL('/', url).toString();
 }
 
 async function initializationContext(reference: string) {
@@ -116,7 +109,10 @@ export async function initializeStoredPaystackPayment(reference: string) {
 }
 
 export async function verifyAndApplyPaystackPaymentState(reference: string) {
-  const verified = await paystackProvider.verifyPayment(reference);
+  const [verified, context] = await Promise.all([
+    paystackProvider.verifyPayment(reference),
+    initializationContext(reference),
+  ]);
   const admin = createAdminClient();
   const { data, error } = await admin.rpc('confirm_paystack_payment', {
     provider_reference: verified.reference,
@@ -128,6 +124,11 @@ export async function verifyAndApplyPaystackPaymentState(reference: string) {
       verified.paidAt && Number.isFinite(Date.parse(verified.paidAt)) ? verified.paidAt : null,
   });
   if (error) throw new PaymentProviderError('PAYMENT_RECONCILIATION_FAILED');
+  if (['PROCESSED', 'ALREADY_PROCESSED'].includes(String(data ?? '')))
+    await Promise.allSettled([
+      dispatchQueuedEmails({ tenantId: context.tenantId, limit: 5 }),
+      dispatchQueuedSms({ tenantId: context.tenantId, limit: 5 }),
+    ]);
   return { result: String(data ?? 'UNKNOWN'), providerStatus: verified.status.toLowerCase() };
 }
 
@@ -183,7 +184,9 @@ export async function processPaystackWebhookPayload(payload: unknown) {
     },
   });
   if (error) throw new PaymentProviderError('WEBHOOK_STATE_WRITE_FAILED');
-  return processStoredPaystackWebhook(eventKey);
+  const result = await processStoredPaystackWebhook(eventKey);
+  await Promise.allSettled([dispatchQueuedEmails({ limit: 5 }), dispatchQueuedSms({ limit: 5 })]);
+  return result;
 }
 
 export async function processStoredPaystackWebhook(eventKey: string, force = false) {

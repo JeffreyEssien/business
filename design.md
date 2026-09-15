@@ -1568,3 +1568,881 @@ Beautiful enough to remember.
 Quiet enough to use every day.
 
 This is the version I’d actually put in the repository as DESIGN.md. It gives Codex enough constraints to keep the whole product visually consistent, while still leaving room for the product to develop its own personality instead of looking like a rigid template.
+
+# Apple-Inspired Product Experience Standard
+
+## 1. The Core Question
+
+Before designing, modifying, or approving any user-facing interaction, the agent must stop and ask:
+
+> **“If Apple were designing this exact interaction for a first-party product, how would they make it feel obvious, immediate, calm, polished, and effortless?”**
+
+This is not an instruction to visually clone Apple.
+
+It is an instruction to apply the level of product thinking associated with highly refined consumer software:
+
+* strong information hierarchy
+* immediate interaction feedback
+* minimal cognitive load
+* deliberate whitespace
+* predictable navigation
+* progressive disclosure
+* excellent typography
+* clear system status
+* subtle motion
+* responsive layouts
+* consistency
+* accessibility
+* forgiving interactions
+* attention to edge cases
+
+When the correct UX approach is not obvious, **do not guess**.
+
+Research the current Apple Human Interface Guidelines and high-quality comparable products before implementing the interaction.
+
+The agent must determine:
+
+1. What is the user's intention?
+2. What does the user expect to happen immediately after interacting?
+3. What feedback confirms that their action was registered?
+4. What information does the user actually need at this moment?
+5. Can anything unnecessary be removed?
+6. Is the navigation obvious without explanation?
+7. Does the interface preserve context?
+8. Does the user always know where they are?
+9. What happens under slow network conditions?
+10. What happens when the action fails?
+11. What happens when there is no data?
+12. What happens when there is a lot of data?
+13. What happens on mobile, tablet, laptop, and wide desktop displays?
+14. Is there a better native or familiar interaction pattern?
+15. **What would Apple do here, and why?**
+
+The answer to the final question should influence the implementation, but product requirements and web-platform conventions still take precedence.
+
+---
+
+# 2. Perceived Performance Is a Product Requirement
+
+The interface must never feel unresponsive.
+
+A technically successful application that feels slow is still a poor user experience.
+
+Every meaningful interaction must provide immediate visual acknowledgment.
+
+When a user clicks:
+
+* Save
+* Continue
+* Publish
+* Create
+* Delete
+* Submit
+* Add product
+* Update order
+* Change settings
+* Navigate
+* Upload
+* Generate
+* Apply
+* Search
+* Filter
+
+the interface must immediately communicate that something happened.
+
+Never leave the user wondering:
+
+> “Did I actually click it?”
+
+## Mandatory Interaction States
+
+Interactive operations must account for:
+
+**Idle → Pressed → Loading → Success / Error**
+
+Where appropriate, also support:
+
+**Disabled, Empty, Retry, Partial Success, Offline and Unsaved Changes.**
+
+A button performing an asynchronous action should normally:
+
+* react visually immediately on press
+* prevent accidental duplicate submissions
+* retain approximately the same dimensions while loading
+* show a subtle spinner or progress state
+* optionally change its text to a useful status such as `Saving…`
+* resolve clearly into success or error
+
+Do not make users stare at a frozen button.
+
+Apple's Human Interface Guidelines emphasize that progress feedback should reassure people that an application has not stalled.
+
+---
+
+# 3. Prefer Skeletons Over Blank Screens
+
+When loading structured content such as:
+
+* dashboards
+* orders
+* product lists
+* analytics
+* tables
+* cards
+* customer information
+* store configuration
+
+preserve the expected page structure while data loads.
+
+Prefer:
+
+**existing content → subtle loading state → updated content**
+
+or:
+
+**skeleton layout → rendered content**
+
+instead of:
+
+**blank page → giant spinner → page suddenly appears**
+
+Skeletons should resemble the eventual content hierarchy without becoming distracting animations.
+
+If existing information can remain safely visible while refreshing, keep it visible.
+
+Do not destroy context unnecessarily.
+
+---
+
+# 4. Navigation Must Feel Instant
+
+Navigation should respond immediately.
+
+When moving between dashboard sections:
+
+* visually select the destination immediately
+* preserve the application shell whenever possible
+* do not unnecessarily rebuild the entire interface
+* show loading states inside the changing content region
+* prefetch likely destinations where appropriate
+* avoid full-page flashes
+* avoid unnecessary layout shifts
+
+The persistent interface should feel stable while content changes.
+
+The user should feel like they are moving **within an application**, not opening an entirely new website every time they click something.
+
+---
+
+# 5. Business Owner Dashboard: Desktop Sidebar Architecture
+
+The Business Owner Admin Dashboard should use a **responsive application-shell layout with a persistent sidebar on appropriate desktop widths**.
+
+Large arbitrary left and right padding should not be used as a substitute for application navigation.
+
+A business management platform naturally contains multiple functional areas and therefore benefits from persistent hierarchical navigation.
+
+Apple's own interface guidance recommends sidebar and split-view navigation for more complex information hierarchies.
+
+## Recommended Desktop Structure
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Sidebar │                    Main Content                        │
+│         │                                                        │
+│ Logo    │ Page title                              Actions         │
+│         │ Context / breadcrumb                                     │
+│ Home    │ ───────────────────────────────────────────────────── │
+│ Orders  │                                                        │
+│ Products│                    Page Content                         │
+│ Customers│                                                       │
+│ Analytics│                                                       │
+│         │                                                        │
+│ Website │                                                        │
+│ Marketing│                                                       │
+│         │                                                        │
+│ Settings│                                                        │
+│ ─────── │                                                        │
+│ Account │                                                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+The sidebar establishes persistent spatial memory.
+
+A user should learn:
+
+> Orders are always here.
+> Products are always here.
+> Analytics is always here.
+
+Controls should not move unnecessarily between screens.
+
+---
+
+# 6. Sidebar Behaviour
+
+The sidebar should feel quiet, useful and stable.
+
+Do not create an oversized decorative sidebar.
+
+It exists primarily for orientation and navigation.
+
+Recommended groups may include:
+
+### Core
+
+* Overview
+* Orders
+* Products
+* Customers
+
+### Growth
+
+* Analytics
+* Marketing
+* Discounts / Promotions
+
+### Business
+
+* Website / Store
+* Payments
+* Delivery / Fulfilment
+
+### System
+
+* Settings
+* Help
+
+The exact information architecture must be determined from actual implemented BusinessCare functionality rather than blindly copying this example.
+
+Do not expose navigation for features that do not exist.
+
+Use grouping only where grouping improves comprehension.
+
+---
+
+# 7. Active Navigation State
+
+A user must always understand where they are.
+
+The active sidebar item should have:
+
+* a clear selected state
+* subtle background differentiation
+* appropriate icon treatment
+* readable label
+* sufficient contrast
+
+Avoid aggressive highlights.
+
+Selection should be obvious without dominating the interface.
+
+Page headings must also reinforce location.
+
+For example:
+
+```text
+Products
+Manage your catalogue, inventory and availability.
+```
+
+not merely:
+
+```text
+Dashboard
+```
+
+on every page.
+
+Apple recommends useful, concise titles that help users understand their current location.
+
+---
+
+# 8. Responsive Sidebar
+
+Do not force desktop navigation onto mobile.
+
+### Wide desktop
+
+Persistent expanded sidebar.
+
+### Medium desktop/tablet
+
+Collapsed sidebar or narrower navigation rail where useful.
+
+### Mobile
+
+Sidebar becomes a temporary drawer, sheet, or appropriate compact navigation pattern.
+
+Primary actions must remain easily reachable.
+
+The same underlying information architecture should remain consistent across screen sizes.
+
+Do not radically rearrange navigation merely because the viewport becomes smaller.
+
+---
+
+# 9. Content Width
+
+A sidebar does not mean content should stretch infinitely.
+
+Use intentional maximum widths based on the type of information.
+
+For example:
+
+* forms should remain comfortably readable
+* analytics may use more horizontal space
+* data tables may use most of the available viewport
+* settings pages may use narrower content areas
+* dashboards can use responsive grids
+
+Do not apply one arbitrary `max-width` to every screen.
+
+Do not create huge empty gutters simply because a screen is large.
+
+Whitespace must communicate hierarchy, not waste space.
+
+---
+
+# 10. Motion Must Explain
+
+Animations must have a functional purpose.
+
+Use motion to communicate:
+
+* state changes
+* hierarchy
+* navigation
+* success
+* insertion
+* removal
+* expansion
+* collapse
+* continuity
+
+Do not animate merely because animation is possible.
+
+Transitions should generally be:
+
+* fast
+* subtle
+* interruptible
+* physically believable
+* consistent
+
+A dropdown can gently appear.
+
+A sidebar may smoothly collapse.
+
+A saved setting may quietly confirm itself.
+
+A modal may subtly enter from the spatial direction that makes sense.
+
+Do not turn routine administration into a cinematic experience.
+
+---
+
+# 11. Optimistic UI
+
+Where failure risk is low and rollback is safe, consider optimistic UI.
+
+Examples may include:
+
+* toggling preferences
+* favouriting
+* simple status changes
+* rearranging items
+* switching views
+
+The interface may visually update immediately while the server operation completes.
+
+If the operation fails:
+
+* revert safely
+* explain what happened
+* provide recovery
+
+Do not use optimistic UI for operations where pretending success could create financial, inventory, fulfilment, security or data-integrity problems.
+
+---
+
+# 12. Never Hide System Status
+
+The user should always be able to understand whether an operation is:
+
+* waiting
+* processing
+* completed
+* failed
+* partially completed
+
+Avoid vague feedback.
+
+Bad:
+
+```text
+Loading...
+```
+
+Better:
+
+```text
+Publishing website…
+```
+
+Bad:
+
+```text
+Something went wrong.
+```
+
+Better:
+
+```text
+We couldn't publish your changes. Your edits are still saved here.
+Try again
+```
+
+Status messages should explain useful consequences.
+
+---
+
+# 13. Preserve User Work
+
+Never destroy entered information because:
+
+* an API failed
+* validation failed
+* the network disconnected
+* the user navigated backwards
+* submission timed out
+
+Unless there is an unavoidable technical/security reason.
+
+Forms, especially:
+
+* business onboarding
+* product creation
+* website configuration
+* checkout configuration
+* business settings
+
+should aggressively protect user-entered data.
+
+Where appropriate:
+
+* locally preserve drafts
+* autosave
+* clearly indicate saved/unsaved state
+* restore recoverable sessions
+
+A failed submission should not become a punishment.
+
+---
+
+# 14. Success Feedback
+
+Do not overcelebrate routine actions.
+
+A successful save usually needs:
+
+* a small confirmation
+* inline status
+* toast
+* subtle checkmark
+
+not:
+
+* giant modals
+* confetti
+* blocking dialogs
+* multiple notifications
+
+Save celebration for meaningful milestones, such as:
+
+* first store published
+* first product created
+* first sale
+* completed onboarding
+
+The intensity of feedback should match the importance of the event.
+
+---
+
+# 15. Error Design
+
+Errors are part of the interface.
+
+They must be designed deliberately.
+
+Every failure state must answer:
+
+1. What happened?
+2. Did we lose anything?
+3. What can I do now?
+
+Bad:
+
+```text
+Error 500
+```
+
+Bad:
+
+```text
+Unable to process request.
+```
+
+Better:
+
+```text
+We couldn't save the product.
+
+Your changes are still here. Check your connection and try again.
+```
+
+Provide an actionable recovery path wherever possible.
+
+---
+
+# 16. Loading Hierarchy
+
+Not every asynchronous operation deserves the same loading treatment.
+
+### Tiny background operation
+
+Use subtle inline feedback.
+
+### Button operation
+
+Use button loading state.
+
+### Section refresh
+
+Use skeleton/content-level indicator.
+
+### Full route requiring data
+
+Preserve the app shell and skeleton the page content.
+
+### Long-running operation
+
+Use explicit progress and describe what is occurring.
+
+### Multi-stage operation
+
+Display the current meaningful stage where useful.
+
+Never block the entire interface unnecessarily.
+
+---
+
+# 17. Avoid Spinner Abuse
+
+A spinner is not the solution to every wait.
+
+Prefer:
+
+* optimistic updates
+* skeletons
+* progressive rendering
+* cached content
+* prefetching
+* stale-while-revalidate behaviour
+* instantaneous local state transitions
+
+before defaulting to a spinner.
+
+The objective isn't:
+
+> “Show loading.”
+
+The objective is:
+
+> **“Make waiting understandable — or eliminate the perception of waiting entirely.”**
+
+---
+
+# 18. Performance Investigation Is Mandatory
+
+Do not attempt to solve perceived slowness exclusively through animation.
+
+If an interaction feels slow, investigate the actual cause.
+
+Inspect:
+
+* unnecessary server round trips
+* sequential API requests that could run concurrently
+* oversized JavaScript bundles
+* excessive React rerenders
+* uncached requests
+* unnecessary authentication checks
+* database query latency
+* image payloads
+* blocking third-party scripts
+* route transitions
+* server component boundaries
+* hydration overhead
+* repeated fetches
+* API cold starts
+* middleware
+* expensive client state operations
+
+A loading animation may improve perception.
+
+It does not excuse poor performance.
+
+---
+
+# 19. Interaction Budget
+
+Treat responsiveness as a measurable requirement.
+
+For every major interaction, inspect:
+
+```text
+Input
+↓
+Visual acknowledgement
+↓
+Application work
+↓
+Result
+```
+
+**Visual acknowledgement should feel immediate.**
+
+If the final operation cannot be immediate, the system must immediately communicate what is happening.
+
+No important button should appear dead after being clicked.
+
+---
+
+# 20. Progressive Disclosure
+
+Do not expose every capability simultaneously.
+
+Advanced configuration should appear when it becomes relevant.
+
+For example, rather than showing twenty product settings immediately:
+
+```text
+Basic information
+Pricing
+Inventory
+
+Advanced options >
+```
+
+This reduces intimidation without removing capability.
+
+Complexity should exist in the product where required, but users should encounter it gradually.
+
+---
+
+# 21. Default to Familiarity
+
+Do not invent new interactions when users already understand an established one.
+
+Before creating a custom pattern, ask:
+
+> Is there already a familiar interface convention for this?
+
+Prefer recognisable patterns for:
+
+* navigation
+* filters
+* search
+* tables
+* selection
+* forms
+* dialogs
+* destructive actions
+* pagination
+* sorting
+* account controls
+
+Innovation should solve a user problem, not merely create novelty.
+
+---
+
+# 22. Reduce Decisions
+
+Every screen should have an obvious primary purpose.
+
+Ask:
+
+> “What is the most likely thing the user came here to accomplish?”
+
+That action should receive the strongest visual emphasis.
+
+Secondary actions should remain accessible without competing equally for attention.
+
+Avoid screens containing five buttons that all visually scream:
+
+> CLICK ME.
+
+Hierarchy is part of usability.
+
+---
+
+# 23. Contextual Controls
+
+Show controls near the thing they affect.
+
+An action relating to a product belongs close to the product.
+
+An order status control belongs with the order.
+
+Page-level actions belong near the page heading or appropriate toolbar.
+
+Avoid scattering related controls across unrelated parts of the screen.
+
+Apple's toolbar guidance similarly emphasizes grouping controls and actions logically around the content they affect.
+
+---
+
+# 24. Empty States Must Be Useful
+
+An empty state is often a new user's first experience.
+
+Never show only:
+
+```text
+No products.
+```
+
+Use empty states to teach.
+
+For example:
+
+```text
+No products yet
+
+Add your first product to start building your online store.
+
+[ Add product ]
+```
+
+Where appropriate, include a concise explanation or preview.
+
+---
+
+# 25. The "Apple Review" Before Completion
+
+Before declaring any UI feature complete, the agent must perform an **Apple Review**.
+
+Ask:
+
+### Clarity
+
+Can someone understand this screen without instructions?
+
+### Hierarchy
+
+Is the most important information visually dominant?
+
+### Feedback
+
+Does every interaction acknowledge the user immediately?
+
+### Navigation
+
+Does the user always know where they are and how to leave?
+
+### Continuity
+
+Does the interface maintain context during transitions?
+
+### Performance
+
+Does the interaction actually perform quickly?
+
+### Perceived Performance
+
+If processing takes time, does the interface still feel responsive?
+
+### Restraint
+
+Can anything unnecessary be removed?
+
+### Consistency
+
+Does the behaviour match equivalent interactions elsewhere?
+
+### Accessibility
+
+Does the experience work with keyboard navigation, focus states, reduced motion, contrast requirements and assistive technologies?
+
+### Responsiveness
+
+Does it remain coherent across supported viewport sizes?
+
+### Edge Cases
+
+What happens during loading, empty, error, offline, duplicate action, timeout, slow network, partial result and unexpectedly large data states?
+
+### Delight
+
+Is there a subtle opportunity to make the experience feel exceptionally polished without making it distracting?
+
+Only after answering these questions should the feature be considered UI-complete.
+
+---
+
+# 26. Research Rule
+
+For significant UX decisions, the agent must not rely solely on its internal assumptions.
+
+Research when appropriate:
+
+1. Current Apple Human Interface Guidelines.
+2. The equivalent interaction in first-party Apple applications where relevant.
+3. Established best practices for modern web applications.
+4. Comparable high-quality SaaS products.
+5. Accessibility requirements.
+6. Mobile and desktop conventions.
+
+The agent should extract the underlying principle rather than blindly copy visual styling.
+
+The question is not:
+
+> “How do I make this look like Apple?”
+
+The question is:
+
+> **“Why would Apple make this decision, and how do we apply the underlying UX principle appropriately to BusinessCare?”**
+
+---
+
+# 27. Product Experience Principle
+
+BusinessCare should feel simpler than the complexity underneath it.
+
+The system may contain:
+
+* commerce
+* websites
+* orders
+* inventory
+* payments
+* customers
+* analytics
+* marketing
+* delivery
+* configuration
+
+but the merchant should never feel like they are operating all of those systems simultaneously.
+
+The interface must progressively translate complexity into understandable actions.
+
+The desired experience is:
+
+**Powerful underneath.
+Simple on the surface.
+Immediate when touched.
+Predictable when navigated.
+Forgiving when mistakes happen.
+Quiet when nothing requires attention.**
+
+That is the standard.

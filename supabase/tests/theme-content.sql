@@ -14,26 +14,43 @@ reset role;
 select set_config('request.jwt.claim.sub',(select id::text from site_fixture where k='owner-a'),true);
 set local role authenticated;
 select public.accept_tenant_invitation((select id from site_fixture where k='invite-a'));
-select public.save_site_draft_with_secondary(
+select public.save_site_design(
  target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Distinct Store A',business_description=>'A unique description',business_phone=>'+234 800 000 0000',business_address=>'Lagos',
- theme_preset=>'fashion',primary_color=>'#112233',secondary_color=>'#445566',accent_color=>'#aabbcc',background_color=>'#fefefe',text_color=>'#121212',
+ theme_preset=>'fashion',website_style=>'bright-bold',primary_color=>'#112233',secondary_color=>'#445566',accent_color=>'#aabbcc',background_color=>'#fefefe',text_color=>'#121212',
  announcement_text=>'Today only',announcement_enabled=>true,hero_eyebrow=>'New',hero_headline=>'First published headline',hero_subheadline=>'Made for A',hero_cta_label=>'Shop now',hero_variant=>'split',
  products_heading=>'Store A products',products_enabled=>true,footer_description=>'Footer A',navigation=>'[{"label":"Home","target":"/","location":"HEADER","linkType":"URL","enabled":true}]'::jsonb
 );
+do $$ begin
+ if (select tokens->>'styleKey' from public.tenant_theme_settings
+  where tenant_id=(select id from site_fixture where k='tenant-a'))<>'bright-bold' then
+  raise exception 'Explicit website style was not saved';
+ end if;
+ begin
+  perform public.save_site_design(
+   (select id from site_fixture where k='tenant-a'),'Bad style','','','','general','unknown-style',
+   '#111111','#333333','#222222','#ffffff','#000000','',false,'','Bad style','','','centered',
+   'Products',true,'','[]'::jsonb
+  );
+  raise exception 'Invalid website style was accepted';
+ exception when invalid_parameter_value then null;
+ end;
+end $$;
 select public.publish_site((select id from site_fixture where k='tenant-a'));
 do $$ begin
  if (select count(*) from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')<>1 then raise exception 'Initial publish failed'; end if;
  if (select configuration#>>'{sections,1,content,headline}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')<>'First published headline' then raise exception 'Published snapshot incorrect'; end if;
  if exists(select 1 from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-b')) then raise exception 'Cross-tenant version leaked'; end if;
 end $$;
-select public.save_site_draft(
+select public.save_site_design(
  target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Distinct Store A',business_description=>'Changed draft',business_phone=>'',business_address=>'',
- theme_preset=>'restaurant',primary_color=>'#654321',accent_color=>'#ccbbaa',background_color=>'#202020',text_color=>'#f1f1f1',
+ theme_preset=>'restaurant',website_style=>'bright-bold',primary_color=>'#654321',secondary_color=>'#66745a',accent_color=>'#ccbbaa',background_color=>'#202020',text_color=>'#f1f1f1',
  announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Unpublished headline',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',
  products_heading=>'New products heading',products_enabled=>true,footer_description=>'',navigation=>'[{"label":"Home","target":"/","location":"HEADER","linkType":"URL","enabled":true}]'::jsonb
 );
 do $$ begin
  if (select configuration#>>'{sections,1,content,headline}' from public.tenant_site_versions where tenant_id=(select id from site_fixture where k='tenant-a') and status='PUBLISHED')<>'First published headline' then raise exception 'Draft changed live snapshot'; end if;
+ if (select preset_key from public.tenant_theme_settings where tenant_id=(select id from site_fixture where k='tenant-a'))<>'restaurant' then raise exception 'Color palette did not save independently'; end if;
+ if (select tokens->>'styleKey' from public.tenant_theme_settings where tenant_id=(select id from site_fixture where k='tenant-a'))<>'bright-bold' then raise exception 'Website style changed with the color palette'; end if;
 end $$;
 select public.publish_site((select id from site_fixture where k='tenant-a'));
 do $$ begin
@@ -61,9 +78,9 @@ select public.save_navigation((select id from site_fixture where k='tenant-a'),j
  jsonb_build_object('label','Shop collection','linkType','CATEGORY','categoryId',(select id from site_fixture where k='category-a'),'target','','location','HEADER','enabled',true),
  jsonb_build_object('label','Customer help','linkType','URL','target','https://example.com/help','location','FOOTER','enabled',true)
 ));
-select public.save_site_draft(
+select public.save_site_design(
  target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Distinct Store A',business_description=>'Navigation-safe design save',business_phone=>'',business_address=>'',
- theme_preset=>'fashion',primary_color=>'#112233',accent_color=>'#aabbcc',background_color=>'#fefefe',text_color=>'#121212',
+ theme_preset=>'fashion',website_style=>'elegant-luxury',primary_color=>'#112233',secondary_color=>'#445566',accent_color=>'#aabbcc',background_color=>'#fefefe',text_color=>'#121212',
  announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Navigation-safe headline',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',
  products_heading=>'Store A products',products_enabled=>true,footer_description=>'Footer A',navigation=>'[]'::jsonb
 );
@@ -144,7 +161,7 @@ select set_config('request.jwt.claim.sub',(select id::text from site_fixture whe
 set local role authenticated;
 do $$ begin
  begin perform public.publish_site((select id from site_fixture where k='tenant-a'));raise exception 'Outsider publish allowed';exception when insufficient_privilege then null;end;
- begin perform public.save_site_draft_with_secondary(target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Bad',business_description=>'',business_phone=>'',business_address=>'',theme_preset=>'general',primary_color=>'#111111',secondary_color=>'#333333',accent_color=>'#222222',background_color=>'#ffffff',text_color=>'#000000',announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Bad',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',products_heading=>'Bad',products_enabled=>true,footer_description=>'',navigation=>'[]'::jsonb);raise exception 'Outsider draft write allowed';exception when insufficient_privilege then null;end;
+ begin perform public.save_site_design(target_tenant=>(select id from site_fixture where k='tenant-a'),business_name=>'Bad',business_description=>'',business_phone=>'',business_address=>'',theme_preset=>'general',website_style=>'professional-modern',primary_color=>'#111111',secondary_color=>'#333333',accent_color=>'#222222',background_color=>'#ffffff',text_color=>'#000000',announcement_text=>'',announcement_enabled=>false,hero_eyebrow=>'',hero_headline=>'Bad',hero_subheadline=>'',hero_cta_label=>'',hero_variant=>'centered',products_heading=>'Bad',products_enabled=>true,footer_description=>'',navigation=>'[]'::jsonb);raise exception 'Outsider draft write allowed';exception when insufficient_privilege then null;end;
  begin perform public.delete_content_page((select id from site_fixture where k='tenant-a'),(select id from site_fixture where k='page-a'));raise exception 'Outsider page delete allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_global_seo((select id from site_fixture where k='tenant-a'),'Forbidden','%s | Forbidden','', '',true,true,'','');raise exception 'Outsider search settings write allowed';exception when insufficient_privilege then null;end;
  begin perform public.save_entity_seo((select id from site_fixture where k='tenant-a'),'PAGE',(select id from site_fixture where k='page-a'),'Forbidden','','','','',true,true);raise exception 'Outsider record search write allowed';exception when insufficient_privilege then null;end;

@@ -78,7 +78,7 @@ export function PaystackPaymentStatus({
               Refresh payment status
             </button>
             <form action={action}>
-              <button type="submit" disabled={pending}>
+              <button className={styles.primaryLink} type="submit" disabled={pending}>
                 {pending ? 'Opening secure payment…' : 'Try payment again'}
               </button>
             </form>

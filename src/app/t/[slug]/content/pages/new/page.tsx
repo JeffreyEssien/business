@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { ContentPageForm } from '@/components/content/content-page-form';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -10,7 +9,6 @@ export default async function NewWebsitePage({ params }: { params: Promise<{ slu
   const { tenant } = await getTenantWorkspace(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={tenant.name} slug={slug} />
       <PageHeader
         eyebrow="NEW CUSTOMER PAGE"
         title="What should customers know?"

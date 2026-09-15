@@ -19,13 +19,15 @@ export function InvitationControl({ id }: { id: string }) {
           {isPending ? 'Generating…' : 'Generate owner invitation link'}
         </Button>
         <FormError message={state.error} />
+        {state.message && <p role="status">{state.message}</p>}
       </FormStack>
       {state.link && (
         <div className="section-stack">
           <CopyField name="invitation-link" label="Owner invitation link" value={state.link} />
           <p>
             Share privately with the named owner. New-account links expire according to your
-            Supabase invitation settings. No email has been sent.
+            Supabase invitation settings. BusinessCare will also queue this invitation for email
+            when delivery is configured.
           </p>
           {isLocalLink && (
             <p>

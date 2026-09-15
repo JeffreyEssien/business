@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import {
   BankAccountForm,
   CheckoutSettingsForm,
@@ -25,7 +24,6 @@ export default async function CheckoutSettingsPage({
   ]);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="ORDERS"
         title="Checkout settings"

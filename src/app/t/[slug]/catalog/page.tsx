@@ -1,5 +1,4 @@
 import { CATALOG_PAGE_SIZE, getCatalogWorkspace } from '@/modules/catalog/queries';
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { CatalogList } from '@/components/catalog/catalog-list';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -17,24 +16,40 @@ export default async function CatalogPage({
 }) {
   const { slug } = await params;
   const filters = await searchParams;
-  const { tenant, products, categories, total, activeTotal, page, search, status } =
-    await getCatalogWorkspace(slug, {
-      page: Number(filters.page) || 1,
-      search: filters.search,
-      status: filters.status,
-    });
+  const {
+    tenant,
+    products,
+    categories,
+    total,
+    activeTotal,
+    usageTotal,
+    productLimit,
+    page,
+    search,
+    status,
+  } = await getCatalogWorkspace(slug, {
+    page: Number(filters.page) || 1,
+    search: filters.search,
+    status: filters.status,
+  });
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CATALOG"
         title="Products"
         description="Manage what customers can browse in your public store."
-        action={<ButtonLink href={`/t/${slug}/catalog/products/new`}>Add product</ButtonLink>}
+        action={
+          productLimit === null || usageTotal < productLimit ? (
+            <ButtonLink href={`/t/${slug}/catalog/products/new`}>Add product</ButtonLink>
+          ) : undefined
+        }
       />
       <div className={styles.summary}>
         <div className={styles.metric}>
-          Matching products<strong>{total}</strong>
+          Products used
+          <strong>
+            {usageTotal} of {productLimit ?? 'unlimited'}
+          </strong>
         </div>
         <div className={styles.metric}>
           Active<strong>{activeTotal}</strong>

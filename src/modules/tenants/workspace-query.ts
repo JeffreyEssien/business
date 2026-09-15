@@ -18,7 +18,7 @@ export async function getTenantWorkspace(slug: string) {
   if (!profile || profile.status !== 'ACTIVE') notFound();
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id,name,status,template_key')
+    .select('id,name,status,template_key,plan_id')
     .eq('slug', slug)
     .maybeSingle();
   if (tenantError) throw new Error('Workspace could not be loaded.');

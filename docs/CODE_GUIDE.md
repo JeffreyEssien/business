@@ -20,7 +20,7 @@ The default is readable, modular code. Routes compose features; they do not cont
 | `components/auth`        | Authentication-specific compositions                                     | AuthLayout, LoginForm, PasswordForm                  |
 | `components/businesses`  | Business-specific presentation and form orchestration                    | BusinessSummary, BusinessFilters, CreateBusinessForm |
 | `components/commerce`    | Cart, checkout, settings, order lists, and order-detail presentation      | CartCheckout, CheckoutSettings, OrderDetail          |
-| `components/layout`      | Application navigation and framing                                       | PlatformSidebar, PlatformTopbar                      |
+| `components/layout`      | Application navigation and framing                                       | PlatformSidebar, PlatformTopbar, TenantShell         |
 | `components/super-admin` | Platform views composed from UI components                               | Shell, BusinessList, LaunchCard                      |
 | `modules/tenants`        | Data access, validation, configuration, domain types, authorized actions | queries, workspace-query, actions                    |
 | `lib/supabase`           | SDK construction and cookie handling                                     | server, admin                                        |
@@ -38,6 +38,10 @@ Use explicit prop types and descriptive names such as `submitAction`, `isPending
 - Feature-specific rules live beside the feature, such as `create-business-form.module.css`.
 
 A page should never need to remember a special global class to make a TextField visible. The component imports the styling it requires. Form sections use fieldsets and legends; labels target stable control IDs; help and error text is associated with aria-describedby.
+
+Platform routes share the persistent shell in `app/(platform)/layout.tsx`. Business-owner routes share `app/t/[slug]/layout.tsx` and `components/layout/tenant-shell.tsx`; individual tenant pages must not recreate workspace navigation. Both shells use grouped desktop sidebars and dismissible mobile drawers with an in-drawer close control, backdrop dismissal, Escape handling, and scroll containment. Keep only implemented destinations in navigation.
+
+`components/ui/loading-skeleton.tsx` is the shared structured route fallback. Platform and tenant `loading.tsx` files preserve their application shells while page data changes. Prefer extending this skeleton hierarchy over introducing blank screens or full-page spinners.
 
 ## Comments and explanations
 
@@ -84,6 +88,7 @@ Cloudinary is the production media provider (ADR 003). `lib/cloudinary/server.ts
 6. `publish_site` atomically archives the old live version and saves a complete normalized snapshot. A saved draft cannot change anonymous output until this RPC succeeds.
 7. `components/storefront/storefront-renderer.tsx` renders both the authenticated draft preview and public homepage. Never create a second preview-only rendering implementation.
 8. `get_public_storefront` exposes active catalog products and only the current published site snapshot to anonymous visitors.
+9. `components/storefront/store-navigation.tsx` keeps store identity and cart access visible while adapting secondary customer navigation into a dismissible mobile sheet. The shared mobile-navigation hook contains keyboard focus, restores the trigger on dismissal, supports Escape, and locks background scrolling for both application and storefront drawers.
 
 Store Design does not own navigation. `save_site_draft` intentionally leaves menu records untouched; use the dedicated Store menus flow below for every navigation change.
 
@@ -99,7 +104,9 @@ Store Design does not own navigation. `save_site_draft` intentionally leaves men
 
 Keep tenant colors in validated tokens and pass them to storefront components through CSS variables. Marketing copy belongs in content records; only system UX labels may remain in code.
 
-Application website styles are real storefront personality profiles stored in `theme.tokens.styleKey`. They layer typography, shape, spacing, and composition over the four base business presets without creating a second renderer. Store Design preserves the profile while its base preset is unchanged and selects the corresponding profile when an owner deliberately changes presets.
+Storefront controls, checkout surfaces, status feedback, focus rings, borders, and loading structures must derive from those tenant variables with semantic application-token fallbacks. The customer interface uses a system-legible body stack; personality profiles may deliberately vary display typography and geometry without changing control meaning or accessibility behavior.
+
+Application website styles are real storefront personality profiles stored in `theme.tokens.styleKey`. They layer typography, shape, spacing, product-grid composition, and section treatment over the four color palettes without creating a second renderer. Website style, color palette, and homepage layout are independent choices: changing one must never silently rewrite another. `modules/content/presets.ts` owns the six style choices, four palettes, and legacy fallback mapping for older tenants.
 
 ## Follow a customer-information page change
 
@@ -175,3 +182,35 @@ Application website styles are real storefront personality profiles stored in `t
 5. Successful creation returns only the reference, totals, snapshotted bank instructions, and an opaque order-access token. The token may submit a payment notice but cannot read tenant tables or confirm payment.
 6. Routes under `/t/[slug]/orders` use membership-authorized bounded queries. Settings and every status/note mutation re-resolve tenant access on the server and call tenant-checking RPCs.
 7. Order administration keeps payment and fulfilment as separate state machines. All transitions are audited, and customer/order/item snapshots remain immutable.
+
+## Follow a transactional customer email
+
+1. `202609120002_email_notifications.sql` owns notification settings, the private durable queue, delivery events, tenant/platform log projections, and the order lifecycle trigger. Order events are queued in the same transaction as their authoritative state change.
+2. `modules/email/templates.ts` is the single tenant-branded HTML/plain-text renderer. The settings preview calls this exact renderer; do not create a second preview-only template.
+3. `modules/email/provider.ts` owns the provider contract, Resend adapter, test-recipient restriction, sender validation, and provider idempotency key. No browser component imports it.
+4. `modules/email/service.ts` claims a bounded batch and sends its messages concurrently. Provider failure records a safe code and retry time without changing the order or invitation.
+5. New orders and order transitions attempt due delivery after the database transaction. `/api/jobs/email-delivery` provides the protected retry boundary for a deployment scheduler. Super Admin can also process or retry from `/communications`.
+6. `/api/webhooks/resend` verifies the signature against the untouched raw request body and stores only event ID, type, provider message ID, timestamp, and bounded failure category. It never stores the provider payload.
+7. Tenant controls live at `/t/{slug}/communications/email`. Direct queue access is unavailable to tenants; authorized log projections mask recipient addresses. Service-only RPCs own claims and provider state writes.
+8. `EMAIL_DELIVERY_MODE=disabled` is the safe default. Test mode permits exactly `EMAIL_TEST_RECIPIENT`; live mode must not be enabled until `EMAIL_FROM_ADDRESS` belongs to a verified domain.
+
+## Follow a transactional customer SMS
+
+1. `202609130001_sms_notifications.sql` owns tenant SMS settings, the two-stage sender-name state machine, private queue, webhook events, usage, masked projections, and order lifecycle trigger. `202609130002_sms_sender_review.sql` is the additive correction; never edit either applied migration.
+2. The database queues SMS only when the tenant plan includes `sms_notifications`, the tenant master switch and specific event are enabled, the sender name is approved, and the customer phone normalizes successfully. Application checks are explanatory, not authoritative.
+3. A tenant request stops at `PENDING_REVIEW`. Only Super Admin can return it for correction or explicitly submit it to Termii. Provider approval is synchronized separately before the tenant can enable delivery.
+4. `modules/sms/provider.ts` owns the provider contract, Termii host allowlist, disabled/test/live modes, exact test-recipient restriction, sender-name operations, sending, and raw webhook-signature verification. No client component may import it.
+5. `modules/sms/service.ts` claims bounded batches and sends concurrently. Retry only failures known to have happened before provider acceptance; an ambiguous outcome is `DELIVERY_UNKNOWN` and requires investigation rather than automatic resend.
+6. `/api/webhooks/termii` verifies `X-Termii-Signature` over the untouched raw request body before parsing and stores only bounded delivery metadata. `/api/jobs/sms-delivery` is protected by `CRON_SECRET` and claims at most 25 messages.
+7. Tenant controls live at `/t/{slug}/communications/sms`; `/sms-operations` is the Super-Admin review and delivery workspace. Both use masked recipient projections and never query private queue tables directly.
+8. `SMS_DELIVERY_MODE=disabled` is the safe default. Test mode permits only `SMS_TEST_RECIPIENT`; live mode requires an approved sender name, deployed webhook, and an owner-observed test delivery.
+
+## Follow a feature entitlement
+
+1. `features` owns feature metadata and value types; `plan_features` owns the normal Starter, Growth, and Pro values. Do not branch on a plan slug in application code.
+2. `private.get_effective_feature` is authoritative. A global Boolean emergency shutdown wins first for Boolean features only, followed by a non-expired tenant override, the tenant plan value, and the catalog default. `feature_global_state` must never represent numeric, string, or JSON values.
+3. `get_tenant_entitlements` exposes the resolved map only to a tenant member or Super Admin. Tenant layouts and feature screens consume this map for explanatory navigation and controls.
+4. Backend mutations independently call `private.assert_feature` or `private.assert_usage_within_limit`. UI locks are guidance, never authorization.
+5. Super Admin mutations use validated security-definer RPCs. Browser roles cannot write plan values, overrides, or global state directly; every change creates an audit event containing the relevant plan or tenant and the previous/new value and expiry.
+6. Numeric limits distinguish zero from JSON null (unlimited). Every quota-sensitive growth mutation must serialize its usage check with a tenant-and-feature transaction lock and enforce the effective value in the database.
+7. Quota downgrades are non-destructive: preserve existing customer data, block new creation or reactivation while usage is at or above the allowance, and explain how to reduce usage or upgrade. Product creation/restoration and owner invitation acceptance currently follow this rule; future staff invitation and reactivation mutations must use the same `staff_limit` authority.

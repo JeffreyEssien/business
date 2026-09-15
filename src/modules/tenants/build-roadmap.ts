@@ -22,18 +22,18 @@ export const buildStages = [
   ],
   [
     'Orders & payments · Phases 5–6',
-    'In progress',
-    'Checkout, order management, and bank transfers are ready. Verified Paystack payments are next.',
+    'Ready',
+    'Checkout, order management, bank transfers, and verified Paystack merchant payments.',
   ],
   [
     'Notifications · Phases 7–8',
-    'Planned',
-    'Branded email and SMS, delivery logs, and notification preferences.',
+    'Ready for provider activation',
+    'Branded email and SMS queues, delivery logs, sender review, and notification preferences.',
   ],
   [
     'Plans & billing · Phases 9–10',
-    'Planned',
-    'Centralized entitlements, business overrides, and platform subscriptions.',
+    'In progress',
+    'Centralized entitlements and business overrides are ready. Platform subscriptions are next.',
   ],
   [
     'Domains & launch readiness · Phases 11–13',

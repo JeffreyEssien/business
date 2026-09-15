@@ -78,7 +78,7 @@ export default async function PublicProductPage({
         }}
       />
       <StorefrontShell slug={slug} configuration={configuration}>
-        <main className={styles.storeMain}>
+        <main id="store-main" className={styles.storeMain}>
           <div className={styles.productDetail}>
             <CatalogMedia
               url={product.mediaUrl}
@@ -100,8 +100,12 @@ export default async function PublicProductPage({
                   currency: product.currency,
                 }).format(product.price)}
               </p>
-              <p>{product.description || product.shortDescription}</p>
-              <p>{available ? 'Available' : 'Out of stock'}</p>
+              {(product.description || product.shortDescription) && (
+                <p>{product.description || product.shortDescription}</p>
+              )}
+              <p className={styles.availability} data-available={available}>
+                <span aria-hidden="true" /> {available ? 'In stock' : 'Out of stock'}
+              </p>
               <AddToCartButton slug={slug} product={product} />
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { themePresets, type ThemePresetKey } from './presets';
+import { isWebsiteStyleKey, themePresets, type ThemePresetKey } from './presets';
 import type { NavigationEditorItem } from './types';
 
 const hexColor = /^#[0-9a-fA-F]{6}$/;
@@ -26,6 +26,7 @@ export function validateSiteDraft(form: FormData) {
     phone: text(form, 'phone', 40),
     address: text(form, 'address', 300),
     preset,
+    websiteStyle: String(form.get('websiteStyle') ?? ''),
     primary: String(form.get('primary') ?? ''),
     secondary: String(form.get('secondary') ?? ''),
     accent: String(form.get('accent') ?? ''),
@@ -47,6 +48,7 @@ export function validateSiteDraft(form: FormData) {
     !values.heroHeadline ||
     !values.productsHeading ||
     !(preset in themePresets) ||
+    !isWebsiteStyleKey(values.websiteStyle) ||
     ![values.primary, values.secondary, values.accent, values.background, values.text].every(
       (color) => hexColor.test(color),
     ) ||
