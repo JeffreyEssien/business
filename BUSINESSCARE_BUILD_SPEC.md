@@ -1609,7 +1609,9 @@ Effective value = true
 
 ## 32.4 Feature resolution order
 
-Always calculate:
+For Boolean features, a global emergency shutdown is evaluated first. Global emergency state is Boolean-only and must not be used to represent integer, string, or JSON entitlement values.
+
+Then calculate:
 
 ```text
 TENANT OVERRIDE
@@ -1623,7 +1625,7 @@ PLAN FEATURE VALUE
 FEATURE DEFAULT
 ```
 
-Optionally add platform emergency kill switch above all:
+For Boolean features, the platform emergency layer sits above all tenant-specific values:
 
 ```text
 GLOBAL FEATURE KILL SWITCH
@@ -1638,7 +1640,11 @@ PLAN VALUE
 DEFAULT
 ```
 
-## 32.5 Enforcement
+## 32.5 Quota downgrade rule
+
+A lower plan or override limit must never delete existing tenant data. Preserve existing usage, block new creation or reactivation while current usage is at or above the effective allowance, and prompt the tenant to reduce usage or upgrade. Every membership- or resource-growth mutation must enforce the effective quota inside the authoritative database transaction and serialize concurrent checks with a tenant-and-feature lock.
+
+## 32.6 Enforcement
 
 Feature enforcement occurs in three places:
 

@@ -208,8 +208,9 @@ Application website styles are real storefront personality profiles stored in `t
 ## Follow a feature entitlement
 
 1. `features` owns feature metadata and value types; `plan_features` owns the normal Starter, Growth, and Pro values. Do not branch on a plan slug in application code.
-2. `private.get_effective_feature` is authoritative. A global boolean shutdown wins first, followed by a non-expired tenant override, the tenant plan value, and the catalog default.
+2. `private.get_effective_feature` is authoritative. A global Boolean emergency shutdown wins first for Boolean features only, followed by a non-expired tenant override, the tenant plan value, and the catalog default. `feature_global_state` must never represent numeric, string, or JSON values.
 3. `get_tenant_entitlements` exposes the resolved map only to a tenant member or Super Admin. Tenant layouts and feature screens consume this map for explanatory navigation and controls.
 4. Backend mutations independently call `private.assert_feature` or `private.assert_usage_within_limit`. UI locks are guidance, never authorization.
-5. Super Admin mutations use validated security-definer RPCs. Browser roles cannot write plan values, overrides, or global state directly; every change creates an audit event.
-6. Numeric limits may be JSON null for unlimited. Product creation serializes count checks with a tenant-specific transaction lock so concurrent requests cannot exceed the effective allowance.
+5. Super Admin mutations use validated security-definer RPCs. Browser roles cannot write plan values, overrides, or global state directly; every change creates an audit event containing the relevant plan or tenant and the previous/new value and expiry.
+6. Numeric limits distinguish zero from JSON null (unlimited). Every quota-sensitive growth mutation must serialize its usage check with a tenant-and-feature transaction lock and enforce the effective value in the database.
+7. Quota downgrades are non-destructive: preserve existing customer data, block new creation or reactivation while usage is at or above the allowance, and explain how to reduce usage or upgrade. Product creation/restoration and owner invitation acceptance currently follow this rule; future staff invitation and reactivation mutations must use the same `staff_limit` authority.

@@ -177,9 +177,10 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Feature definitions now include customer-facing metadata, value types, categories, active state, and timestamps while preserving stable feature keys.
 - One database resolver owns precedence: global emergency shutdown, non-expired tenant override, plan value, then feature default.
 - Super Admin has a responsive `/features` workspace for the Starter/Growth/Pro matrix, reason-required emergency controls, searchable business targeting, explicit expired-override state, and documented optional-expiry business overrides.
-- Direct override/global-state writes remain unavailable to browser roles. Authorized RPCs validate value types, tenant scope, expiry, reasons, and missing removals, then write bounded audit events that identify the affected feature.
-- SMS database checks and tenant UI now use effective entitlements. Product creation and archive restoration use the effective numeric limit with a per-tenant transaction lock; archived products do not consume capacity. Catalog screens show usage, explain exhaustion and downgrade behavior, and block direct new-product URLs at the limit.
-- Migrations `202609140001_feature_entitlements.sql` and additive hardening migration `202609140002_feature_entitlement_hardening.sql` are applied to development Supabase. Migration idempotency, the complete rollback-only SQL/RLS suite, a real two-connection product-limit race regression, production build, and full desktop/mobile browser regression pass.
+- Direct override/global-state writes remain unavailable to browser roles. Authorized RPCs validate value types, tenant scope, expiry, reasons, and missing removals, then write bounded audit events with relevant plan/tenant context and before/after values and expiry.
+- Emergency global state is explicitly Boolean-only. SMS database checks and tenant UI use effective entitlements. Product creation, archive restoration, and owner invitation acceptance enforce numeric allowances with tenant-and-feature transaction locks; archived products do not consume capacity.
+- Quota downgrades preserve existing customer data and block only further creation or reactivation while usage is at or above the allowance. Catalog screens explain exhaustion and downgrade behavior and block direct new-product URLs at the limit.
+- Migrations `202609140001_feature_entitlements.sql`, `202609140002_feature_entitlement_hardening.sql`, `202609150001_entitlement_audit_and_staff_limit.sql`, and additive resolver-contract migration `202609150002_entitlement_resolver_contract.sql` are applied to development Supabase. Migration idempotency, the complete rollback-only SQL/RLS suite, zero/unlimited/downgrade/expiry/lifecycle cases, a real two-connection product-limit race regression, production build, and full desktop/mobile browser regression pass.
 
 ## Validation
 
@@ -190,7 +191,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all 33 migrations are applied; checksums and migration history are intact.
+- PASS: all 35 migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
