@@ -106,7 +106,7 @@ Keep tenant colors in validated tokens and pass them to storefront components th
 
 Storefront controls, checkout surfaces, status feedback, focus rings, borders, and loading structures must derive from those tenant variables with semantic application-token fallbacks. The customer interface uses a system-legible body stack; personality profiles may deliberately vary display typography and geometry without changing control meaning or accessibility behavior.
 
-Application website styles are real storefront personality profiles stored in `theme.tokens.styleKey`. They layer typography, shape, spacing, and composition over the four base business presets without creating a second renderer. Store Design preserves the profile while its base preset is unchanged and selects the corresponding profile when an owner deliberately changes presets.
+Application website styles are real storefront personality profiles stored in `theme.tokens.styleKey`. They layer typography, shape, spacing, product-grid composition, and section treatment over the four color palettes without creating a second renderer. Website style, color palette, and homepage layout are independent choices: changing one must never silently rewrite another. `modules/content/presets.ts` owns the six style choices, four palettes, and legacy fallback mapping for older tenants.
 
 ## Follow a customer-information page change
 

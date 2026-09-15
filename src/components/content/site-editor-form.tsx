@@ -1,7 +1,14 @@
 'use client';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { saveSiteDraft, type ContentActionState } from '@/modules/content/actions';
-import { themePresetOptions } from '@/modules/content/presets';
+import {
+  defaultWebsiteStyle,
+  isWebsiteStyleKey,
+  themePresetOptions,
+  themePresets,
+  websiteStyleOptions,
+  type ThemePresetKey,
+} from '@/modules/content/presets';
 import type { SiteConfiguration } from '@/modules/content/types';
 import { Button } from '@/components/ui/button';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/form-fields';
@@ -30,11 +37,51 @@ function ctaLabel(configuration: SiteConfiguration) {
 export function SiteEditorForm({
   slug,
   configuration,
+  saved = false,
 }: {
   slug: string;
   configuration: SiteConfiguration;
+  saved?: boolean;
 }) {
-  const [state, action, pending] = useActionState(saveSiteDraft.bind(null, slug), initialState);
+  const [state, action, pending] = useActionState(
+    saveSiteDraft.bind(null, slug),
+    saved
+      ? {
+          error: '',
+          message: 'Changes saved for review. Your live storefront has not changed.',
+        }
+      : initialState,
+  );
+  const initialPreset =
+    configuration.theme.presetKey in themePresets
+      ? (configuration.theme.presetKey as ThemePresetKey)
+      : 'general';
+  const initialStyle = configuration.theme.tokens.styleKey;
+  const [websiteStyle, setWebsiteStyle] = useState(
+    initialStyle && isWebsiteStyleKey(initialStyle)
+      ? initialStyle
+      : defaultWebsiteStyle(initialPreset),
+  );
+  const [palette, setPalette] = useState(initialPreset);
+  const [colors, setColors] = useState({
+    primary: configuration.theme.tokens.primary,
+    secondary: configuration.theme.tokens.secondary ?? configuration.theme.tokens.accent,
+    accent: configuration.theme.tokens.accent,
+    background: configuration.theme.tokens.background,
+    text: configuration.theme.tokens.text,
+  });
+  const styleDescription = websiteStyleOptions.find(
+    (option) => option.value === websiteStyle,
+  )?.description;
+  function choosePalette(value: string) {
+    if (!(value in themePresets)) return;
+    const nextPalette = value as ThemePresetKey;
+    setPalette(nextPalette);
+    setColors(themePresets[nextPalette].tokens);
+  }
+  function updateColor(key: keyof typeof colors, value: string) {
+    setColors((current) => ({ ...current, [key]: value }));
+  }
   return (
     <FormStack action={action}>
       <FormError message={state.error} />
@@ -87,49 +134,69 @@ export function SiteEditorForm({
         </FormGrid>
       </FormSection>
       <FormSection
-        title="Store colors"
-        description="Choose a starting style, then adjust the colors customers see across your storefront."
+        title="Store appearance"
+        description="Choose the visual character and colors customers see across your storefront."
       >
         <FormGrid>
+          <div>
+            <SelectField
+              name="websiteStyle"
+              label="Website style"
+              options={websiteStyleOptions}
+              value={websiteStyle}
+              onChange={(event) => {
+                if (isWebsiteStyleKey(event.target.value)) setWebsiteStyle(event.target.value);
+              }}
+              hint="Controls typography, spacing, shapes, and product layout independently from color."
+            />
+            {styleDescription && <p className={styles.selectionHint}>{styleDescription}</p>}
+          </div>
           <SelectField
             name="preset"
-            label="Starting color style"
+            label="Color palette"
             options={themePresetOptions}
-            defaultValue={configuration.theme.presetKey}
+            value={palette}
+            onChange={(event) => choosePalette(event.target.value)}
+            hint="Choosing a palette replaces the five colors below. You can adjust them afterward."
           />
           <TextField
             name="primary"
             label="Main button and link color"
             type="color"
-            defaultValue={configuration.theme.tokens.primary}
+            value={colors.primary}
+            onChange={(event) => updateColor('primary', event.target.value)}
             required
           />
           <TextField
             name="accent"
             label="Highlight color"
             type="color"
-            defaultValue={configuration.theme.tokens.accent}
+            value={colors.accent}
+            onChange={(event) => updateColor('accent', event.target.value)}
             required
           />
           <TextField
             name="secondary"
             label="Supporting brand color"
             type="color"
-            defaultValue={configuration.theme.tokens.secondary ?? configuration.theme.tokens.accent}
+            value={colors.secondary}
+            onChange={(event) => updateColor('secondary', event.target.value)}
             required
           />
           <TextField
             name="background"
             label="Page background color"
             type="color"
-            defaultValue={configuration.theme.tokens.background}
+            value={colors.background}
+            onChange={(event) => updateColor('background', event.target.value)}
             required
           />
           <TextField
             name="text"
             label="Main text color"
             type="color"
-            defaultValue={configuration.theme.tokens.text}
+            value={colors.text}
+            onChange={(event) => updateColor('text', event.target.value)}
             required
           />
         </FormGrid>

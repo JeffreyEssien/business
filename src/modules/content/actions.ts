@@ -116,13 +116,14 @@ export async function saveSiteDraft(
   );
   const logo = uploadArguments(logoUpload, logoFile, `${validation.input.businessName} logo`);
   const hero = uploadArguments(heroUpload, heroFile, validation.input.heroHeadline);
-  const { error } = await workspace.supabase.rpc('save_site_draft_with_secondary', {
+  const { error } = await workspace.supabase.rpc('save_site_design', {
     target_tenant: workspace.tenant.id,
     business_name: validation.input.businessName,
     business_description: validation.input.businessDescription,
     business_phone: validation.input.phone,
     business_address: validation.input.address,
     theme_preset: validation.input.preset,
+    website_style: validation.input.websiteStyle,
     primary_color: validation.input.primary,
     secondary_color: validation.input.secondary,
     accent_color: validation.input.accent,
@@ -173,10 +174,7 @@ export async function saveSiteDraft(
   );
   revalidatePath(`/t/${slug}/design`);
   revalidatePath(`/t/${slug}/design/preview`);
-  return {
-    error: '',
-    message: 'Changes saved for review. Your live storefront has not changed.',
-  };
+  redirect(`/t/${slug}/design?notice=saved`);
 }
 
 export async function saveNavigation(
@@ -251,10 +249,7 @@ export async function reorderHomepageSections(
   if (error) return { error: contentErrorMessage(error.code, error.message), message: '' };
   revalidatePath(`/t/${slug}/design`);
   revalidatePath(`/t/${slug}/design/preview`);
-  return {
-    error: '',
-    message: 'Homepage order saved. Customers will see it after you publish your saved changes.',
-  };
+  redirect(`/t/${slug}/design?notice=order-saved`);
 }
 
 export async function saveContentPage(

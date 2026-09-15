@@ -889,6 +889,8 @@ Unknown variants must fail safely.
 
 Theme customization must use controlled design tokens.
 
+Website personality, color palette, and homepage layout are separate choices. A tenant may combine any supported website style with any controlled palette and hero layout; changing one must not silently change another. Shared rendering is preferred, but every advertised style must create a clearly distinguishable composition through deliberate typography, geometry, spacing, section treatment, or product-grid structure.
+
 ## Tenant theme settings
 
 ```text

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { CatalogMedia } from '@/components/catalog/catalog-media';
 import { AddToCartButton } from '@/components/commerce/add-to-cart-button';
 import type { PublicProduct } from '@/modules/catalog/types';
-import { themePresets } from '@/modules/content/presets';
+import { defaultWebsiteStyle, isWebsiteStyleKey, themePresets } from '@/modules/content/presets';
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { SkipLink } from '@/components/ui/skip-link';
 import { StoreNavigation } from './store-navigation';
@@ -37,15 +37,9 @@ function publicStoreHref(slug: string, target: string) {
 
 function storefrontPersonality(configuration: SiteConfiguration) {
   const style = configuration.theme.tokens.styleKey;
-  if (style) return style;
-  return (
-    {
-      fashion: 'elegant-luxury',
-      beauty: 'soft-friendly',
-      restaurant: 'warm-natural',
-      general: 'clean-minimal',
-    }[configuration.theme.presetKey] ?? 'clean-minimal'
-  );
+  return style && isWebsiteStyleKey(style)
+    ? style
+    : defaultWebsiteStyle(configuration.theme.presetKey);
 }
 
 function themeColor(value: string | undefined, fallback: string) {

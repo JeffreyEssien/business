@@ -67,13 +67,13 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 ### Phase 3: theme and content foundation
 
 - Tenant design workspace at `/t/{slug}/design` with grouped business profile, theme tokens, announcement, hero, product section, and footer controls.
-- Four controlled theme presets and editable semantic color tokens; storefront components consume CSS variables rather than scattered tenant colors.
+- Six independently selectable website styles, four controlled color palettes, editable semantic color tokens, and three homepage layouts. Choosing a palette immediately loads its five colors without changing the website style; storefront components consume CSS variables rather than scattered tenant colors.
 - Logo and hero files upload to tenant-scoped Cloudinary paths concurrently inside one authorized Server Action. Partial provider success is cleaned before database mutation, and the request limit supports two validated 5 MB files plus multipart overhead.
 - Draft content remains private and editable. Publishing atomically archives the previous live version and creates a normalized immutable snapshot with an audit record.
 - Saved draft preview and public homepage share `StorefrontRenderer`; no separate fake preview implementation exists.
 - Anonymous storefront projection exposes the current published site snapshot plus active catalog products, without granting raw-table reads.
 - Responsive desktop/mobile storefront variants, business profile footer, header navigation, media, editable homepage copy, and section enable/disable are rendered from tenant data.
-- Migration file 202609070002_theme_content.sql applied to development Supabase.
+- Theme migrations through `202609150003_independent_storefront_style.sql` are applied to development Supabase.
 - Homepage sections can be reordered through tenant-authorized database logic; ordinary content saves preserve the chosen order.
 - About, Contact, Policy, and custom customer-information pages can be created, edited, hidden, shown in the main menu, and deleted without changing the live store until publication.
 - Publishing includes all enabled customer pages in the same immutable site snapshot, and public pages use the same storefront header, theme, and footer as the homepage.
@@ -191,7 +191,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all 35 migrations are applied; checksums and migration history are intact.
+- PASS: all 36 migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.

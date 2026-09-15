@@ -324,6 +324,60 @@ try {
   stage = 'Save and preview storefront design with parallel media uploads';
   await page.goto(`${base}/t/${slug}/design`);
   await expect(page.getByRole('heading', { name: 'Design your storefront' })).toBeVisible();
+  const styleSelect = page.getByLabel('Website style');
+  const styleValues = await styleSelect
+    .locator('option')
+    .evaluateAll((options) => options.map((option) => option.value));
+  assert.deepEqual(styleValues, [
+    'clean-minimal',
+    'elegant-luxury',
+    'bright-bold',
+    'soft-friendly',
+    'warm-natural',
+    'professional-modern',
+  ]);
+  await page.getByLabel('Color palette').selectOption('restaurant');
+  await expect(page.getByLabel('Main button and link color')).toHaveValue('#96572f');
+  await expect(page.getByLabel('Supporting brand color')).toHaveValue('#66745a');
+  const styleTestOrder = [...styleValues.filter((style) => style !== 'bright-bold'), 'bright-bold'];
+  for (const style of styleTestOrder) {
+    await styleSelect.selectOption(style);
+    await expect(styleSelect).toHaveValue(style);
+    assert.equal(
+      await styleSelect.evaluate((select) => new FormData(select.form).get('websiteStyle')),
+      style,
+      `Website style ${style} is present in the submitted form`,
+    );
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes(`/t/${slug}/design`) && response.request().method() === 'POST',
+      ),
+      page.getByRole('button', { name: 'Save without changing the live store' }).click(),
+    ]);
+    const designErrors = await page
+      .locator('section[aria-label="Storefront settings"] [role="alert"]')
+      .allTextContents();
+    assert.deepEqual(designErrors, [], `Website style ${style} saved without an action error`);
+    await expect(
+      page.getByText('Changes saved for review. Your live storefront has not changed.', {
+        exact: true,
+      }),
+    ).toBeVisible();
+    const [savedStyle] = await sql`
+      select tokens->>'styleKey' as value
+      from public.tenant_theme_settings where tenant_id=${tenant.id}
+    `;
+    assert.equal(savedStyle.value, style, `Website style ${style} reached the saved draft`);
+    await page.locator('iframe').evaluate((frame, marker) => {
+      const preview = new URL(frame.src);
+      preview.searchParams.set('style-check', marker);
+      frame.src = preview.toString();
+    }, style);
+    await expect(
+      page.locator('iframe').contentFrame().locator(`[data-style="${style}"]`),
+    ).toBeVisible();
+  }
   await page.getByLabel('Short description').fill('A tenant-controlled UI test storefront.');
   await page.getByLabel('Public phone').fill('+234 800 000 0000');
   await page.getByText('Homepage content and footer', { exact: true }).click();
@@ -364,6 +418,12 @@ try {
   assert.equal(pageMenuAfterDesignSave.link_type, 'PAGE');
   assert.ok(pageMenuAfterDesignSave.page_id, 'Page navigation keeps its page relationship');
   assert.equal(pageMenuAfterDesignSave.target, '/about-our-business');
+  const [savedAppearance] = await sql`
+    select preset_key,tokens->>'styleKey' as style_key
+    from public.tenant_theme_settings where tenant_id=${tenant.id}
+  `;
+  assert.equal(savedAppearance.preset_key, 'restaurant');
+  assert.equal(savedAppearance.style_key, 'bright-bold');
   await page.getByRole('button', { name: 'Move Product collection earlier' }).click();
   await expect(page.getByText(/Homepage order saved/)).toBeVisible({ timeout: 30000 });
   await page.locator('iframe').evaluate((frame) => {
