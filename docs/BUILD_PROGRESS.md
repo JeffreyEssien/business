@@ -1,12 +1,12 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-12
+Last updated: 2026-09-14
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: Phase 6 complete; Phase 7 awaiting owner confirmation
+## Current stage: Phase 9 implemented; provider activation and pricing inputs pending
 
-Status: Phases 0–6 are complete and verified. Customers choose manual transfer or hosted Paystack checkout, return to a token-protected payment-status page, and retry an unresolved online payment. Business owners reach these choices directly from the dashboard or `Checkout & payments`, where plain-language prerequisites prevent enabling an unusable method. Provider truth is recorded separately from its effect on the order: duplicate, late-after-cancellation, and mismatched receipts remain visible for resolution instead of being discarded or mislabelled. Signed webhook deliveries are persisted before processing, can be safely retried, and super admins have explicit payment-attention and failed-webhook queues. Phase 7 has not started. No real customer transaction or settlement subaccount was created by the agent; all automated database, Auth, and Cloudinary fixtures were removed.
+Status: Phases 0–9 are implemented and verified. Feature access resolves centrally from global safety state, an active tenant override, the tenant plan, and finally the catalog default. Super Admin can change plan values, pause boolean features, and manage documented expiring business overrides without a deployment. SMS and product limits use the same database authority, while tenant navigation and catalog usage explain effective access. Transactional email and SMS still require provider activation in the deployed environment. No real customer email, SMS, transaction, sender request, or settlement subaccount was created by the agent; automated database, Auth, and Cloudinary fixtures were removed.
 
 ### Customer application and approval flow
 
@@ -26,7 +26,7 @@ Status: Phases 0–6 are complete and verified. Customers choose manual transfer
 - Proposed plan wording describes likely fit without implying that the non-binding application answer is an entitlement or pricing commitment.
 - Migration `202609110003_application_intake_hardening.sql` is applied to development Supabase.
 
-Deferred deliberately: applicant accounts/status tracking, cross-device server drafts, application confirmation and owner-invitation email delivery (Phase 7 provider decision required), a managed challenge such as Turnstile if production abuse warrants it, bulk product import from an application, custom-domain selection, durable background retries for failed provider cleanup, and bespoke copy fields for every requested policy page. A standalone `APPROVED` holding state is also omitted because the chosen approval action provisions atomically; add it only if a later operational process requires approval and provisioning to happen at different times.
+Deferred deliberately: applicant accounts/status tracking, cross-device server drafts, public application confirmation email, a managed challenge such as Turnstile if production abuse warrants it, bulk product import from an application, custom-domain selection, durable background retries for failed provider cleanup, and bespoke copy fields for every requested policy page. Owner-invitation email is now part of Phase 7. A standalone `APPROVED` holding state is also omitted because the chosen approval action provisions atomically; add it only if a later operational process requires approval and provisioning to happen at different times.
 
 ## Completed
 
@@ -67,13 +67,13 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 ### Phase 3: theme and content foundation
 
 - Tenant design workspace at `/t/{slug}/design` with grouped business profile, theme tokens, announcement, hero, product section, and footer controls.
-- Four controlled theme presets and editable semantic color tokens; storefront components consume CSS variables rather than scattered tenant colors.
+- Six independently selectable website styles, four controlled color palettes, editable semantic color tokens, and three homepage layouts. Choosing a palette immediately loads its five colors without changing the website style; storefront components consume CSS variables rather than scattered tenant colors.
 - Logo and hero files upload to tenant-scoped Cloudinary paths concurrently inside one authorized Server Action. Partial provider success is cleaned before database mutation, and the request limit supports two validated 5 MB files plus multipart overhead.
 - Draft content remains private and editable. Publishing atomically archives the previous live version and creates a normalized immutable snapshot with an audit record.
 - Saved draft preview and public homepage share `StorefrontRenderer`; no separate fake preview implementation exists.
 - Anonymous storefront projection exposes the current published site snapshot plus active catalog products, without granting raw-table reads.
 - Responsive desktop/mobile storefront variants, business profile footer, header navigation, media, editable homepage copy, and section enable/disable are rendered from tenant data.
-- Migration file 202609070002_theme_content.sql applied to development Supabase.
+- Theme migrations through `202609150003_independent_storefront_style.sql` are applied to development Supabase.
 - Homepage sections can be reordered through tenant-authorized database logic; ordinary content saves preserve the chosen order.
 - About, Contact, Policy, and custom customer-information pages can be created, edited, hidden, shown in the main menu, and deleted without changing the live store until publication.
 - Publishing includes all enabled customer pages in the same immutable site snapshot, and public pages use the same storefront header, theme, and footer as the homepage.
@@ -145,13 +145,53 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Migration 202609110001_paystack_payments.sql applied to development Supabase.
 - Hardening migration 202609120001_payment_integrity_hardening.sql applied to development Supabase without editing the original migration.
 
+### Phase 7: transactional customer email
+
+- `EmailProvider` isolates provider delivery from notification orchestration. The first adapter uses Resend's official SDK, a sending-only server key, stable provider idempotency keys, and sanitized operational errors.
+- PostgreSQL queues owner invitations and enabled order lifecycle messages durably. Order creation, verified payment, ready, shipped, and delivered events are unique per order; sending happens outside the order transaction in bounded parallel batches.
+- Every queued message snapshots tenant identity, colours, logo URL, sender name, reply address, subject, recipient, and secure invitation destination where applicable. Order products and totals come from immutable order snapshots.
+- One responsive HTML/plain-text renderer serves every tenant and every supported transactional event. The tenant preview runs that exact production renderer rather than maintaining a separate imitation.
+- Tenant owners reach `Customer emails` directly from their dashboard and workspace navigation. They can turn automatic updates on or off, choose individual events, set the sender display name and reply address, preview their branding, and inspect masked recent activity.
+- Super Admin has `/communications` for masked cross-tenant delivery state, bounded queue processing, failures, and controlled retries. Provider-disabled and test-only modes are explicit rather than silently discarding messages.
+- `/api/webhooks/resend` verifies the raw-body signature before storing sanitized, idempotent delivery events. Out-of-order `sent` events cannot regress a delivered, bounced, or complained message.
+- `/api/jobs/email-delivery` is protected by `CRON_SECRET` and processes a maximum of 25 due messages. Immediate delivery attempts also run after relevant application actions; transient failures retain exponential retry timing without changing orders.
+- Claims abandoned for more than 15 minutes are recovered and retried with the same Resend idempotency key. A missing or invalid application URL now fails closed with `EMAIL_CONFIGURATION_INVALID` instead of generating localhost links, and a failed queue-state write is emitted as a distinct operational error.
+- Owner invitations now queue for email after the existing secure invitation link is generated. When delivery is disabled, the interface clearly tells Super Admin to share the generated link privately.
+- Migrations `202609120002_email_notifications.sql` and additive recovery migration `202609130003_communications_claim_recovery.sql` are applied to development Supabase. All earlier migrations remain unchanged.
+
+### Phase 8: transactional customer SMS
+
+- `SmsProvider` isolates delivery from Termii. Delivery mode defaults to disabled, test mode can send only to one exact configured recipient, provider hosts must be HTTPS Termii domains, and no browser module receives provider credentials.
+- Tenant-specific sender names follow a two-stage workflow: a Growth or Pro tenant submits a clear business/use-case request for internal review, then Super Admin may return it for correction or explicitly submit it to Termii. Nothing contacts Termii merely because a tenant saved the form.
+- Only provider-approved sender names can enable automatic messages. Sender names, canonical recipient numbers, message text, event, and estimated segment counts are snapshotted into the durable private queue.
+- Order received, verified payment, ready, shipped, and delivered events queue exactly once inside the authoritative order transaction. The database independently requires the plan entitlement, master setting, selected event, approved sender, and a valid phone number.
+- Due messages are claimed in bounded batches and sent concurrently. Safe pre-delivery failures receive bounded backoff; ambiguous provider/network outcomes become `DELIVERY_UNKNOWN` and are not automatically retried, preventing accidental duplicate texts.
+- Claims abandoned for more than 15 minutes become `DELIVERY_UNKNOWN` and are not reclaimed automatically, because Termii's messaging send endpoint has no provider idempotency field. Failure-state write failures are logged distinctly for operational recovery.
+- `/api/webhooks/termii` verifies the documented Messaging delivery-report `X-Termii-Signature` (HMAC-SHA512) against the untouched, size-limited raw body before recording a sanitized idempotent delivery event. Out-of-order updates cannot regress a final delivery state.
+- Tenant controls live at `/t/{slug}/communications/sms`; Super Admin uses `/sms-operations` for sender review, approval synchronization, masked delivery activity, queue processing, and explicitly safe retries.
+- `/api/jobs/sms-delivery` reuses the protected scheduler secret and processes no more than 25 due messages. Immediate SMS and email delivery attempts run concurrently after successful order/payment commits.
+- Migrations `202609130001_sms_notifications.sql`, `202609130002_sms_sender_review.sql`, and shared additive recovery migration `202609130003_communications_claim_recovery.sql` are applied to development Supabase. Earlier applied migrations remain unchanged.
+
+### Phase 9: feature entitlements and plan controls
+
+- Feature definitions now include customer-facing metadata, value types, categories, active state, and timestamps while preserving stable feature keys.
+- One database resolver owns precedence: global emergency shutdown, non-expired tenant override, plan value, then feature default.
+- Super Admin has a responsive `/features` workspace for the Starter/Growth/Pro matrix, reason-required emergency controls, searchable business targeting, explicit expired-override state, and documented optional-expiry business overrides.
+- Direct override/global-state writes remain unavailable to browser roles. Authorized RPCs validate value types, tenant scope, expiry, reasons, and missing removals, then write bounded audit events with relevant plan/tenant context and before/after values and expiry.
+- Emergency global state is explicitly Boolean-only. SMS database checks and tenant UI use effective entitlements. Product creation, archive restoration, and owner invitation acceptance enforce numeric allowances with tenant-and-feature transaction locks; archived products do not consume capacity.
+- Quota downgrades preserve existing customer data and block only further creation or reactivation while usage is at or above the allowance. Catalog screens explain exhaustion and downgrade behavior and block direct new-product URLs at the limit.
+- Migrations `202609140001_feature_entitlements.sql`, `202609140002_feature_entitlement_hardening.sql`, `202609150001_entitlement_audit_and_staff_limit.sql`, and additive resolver-contract migration `202609150002_entitlement_resolver_contract.sql` are applied to development Supabase. Migration idempotency, the complete rollback-only SQL/RLS suite, zero/unlimited/downgrade/expiry/lifecycle cases, a real two-connection product-limit race regression, production build, and full desktop/mobile browser regression pass.
+
 ## Validation
 
 - PASS: TypeScript and production Webpack build.
+- PASS: design-system alignment replaces repeated tenant link strips with one persistent grouped desktop sidebar and accessible mobile drawer, removes unavailable navigation, adds shell-preserving route skeletons, centralizes semantic color/motion/radius tokens, keeps mobile save actions reachable, and progressively discloses detailed storefront content controls.
+- PASS: the same interaction system now reaches every public store route: sticky content-first navigation, persistent cart access, a focus-contained mobile menu, tenant-aware semantic surfaces and controls, route skeletons, useful product empty states, immediate search/cart feedback, clearer stock status, and consistent product, cart, checkout, payment, page, and collection layouts.
+- PASS: Paystack settlement banks are limited to active Nigerian NUBAN records and normalized to one unambiguous option per bank code, preventing duplicate React keys and ambiguous settlement labels.
 - PASS: foundation and onboarding SQL suites against actual development Supabase. Every fixture rolled back.
 - PASS: tenant isolation in both directions across all new tenant tables; denied direct writes and anonymous access; invalid/reserved/duplicate slug checks; non-admin RPC denial; invitation email binding and repeat acceptance; disabled identity/membership denial; suspension and restored status.
 - PASS: real Auth password sessions and authenticated admin pages; two independently provisioned tenant workspaces; new-owner invite token verification, password setup, and login; cross-tenant HTTP 404 and API empty result; tenant cannot access platform pages; invite token replay rejected; suspension/reactivation behavior. Integration fixtures removed afterward.
-- PASS: all 29 migrations are applied; checksums and migration history are intact.
+- PASS: all 36 migrations are applied; checksums and migration history are intact.
 - PASS: catalog SQL suite covers forward/reverse tenant isolation, outsider and cross-tenant mutation denial, anonymous raw-table denial, public catalog projection, invalid cross-tenant category assignment, and onboarding checklist state.
 - PASS: real Auth integration covers two independently populated catalogs, an authenticated Cloudinary upload, tenant catalog pages, anonymous storefront/product pages, direct-write denial, and fixture cleanup.
 - PASS: browser creation of a category and active product; desktop tenant catalog and desktop/mobile public storefront inspected with no overflow or runtime errors.
@@ -178,6 +218,11 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - PASS: Phase 6 SQL coverage verifies exact provider reference/amount/currency/method matching, durable receive-before-process webhook handling, failure and replay, routing snapshots, duplicate and late successful receipts, review-required mismatches, one normally applied attempt per order, token-bound retries, manual-confirmation denial, direct-write denial, and tenant isolation.
 - PASS: Paystack callback, webhook, customer status, tenant settlement/attempt, and platform payment-operation routes compile in the production build. The authenticated integration and complete desktop/mobile commerce regression pass with fixture cleanup.
 - PASS: the business dashboard links directly to `Checkout & payments`; desktop/mobile captures verify that payment choices are the first numbered settings section, configuration prerequisites are understandable, customer checkout presents the enabled method clearly, and neither admin nor customer layouts overflow horizontally.
+- PASS: Phase 7 SQL coverage verifies exactly-once order lifecycle messages, immutable tenant branding, masked tenant/platform logs, outsider and anonymous denial, service-only queue access, complete delivery context, idempotent out-of-order webhooks, and safe stale-claim recovery with the same provider idempotency key.
+- PASS: the complete authenticated integration regression passes after Phase 7. The browser regression configures customer emails, renders the real branded production template, queues order/payment messages, exposes only masked recipients, and verifies responsive tenant/platform screens with fixture cleanup.
+- PASS: Phase 8 SQL coverage verifies plan and tenant-setting gates, two-stage sender review, exactly-once order lifecycle messages, immutable sender/phone/message snapshots, segment usage, masked logs, outsider/anonymous denial, service-only queue access, webhook replay, out-of-order delivery handling, and stale-claim quarantine without automatic resend.
+- PASS: the complete authenticated integration regression passes after Phase 8, including real Auth sessions, two-tenant isolation, catalog/media, content/search, checkout/orders, direct-write denial, and fixture cleanup.
+- PASS: the complete browser regression upgrades only its disposable fixture to Growth, submits a sender name for internal review without contacting Termii, verifies the tenant and platform workflows, and checks desktop/mobile layouts for overflow. All fixtures were removed.
 - PASS: application-intake SQL coverage verifies payload-bound single-use reservations, replay denial, legacy-RPC denial, duplicate/slug checks, and Super-Admin-only applicant data. The focused browser flow verifies 48-hour expiry, draft recovery, deferred Cloudinary upload, consumed reservation state, responsive rendering, approval/provisioning, and complete cleanup.
 - PASS: the configured development database directly exposes the expected preflight, reserved-submission, base-submission, and complete-submission signatures plus `business_applications.other_business_type`. A separate no-logo production-browser run completed submission, administrative review, atomic provisioning, and cleanup, isolating Cloudinary from the successful path.
 - PASS: the complete SQL, authenticated integration, and browser UI suites pass after intake hardening. Desktop and mobile application captures were inspected with no horizontal overflow or unclear technical terminology.
@@ -188,9 +233,12 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
 - New image/video uploads live in Cloudinary; their delivery URLs, public IDs, resource types, and tenant-scoped metadata live in PostgreSQL. Legacy Supabase media remains readable and is removed through provider-aware cleanup when replaced or deleted.
-- Plans have initial feature values and catalog product limits, but no pricing, recurring charges, tenant overrides, or complete entitlement-management interface. The full entitlement layer remains Phase 9.
-- Paystack merchant payments and integrity controls are implemented. A real hosted test-card payment still requires the owner to rotate the exposed test secret, connect a Paystack test settlement account, and run Paystack's external checkout; automated tests do not create persistent provider subaccounts or transactions. Email/SMS remain disabled.
-- Invitation generation sends no messages. Localhost links only work on the same computer; configure the deployed app URL before remote owner onboarding.
+- Plans and tenant overrides are operational, but plan prices, recurring charges, trial/grace policy, and SaaS billing remain Phase 10.
+- Paystack merchant payments and integrity controls are implemented. A real hosted test-card payment still requires the owner to rotate the exposed test secret, connect a Paystack test settlement account, and run Paystack's external checkout; automated tests do not create persistent provider subaccounts or transactions.
+- Owner invitations are durably queued, but no provider message is sent while email delivery is disabled. Localhost invitation links work only on the same computer; configure the deployed app URL before remote owner onboarding.
+- Resend delivery is intentionally `disabled` until the owner provides a sending-only API key and the Resend account email for test mode. `resend.dev` testing can reach only that account email; live owner/customer delivery requires a verified sending domain and webhook secret.
+- Termii SMS implementation is complete, but delivery must remain `disabled` until the updated environment is deployed, the webhook is registered, a tenant sender name is approved by Termii, and one exact-recipient test-mode delivery is observed. Automated verification did not contact Termii or send a text.
+- Delivery-job routes are implemented and protected, but no deployment scheduler configuration is checked into this repository. Email and SMS activation remain blocked until the production scheduler plan, cadence, authentication, invocation history, stale-queue drainage, and retry behavior are verified in the deployed environment.
 - Domain-verification UI, the durable merchant refund workflow, and advanced operational controls remain future work.
 - The Store design editor is responsive and functional, but its long settings column should receive further progressive disclosure so first-time users see fewer controls at once.
 - `next build` with Turbopack intermittently stalled during this stage without diagnostics; the production Webpack build completed successfully. This should be rechecked after dependency or Next.js updates.
@@ -207,9 +255,9 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | SEO                    | 4          | Implemented and verified | Global/record metadata and sharing images; DNS gate Phase 11 |
 | Orders and checkout    | 5          | Implemented and verified | Trusted totals, atomic inventory, bank transfer, order admin |
 | Paystack               | 6          | Implemented and verified | Verified/idempotent payment processing                     |
-| Email                  | 7          | Ready to begin           | Branded delivery and logs                                  |
-| SMS                    | 8          | Planned                  | Settings and entitlement enforcement                       |
-| Entitlements/plans     | 9          | Planned                  | Central resolution and server enforcement                  |
+| Email                  | 7          | Implemented; activation gated | Branded queue, templates, settings, logs, retries       |
+| SMS                    | 8          | Implemented; activation gated | Sender review, durable queue, settings, logs, webhooks  |
+| Entitlements/plans     | 9          | Implemented and verified | Central resolution, overrides, kill switches, usage limits |
 | SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
 | Domains                | 11         | Planned                  | Verified hostname/TLS lifecycle                            |
 | Observability          | 12         | Planned                  | Audited platform visibility/monitoring                     |
@@ -221,7 +269,8 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Now: sample products, categories, prices, images, and inventory preferences for real catalog review.
 - Content stage: logos, branding, homepage/about/policy copy.
 - Deployment: configure Paystack callback `/payments/paystack/callback` and webhook `/api/webhooks/paystack` on each environment, then complete one owner-observed test-mode payment before production approval.
-- Integrations: email/SMS providers and sender identities when those stages begin.
+- Email activation: create a Resend sending-only API key, provide the Resend account email for test mode, create a webhook signing secret, and later verify an owned sending domain before live delivery.
+- SMS activation: deploy the Termii variables, register `/api/webhooks/termii`, configure the protected `/api/jobs/sms-delivery` schedule, request and approve one tenant sender name, then observe one test-recipient delivery before live mode.
 - Billing: plan prices/limits, trial length, grace policy.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.
 
@@ -232,7 +281,7 @@ Credentials stay in local environment files, never this tracker. No production d
 - Add cross-request published-version caching only after deployment topology is selected. Cache immutable design/navigation/SEO by version; never make cached storefront stock authoritative for checkout.
 - Verify Supabase production pooler configuration during deployment. The application currently uses Supabase HTTP clients and does not open a PostgreSQL connection per browser request.
 - Evaluate `pg_trgm` with realistic `EXPLAIN ANALYZE` evidence before adding fuzzy-search indexes. Current bounded name search does not justify indiscriminate extensions.
-- Publish quotas belong to Phase 9 entitlements and require an explicit pricing decision. Draft editing and preview must remain available regardless of any future publish allowance.
+- Publish quotas require an explicit future pricing decision before they are added to the entitlement catalog. Draft editing and preview must remain available regardless of any future publish allowance.
 - Audit archive/export requires background jobs, private object storage, verification, redaction, retention policy, email delivery, and retry state. Archive first, verify second, purge hot rows last.
 - Choose external error tracking and provider dashboards after the production host is known. Durable payment/webhook events, idempotency, bounded retries, and failed-event visibility are now implemented locally; production alert delivery and operational ownership remain release gates.
 

@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { NavigationManager } from '@/components/content/navigation-manager';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -11,7 +10,6 @@ export default async function StoreMenusPage({ params }: { params: Promise<{ slu
   const data = await getNavigationWorkspace(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.workspace.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="HELP CUSTOMERS MOVE AROUND"
         title="Store menus"

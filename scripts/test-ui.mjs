@@ -25,6 +25,7 @@ let userId, browser;
 let mediaAssets = [];
 let stage = 'Create temporary account';
 const pageErrors = [];
+const duplicateKeyWarnings = [];
 
 async function checkFormLayout(page, mobile) {
   for (const name of ['name', 'slug', 'owner', 'email', 'template', 'plan', 'payment']) {
@@ -66,6 +67,10 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   page.on('pageerror', (error) => pageErrors.push(error.name));
+  page.on('console', (message) => {
+    if (message.text().includes('Encountered two children with the same key'))
+      duplicateKeyWarnings.push(message.text());
+  });
   stage = 'Load login';
   await page.goto(`${base}/login`);
   stage = 'Sign in through the browser';
@@ -87,6 +92,25 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/payment-operations-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify platform email operations';
+  await page.goto(`${base}/communications`);
+  await expect(page.getByRole('heading', { name: 'Customer email delivery' })).toBeVisible();
+  await expect(
+    page.getByText(/Messages remain safely queued until Resend is configured/),
+  ).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/email-operations-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Email operations has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/email-operations-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify platform SMS operations';
+  await page.goto(`${base}/sms-operations`);
+  await expect(page.getByRole('heading', { name: 'Customer text-message delivery' })).toBeVisible();
+  await expect(page.getByText('No businesses have requested a sender name yet.')).toBeVisible();
+  await expect(page.getByText(/No customer text messages have been queued yet/)).toBeVisible();
   stage = 'Open create-business page';
   await page.goto(`${base}/businesses/new`);
   await expect(page.getByRole('heading', { name: 'Create a business.' })).toBeVisible();
@@ -97,9 +121,9 @@ try {
   stage = 'Mobile layout';
   await checkFormLayout(page, true);
   await page.screenshot({ path: 'artifacts/ui/create-business-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: 'Toggle navigation' }).click();
+  await page.getByRole('button', { name: 'Open navigation' }).click();
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
-  await page.getByRole('button', { name: 'Toggle navigation' }).click();
+  await page.getByRole('button', { name: 'Close navigation' }).click();
   await page.getByLabel('Business name', { exact: true }).fill('UI verification business');
   await page.getByLabel('Store handle', { exact: true }).fill('admin');
   await page.getByLabel('Owner name', { exact: true }).fill('Test owner');
@@ -126,6 +150,54 @@ try {
   await sql`insert into public.tenant_memberships(tenant_id,user_id,role) values(${tenant.id},${profile.id},'TENANT_OWNER') on conflict(tenant_id,user_id) do nothing`;
   await sql`update public.tenants set status='TRIAL' where id=${tenant.id}`;
   await sql`update public.tenant_onboarding set owner_accepted=true where tenant_id=${tenant.id}`;
+  await sql`
+    insert into public.tenant_feature_overrides(
+      tenant_id,feature_key,value,reason,expires_at,created_by
+    ) values(
+      ${tenant.id},'custom_domain','true'::jsonb,'Expired browser regression',
+      now()-interval '1 minute',${profile.id}
+    )
+  `;
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify plan and feature management';
+  await page.goto(`${base}/features`);
+  await expect(
+    page.getByRole('heading', { name: 'Plans and features', exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Plan feature matrix' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Emergency controls' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Business overrides' })).toBeVisible();
+  await expect(page.getByLabel('Business', { exact: true })).toBeVisible();
+  await page.getByLabel('Find a business').fill('UI verification business');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByLabel('Business', { exact: true }).selectOption(tenant.id);
+  await page.getByLabel('Feature', { exact: true }).selectOption('sms_notifications');
+  await page.getByLabel('Override value').selectOption('true');
+  await page.getByLabel('Reason', { exact: true }).fill('Temporary browser regression');
+  await page.getByRole('button', { name: 'Save business override' }).click();
+  await expect(page.getByText('Business override saved.')).toBeVisible({ timeout: 30000 });
+  const browserOverride = page.getByText(
+    'Customer text messages: Included · Temporary browser regression',
+    { exact: true },
+  );
+  await expect(browserOverride).toBeVisible();
+  await expect(page.getByText('Expired', { exact: true })).toBeVisible();
+  await expect(page.getByText(/The plan value is active now/)).toBeVisible();
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Feature management has no desktop overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/features-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Feature management has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/features-mobile.png', fullPage: true });
+  await browserOverride.locator('../..').getByRole('button', { name: 'Return to plan' }).click();
+  await expect(page.getByText('Business returned to its plan value.')).toBeVisible({
+    timeout: 30000,
+  });
   await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Create category through tenant workspace';
   await page.goto(`${base}/t/${slug}/catalog/categories`);
@@ -252,8 +324,63 @@ try {
   stage = 'Save and preview storefront design with parallel media uploads';
   await page.goto(`${base}/t/${slug}/design`);
   await expect(page.getByRole('heading', { name: 'Design your storefront' })).toBeVisible();
+  const styleSelect = page.getByLabel('Website style');
+  const styleValues = await styleSelect
+    .locator('option')
+    .evaluateAll((options) => options.map((option) => option.value));
+  assert.deepEqual(styleValues, [
+    'clean-minimal',
+    'elegant-luxury',
+    'bright-bold',
+    'soft-friendly',
+    'warm-natural',
+    'professional-modern',
+  ]);
+  await page.getByLabel('Color palette').selectOption('restaurant');
+  await expect(page.getByLabel('Main button and link color')).toHaveValue('#96572f');
+  await expect(page.getByLabel('Supporting brand color')).toHaveValue('#66745a');
+  const styleTestOrder = [...styleValues.filter((style) => style !== 'bright-bold'), 'bright-bold'];
+  for (const style of styleTestOrder) {
+    await styleSelect.selectOption(style);
+    await expect(styleSelect).toHaveValue(style);
+    assert.equal(
+      await styleSelect.evaluate((select) => new FormData(select.form).get('websiteStyle')),
+      style,
+      `Website style ${style} is present in the submitted form`,
+    );
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes(`/t/${slug}/design`) && response.request().method() === 'POST',
+      ),
+      page.getByRole('button', { name: 'Save without changing the live store' }).click(),
+    ]);
+    const designErrors = await page
+      .locator('section[aria-label="Storefront settings"] [role="alert"]')
+      .allTextContents();
+    assert.deepEqual(designErrors, [], `Website style ${style} saved without an action error`);
+    await expect(
+      page.getByText('Changes saved for review. Your live storefront has not changed.', {
+        exact: true,
+      }),
+    ).toBeVisible();
+    const [savedStyle] = await sql`
+      select tokens->>'styleKey' as value
+      from public.tenant_theme_settings where tenant_id=${tenant.id}
+    `;
+    assert.equal(savedStyle.value, style, `Website style ${style} reached the saved draft`);
+    await page.locator('iframe').evaluate((frame, marker) => {
+      const preview = new URL(frame.src);
+      preview.searchParams.set('style-check', marker);
+      frame.src = preview.toString();
+    }, style);
+    await expect(
+      page.locator('iframe').contentFrame().locator(`[data-style="${style}"]`),
+    ).toBeVisible();
+  }
   await page.getByLabel('Short description').fill('A tenant-controlled UI test storefront.');
   await page.getByLabel('Public phone').fill('+234 800 000 0000');
+  await page.getByText('Homepage content and footer', { exact: true }).click();
   await page.getByLabel('Short label above the heading').fill('Browser verified');
   await page
     .getByLabel('Main welcome heading', { exact: true })
@@ -291,6 +418,12 @@ try {
   assert.equal(pageMenuAfterDesignSave.link_type, 'PAGE');
   assert.ok(pageMenuAfterDesignSave.page_id, 'Page navigation keeps its page relationship');
   assert.equal(pageMenuAfterDesignSave.target, '/about-our-business');
+  const [savedAppearance] = await sql`
+    select preset_key,tokens->>'styleKey' as style_key
+    from public.tenant_theme_settings where tenant_id=${tenant.id}
+  `;
+  assert.equal(savedAppearance.preset_key, 'restaurant');
+  assert.equal(savedAppearance.style_key, 'bright-bold');
   await page.getByRole('button', { name: 'Move Product collection earlier' }).click();
   await expect(page.getByText(/Homepage order saved/)).toBeVisible({ timeout: 30000 });
   await page.locator('iframe').evaluate((frame) => {
@@ -345,6 +478,72 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/checkout-settings-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Configure customer emails';
+  await page.goto(`${base}/t/${slug}`);
+  await expect(page.getByRole('link', { name: 'Customer emails', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Customer emails', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Customer emails' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '1. Choose automatic order updates' }),
+  ).toBeVisible();
+  const emailPreview = page.locator('iframe[title="Example customer order email"]');
+  await expect(emailPreview.contentFrame().getByText('UI verification business')).toBeVisible();
+  await expect(emailPreview.contentFrame().getByText('Example product × 1')).toBeVisible();
+  await page.getByLabel('Send automatic order updates to customers').check();
+  await page.getByRole('button', { name: 'Save customer email choices' }).click();
+  await expect(page.getByText('Automatic customer email choices saved.')).toBeVisible({
+    timeout: 30000,
+  });
+  await page.screenshot({ path: 'artifacts/ui/customer-emails-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Customer email settings has no mobile overflow',
+  );
+  await emailPreview.scrollIntoViewIfNeeded();
+  await expect(emailPreview.contentFrame().getByText('UI verification business')).toBeVisible();
+  await expect(emailPreview.contentFrame().getByText('Example product × 1')).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/customer-emails-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Request a tenant SMS sender name';
+  await sql`update public.tenants set plan_id=(select id from public.plans where slug='growth') where id=${tenant.id}`;
+  await page.goto(`${base}/t/${slug}`);
+  await expect(
+    page.getByRole('link', { name: 'Customer text messages', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Customer text messages', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Customer text messages' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '1. Choose the business name customers will see' }),
+  ).toBeVisible();
+  await page.getByLabel('Short name customers will see').fill('UITESTSMS');
+  await page.getByRole('button', { name: 'Submit sender name for review' }).click();
+  await expect(page.getByText(/Sender name submitted to BusinessCare for review/)).toBeVisible({
+    timeout: 30000,
+  });
+  await expect(page.getByText(/BusinessCare is reviewing this sender name/)).toBeVisible();
+  await expect(page.getByLabel('Send automatic order updates by text message')).toBeDisabled();
+  await page.screenshot({ path: 'artifacts/ui/customer-sms-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'Customer SMS settings has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/customer-sms-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Review tenant SMS sender request as platform owner';
+  await page.goto(`${base}/sms-operations`);
+  await expect(page.getByText('UI verification business', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('UITESTSMS', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve and send to Termii' })).toBeVisible();
+  await page.screenshot({ path: 'artifacts/ui/sms-operations-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    'SMS operations has no mobile overflow',
+  );
+  await page.screenshot({ path: 'artifacts/ui/sms-operations-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Verify public storefront layouts';
   await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
   await expect(
@@ -387,6 +586,7 @@ try {
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     'Checkout has no mobile overflow',
   );
+  await page.evaluate(() => scrollTo(0, 0));
   await page.screenshot({ path: 'artifacts/ui/checkout-mobile.png', fullPage: true });
   await page.getByRole('button', { name: /Place order/ }).click();
   await expect(page.getByRole('heading', { name: 'Thank you for your order.' })).toBeVisible({
@@ -432,6 +632,12 @@ try {
   );
   await page.screenshot({ path: 'artifacts/ui/order-details-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1100 });
+  stage = 'Verify durable customer email activity';
+  await page.goto(`${base}/t/${slug}/communications/email`);
+  await expect(page.getByText(`We received order ${placedOrder.reference}`)).toBeVisible();
+  await expect(page.getByText(`Payment received for ${placedOrder.reference}`)).toBeVisible();
+  await expect(page.getByText('c***@example.invalid').first()).toBeVisible();
+  await expect(page.getByText('Queued').first()).toBeVisible();
   await page.goto(`${base}/store/${slug}/products?search=UI%20verification`);
   await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
   await expect(page.getByLabel("Search this store's products")).toHaveValue('UI verification');
@@ -446,13 +652,42 @@ try {
   await page.setViewportSize({ width: 1440, height: 1100 });
   stage = 'Verify published customer page after checkout';
   await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('heading', { name: 'A storefront shaped by its owner' }),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'About our business' }).click();
   await expect(page.getByRole('heading', { name: 'A business customers can trust' })).toBeVisible();
   await page.goto(`${base}/store/${slug}`, { waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('heading', { name: 'A storefront shaped by its owner' }),
+  ).toBeVisible();
   await page.screenshot({ path: 'artifacts/ui/storefront-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'UI verification product' })).toBeVisible();
+  const storeMenu = page.getByRole('button', { name: 'Open store navigation' });
+  await expect(storeMenu).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Cart' })).toBeVisible();
+  await page.evaluate(() =>
+    document.activeElement instanceof HTMLElement ? document.activeElement.blur() : null,
+  );
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await storeMenu.click();
+  const storeNavigation = page.locator('#store-navigation');
+  await expect(storeNavigation.getByRole('link', { name: 'About our business' })).toBeVisible();
+  await expect(
+    storeNavigation.getByRole('button', { name: 'Close store navigation' }),
+  ).toBeFocused();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'artifacts/ui/store-navigation-mobile.png' });
+  await page.keyboard.press('Escape');
+  await expect(storeNavigation).toBeHidden();
+  await expect(storeMenu).toBeFocused();
+  await page.evaluate(() =>
+    document.activeElement instanceof HTMLElement ? document.activeElement.blur() : null,
+  );
   assert.ok(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     'Storefront has no mobile overflow',
@@ -495,6 +730,7 @@ try {
     )
     .toBe(true);
   assert.equal(pageErrors.length, 0, 'No browser runtime errors');
+  assert.equal(duplicateKeyWarnings.length, 0, 'No duplicate React keys');
   console.log(
     'PASS: browser login, bounded catalog browsing, cart and checkout, bank-transfer notice, order administration, website-page editing, social/search publishing, structured data, compact mobile navigation, Cloudinary lifecycle, and responsive public storefront.',
   );

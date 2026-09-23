@@ -611,7 +611,8 @@ td {
   white-space: normal;
 }
 .tenant-home {
-  max-width: 980px;
+  width: 100%;
+  max-width: 1280px;
 }
 .tenant-header {
   display: flex;

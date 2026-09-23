@@ -55,10 +55,55 @@
   background: var(--success-surface);
   color: var(--success-text);
 }
+.selectionHint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .publishForm {
   display: grid;
   gap: 12px;
   justify-items: end;
+}
+.advancedEditor {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  background: var(--surface-muted);
+}
+.advancedEditor > summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  color: var(--foreground);
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.advancedEditor > summary::-webkit-details-marker {
+  display: none;
+}
+.advancedEditor > summary::after {
+  content: '+';
+  color: var(--primary);
+  font-size: 20px;
+  font-weight: 400;
+}
+.advancedEditor[open] > summary::after {
+  content: '−';
+}
+.advancedEditor > p {
+  margin: -4px 16px 16px;
+  font-size: 12px;
+}
+.advancedEditorBody {
+  display: grid;
+  gap: 30px;
+  padding: 24px 16px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 .orderPanel {
   margin-bottom: 24px;

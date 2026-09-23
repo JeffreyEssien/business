@@ -5,6 +5,7 @@ import { StorefrontCategoryPage } from '@/components/storefront/storefront-rende
 import { StructuredData } from '@/components/storefront/structured-data';
 import { getPublicProducts } from '@/modules/catalog/queries';
 import { entityMetadata, storefrontUrl } from '@/modules/seo/public';
+import styles from '@/components/catalog/catalog.module.css';
 
 export async function generateMetadata({
   params,
@@ -62,7 +63,7 @@ export default async function PublicCategoryPage({
         products={store.products}
         afterProducts={
           store.nextCursor ? (
-            <nav className="store-pagination" aria-label="Collection products">
+            <nav className={styles.publicPagination} aria-label="Collection products">
               <Link
                 href={`/store/${slug}/categories/${categorySlug}?${new URLSearchParams({ cursor: store.nextCursor })}`}
               >

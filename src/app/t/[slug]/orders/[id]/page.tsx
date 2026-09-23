@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { OrderDetail } from '@/components/commerce/order-detail';
 import { ButtonLink } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -14,7 +13,6 @@ export default async function OrderDetailPage({
   const data = await getOrderDetail(slug, id);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="ORDER DETAILS"
         title={data.order.reference}

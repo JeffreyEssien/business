@@ -16,14 +16,31 @@ export const CATALOG_PAGE_SIZE = 20;
 
 export async function getCategoryWorkspace(slug: string) {
   const workspace = await getTenantWorkspace(slug);
-  const { data, error } = await workspace.supabase
-    .from('categories')
-    .select('id,name,slug,description,status')
-    .eq('tenant_id', workspace.tenant.id)
-    .order('name')
-    .limit(200);
-  if (error) throw new Error('Product collections could not be loaded.');
-  return { ...workspace, categories: (data ?? []) as Category[] };
+  const [categoryResult, usageResult, entitlementResult] = await Promise.all([
+    workspace.supabase
+      .from('categories')
+      .select('id,name,slug,description,status')
+      .eq('tenant_id', workspace.tenant.id)
+      .order('name')
+      .limit(200),
+    workspace.supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', workspace.tenant.id)
+      .neq('status', 'ARCHIVED'),
+    workspace.supabase.rpc('get_tenant_entitlements', {
+      target_tenant: workspace.tenant.id,
+    }),
+  ]);
+  if (categoryResult.error || usageResult.error || entitlementResult.error)
+    throw new Error('Product collections could not be loaded.');
+  const productLimit = (entitlementResult.data as Record<string, unknown> | null)?.product_limit;
+  return {
+    ...workspace,
+    categories: (categoryResult.data ?? []) as Category[],
+    usageTotal: usageResult.count ?? 0,
+    productLimit: typeof productLimit === 'number' ? productLimit : null,
+  };
 }
 
 export async function getCatalogWorkspace(
@@ -51,22 +68,38 @@ export async function getCatalogWorkspace(
     .order('id', { ascending: false });
   if (search) productQuery = productQuery.ilike('name', `%${search}%`);
   if (status) productQuery = productQuery.eq('status', status);
-  const [categoryResult, productResult, activeCount] = await Promise.all([
-    workspace.supabase
-      .from('categories')
-      .select('id,name,slug,description,status')
-      .eq('tenant_id', workspace.tenant.id)
-      .order('name')
-      .limit(200),
-    productQuery.range((page - 1) * CATALOG_PAGE_SIZE, page * CATALOG_PAGE_SIZE - 1),
-    workspace.supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', workspace.tenant.id)
-      .eq('status', 'ACTIVE'),
-  ]);
-  if (categoryResult.error || productResult.error || activeCount.error)
+  const [categoryResult, productResult, activeCount, usageCount, entitlementResult] =
+    await Promise.all([
+      workspace.supabase
+        .from('categories')
+        .select('id,name,slug,description,status')
+        .eq('tenant_id', workspace.tenant.id)
+        .order('name')
+        .limit(200),
+      productQuery.range((page - 1) * CATALOG_PAGE_SIZE, page * CATALOG_PAGE_SIZE - 1),
+      workspace.supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', workspace.tenant.id)
+        .eq('status', 'ACTIVE'),
+      workspace.supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', workspace.tenant.id)
+        .neq('status', 'ARCHIVED'),
+      workspace.supabase.rpc('get_tenant_entitlements', {
+        target_tenant: workspace.tenant.id,
+      }),
+    ]);
+  if (
+    categoryResult.error ||
+    productResult.error ||
+    activeCount.error ||
+    usageCount.error ||
+    entitlementResult.error
+  )
     throw new Error('Catalog could not be loaded.');
+  const productLimit = (entitlementResult.data as Record<string, unknown> | null)?.product_limit;
   await recordServerOperation({
     event: 'SLOW_CATALOG_QUERY',
     operation: 'tenant_catalog_page',
@@ -80,6 +113,8 @@ export async function getCatalogWorkspace(
     products: (productResult.data ?? []) as Product[],
     total: productResult.count ?? 0,
     activeTotal: activeCount.count ?? 0,
+    usageTotal: usageCount.count ?? 0,
+    productLimit: typeof productLimit === 'number' ? productLimit : null,
     page,
     search,
     status,

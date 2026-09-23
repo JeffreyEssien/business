@@ -17,6 +17,7 @@ export function AddToCartButton({ slug, product }: { slug: string; product: Publ
       className={styles.addButton}
       type="button"
       disabled={!available}
+      aria-live="polite"
       onClick={() => {
         addCartLine(slug, {
           productId: product.id,

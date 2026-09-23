@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { OrderList } from '@/components/commerce/order-list';
 import { Button, ButtonLink } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -28,7 +27,6 @@ export default async function OrdersPage({
     `/t/${slug}/orders?${new URLSearchParams({ page: String(page), ...(data.search && { search: data.search }), ...(data.payment && { payment: data.payment }), ...(data.fulfillment && { fulfillment: data.fulfillment }) })}`;
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="ORDERS"
         title="Customer orders"

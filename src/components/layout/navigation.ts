@@ -1,10 +1,15 @@
 export const platformNavigation = [
-  { href: '/', label: 'Overview', icon: '◫' },
-  { href: '/businesses', label: 'Businesses', icon: '▦' },
-  { href: '/businesses/applications', label: 'Applications', icon: '◇' },
-  { href: '/payment-operations', label: 'Payments', icon: '◎' },
-  { href: '/setup', label: 'Launch checklist', icon: '☷' },
+  { href: '/', label: 'Overview', group: 'Platform' },
+  { href: '/businesses', label: 'Businesses', group: 'Platform' },
+  { href: '/businesses/applications', label: 'Applications', group: 'Platform' },
+  { href: '/payment-operations', label: 'Payments', group: 'Operations' },
+  { href: '/communications', label: 'Email delivery', group: 'Operations' },
+  { href: '/sms-operations', label: 'SMS delivery', group: 'Operations' },
+  { href: '/features', label: 'Plans & features', group: 'System' },
+  { href: '/setup', label: 'Launch checklist', group: 'System' },
 ] as const;
+
+export const platformNavigationGroups = ['Platform', 'Operations', 'System'] as const;
 
 /** Nested business routes keep the Businesses navigation item active. */
 export function isNavigationActive(pathname: string, href: string) {

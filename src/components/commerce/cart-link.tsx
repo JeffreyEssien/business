@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CART_CHANGED_EVENT, readCart } from '@/modules/commerce/cart';
 
-export function CartLink({ slug }: { slug: string }) {
+export function CartLink({ slug, className }: { slug: string; className?: string }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     const refresh = () =>
@@ -20,5 +20,9 @@ export function CartLink({ slug }: { slug: string }) {
       window.removeEventListener('storage', refresh);
     };
   }, [slug]);
-  return <Link href={`/store/${slug}/cart`}>Cart{count ? ` (${count})` : ''}</Link>;
+  return (
+    <Link className={className} href={`/store/${slug}/cart`}>
+      Cart <span aria-live="polite">{count ? `(${count})` : ''}</span>
+    </Link>
+  );
 }

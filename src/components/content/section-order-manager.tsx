@@ -56,7 +56,15 @@ function MoveSectionForm({
   );
 }
 
-export function SectionOrderManager({ slug, sections }: { slug: string; sections: SiteSection[] }) {
+export function SectionOrderManager({
+  slug,
+  sections,
+  saved = false,
+}: {
+  slug: string;
+  sections: SiteSection[];
+  saved?: boolean;
+}) {
   const keys = sections.map((section) => section.key);
   return (
     <section className={styles.orderPanel} aria-labelledby="homepage-order-heading">
@@ -66,6 +74,11 @@ export function SectionOrderManager({ slug, sections }: { slug: string; sections
           Move homepage areas into the order that best tells your story. This changes only your
           saved version until you publish it.
         </p>
+        {saved && (
+          <p className={styles.orderMessage} role="status">
+            Homepage order saved. Customers will see it after you publish your saved changes.
+          </p>
+        )}
       </div>
       <ol className={styles.orderList}>
         {sections.map((section, index) => {

@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { ContentPageForm } from '@/components/content/content-page-form';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -17,7 +16,6 @@ export default async function EditWebsitePage({
   if (!page) notFound();
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.workspace.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="EDIT CUSTOMER PAGE"
         title={page.name}

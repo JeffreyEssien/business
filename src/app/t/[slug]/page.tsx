@@ -6,7 +6,6 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
 import { Checklist } from '@/components/ui/checklist';
 import { ButtonLink } from '@/components/ui/button';
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 export const metadata = { title: 'Business workspace' };
 export default async function TenantWorkspacePage({
   params,
@@ -27,7 +26,6 @@ export default async function TenantWorkspacePage({
   }
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={tenant.name} slug={slug} />
       <PageHeader
         eyebrow="YOUR BUSINESS WORKSPACE"
         title="Welcome to your next chapter."
@@ -43,9 +41,6 @@ export default async function TenantWorkspacePage({
         </ButtonLink>{' '}
         <ButtonLink href={`/t/${slug}/orders/settings`} variant="secondary">
           Choose payment methods
-        </ButtonLink>{' '}
-        <ButtonLink href="/workspace" variant="secondary">
-          ← Your businesses
         </ButtonLink>
       </p>
     </main>

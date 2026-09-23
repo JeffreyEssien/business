@@ -28,7 +28,7 @@ export default async function PaymentStatusPage({
   if (!store.site || !order) notFound();
   return (
     <StorefrontShell slug={slug} configuration={store.site}>
-      <main>
+      <main id="store-main">
         <PaystackPaymentStatus slug={slug} accessToken={token} order={order} />
       </main>
     </StorefrontShell>

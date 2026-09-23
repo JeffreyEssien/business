@@ -1,4 +1,3 @@
-import { WorkspaceNavigation } from '@/components/catalog/workspace-navigation';
 import { ContentPageList } from '@/components/content/content-page-list';
 import { ButtonLink } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -11,7 +10,6 @@ export default async function WebsitePagesPage({ params }: { params: Promise<{ s
   const data = await getContentPagesWorkspace(slug);
   return (
     <main className="tenant-home">
-      <WorkspaceNavigation name={data.workspace.tenant.name} slug={slug} />
       <PageHeader
         eyebrow="CUSTOMER INFORMATION"
         title="Website pages"
