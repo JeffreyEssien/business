@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_rethrow } from 'next/navigation';
 import type { PublicStorefront } from '@/modules/catalog/types';
 import type { SeoEntityType } from '@/modules/content/types';
 
@@ -85,4 +86,26 @@ export function entityMetadata({
       images: socialImage ? [socialImage] : undefined,
     },
   };
+}
+
+/**
+ * Crawler-facing files (robots.txt, sitemap) must not answer a temporary
+ * database failure with a bare 500. Next's own not-found signal is rethrown so
+ * unknown stores still get a 404; anything else becomes a short-lived 503 that
+ * tells crawlers to retry instead of treating the store as broken.
+ */
+export async function crawlerResponse(build: () => Promise<Response>) {
+  try {
+    return await build();
+  } catch (error) {
+    unstable_rethrow(error);
+    return new Response('Temporarily unavailable. Please retry shortly.\n', {
+      status: 503,
+      headers: {
+        'content-type': 'text/plain; charset=utf-8',
+        'retry-after': '300',
+        'cache-control': 'no-store',
+      },
+    });
+  }
 }
