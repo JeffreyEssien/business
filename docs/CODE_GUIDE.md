@@ -214,3 +214,11 @@ Application website styles are real storefront personality profiles stored in `t
 5. Super Admin mutations use validated security-definer RPCs. Browser roles cannot write plan values, overrides, or global state directly; every change creates an audit event containing the relevant plan or tenant and the previous/new value and expiry.
 6. Numeric limits distinguish zero from JSON null (unlimited). Every quota-sensitive growth mutation must serialize its usage check with a tenant-and-feature transaction lock and enforce the effective value in the database.
 7. Quota downgrades are non-destructive: preserve existing customer data, block new creation or reactivation while usage is at or above the allowance, and explain how to reduce usage or upgrade. Product creation/restoration and owner invitation acceptance currently follow this rule; future staff invitation and reactivation mutations must use the same `staff_limit` authority.
+
+## Follow a plan pricing change
+
+1. `app/(platform)/billing/plans/page.tsx` authorizes the Super Admin and composes the pricing screen. Plan _pricing_ (price, cycle, visibility) lives here; plan _feature values_ stay on `/features`. These are two canonical surfaces over one `plans` table — do not duplicate price editing into the feature matrix.
+2. `components/billing/plan-management.tsx` renders one card per plan in customer-facing language ("What this plan includes", "Charged every month", "Show this plan to new businesses"). It never exposes column names such as `billing_interval` or `is_public`.
+3. `modules/billing/validation.ts` owns the billing-cycle choices and normalizes untrusted form values at the boundary. `modules/billing/queries.ts` coerces PostgREST numerics to numbers once so the `Plan` type holds for every consumer.
+4. `modules/billing/actions.ts` re-resolves Super-Admin access and calls `save_plan`. `save_plan` is a Super-Admin-only security-definer RPC that re-validates every field and audits the previous and new values; browser roles cannot write `plans` directly.
+5. Pricing is owner-entered data only. `save_plan` collects no money, and merchant customer payments remain separate. Recurring SaaS charging, subscription-lifecycle transitions, and trial/grace policy are the remaining Phase 10 work.
