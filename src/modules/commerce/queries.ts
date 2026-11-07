@@ -136,6 +136,51 @@ export async function getCustomersWorkspace(
   };
 }
 
+const RECENT_ORDER_LIMIT = 5;
+const DASHBOARD_WINDOW_DAYS = 30;
+
+/**
+ * Bounded dashboard reads for an already-authorized workspace: head-only counts
+ * plus five recent orders, run concurrently. Revenue sums need a database
+ * aggregate and are intentionally not computed by loading orders here.
+ */
+export async function getTenantDashboard(
+  workspace: Awaited<ReturnType<typeof getTenantWorkspace>>,
+) {
+  const { supabase } = workspace;
+  const tenantId = workspace.tenant.id;
+  const since = new Date(Date.now() - DASHBOARD_WINDOW_DAYS * 86_400_000).toISOString();
+  const count = (table: 'orders' | 'customers') =>
+    supabase.from(table).select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId);
+  const [recentOrderCount, awaitingVerification, toFulfil, customers, recent] = await Promise.all([
+    count('orders').gte('created_at', since),
+    count('orders').eq('payment_status', 'AWAITING_VERIFICATION'),
+    count('orders')
+      .eq('payment_status', 'PAID')
+      .in('fulfillment_status', ['NEW', 'PROCESSING', 'READY']),
+    count('customers'),
+    supabase
+      .from('orders')
+      .select(
+        'id,reference,customer_name_snapshot,total,currency,payment_status,fulfillment_status,created_at',
+      )
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(RECENT_ORDER_LIMIT),
+  ]);
+  if ([recentOrderCount, awaitingVerification, toFulfil, customers, recent].some((r) => r.error))
+    throw new Error('Dashboard could not be loaded.');
+  return {
+    windowDays: DASHBOARD_WINDOW_DAYS,
+    recentOrderCount: recentOrderCount.count ?? 0,
+    awaitingVerification: awaitingVerification.count ?? 0,
+    toFulfil: toFulfil.count ?? 0,
+    customers: customers.count ?? 0,
+    recentOrders: (recent.data ?? []) as OrderSummary[],
+  };
+}
+
 export async function getOrderDetail(slug: string, orderId: string) {
   const workspace = await getTenantWorkspace(slug);
   const [orderResult, itemResult, paymentResult] = await Promise.all([
