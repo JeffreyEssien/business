@@ -34,6 +34,11 @@ export const config = {
   matcher: [
     '/',
     '/businesses/:path*',
+    '/billing/:path*',
+    '/features/:path*',
+    '/communications/:path*',
+    '/payment-operations/:path*',
+    '/sms-operations/:path*',
     '/setup/:path*',
     '/login',
     '/invite',

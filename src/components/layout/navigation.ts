@@ -5,7 +5,8 @@ export const platformNavigation = [
   { href: '/payment-operations', label: 'Payments', group: 'Operations' },
   { href: '/communications', label: 'Email delivery', group: 'Operations' },
   { href: '/sms-operations', label: 'SMS delivery', group: 'Operations' },
-  { href: '/features', label: 'Plans & features', group: 'System' },
+  { href: '/billing/plans', label: 'Plans & pricing', group: 'System' },
+  { href: '/features', label: 'Features & limits', group: 'System' },
   { href: '/setup', label: 'Launch checklist', group: 'System' },
 ] as const;
 

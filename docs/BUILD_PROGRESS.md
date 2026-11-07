@@ -1,10 +1,10 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-14
+Last updated: 2026-11-07
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: Phase 9 implemented; provider activation and pricing inputs pending
+## Current stage: Phase 10 plan management shipped; recurring charging and pricing inputs pending
 
 Status: Phases 0–9 are implemented and verified. Feature access resolves centrally from global safety state, an active tenant override, the tenant plan, and finally the catalog default. Super Admin can change plan values, pause boolean features, and manage documented expiring business overrides without a deployment. SMS and product limits use the same database authority, while tenant navigation and catalog usage explain effective access. Transactional email and SMS still require provider activation in the deployed environment. No real customer email, SMS, transaction, sender request, or settlement subaccount was created by the agent; automated database, Auth, and Cloudinary fixtures were removed.
 
@@ -229,6 +229,21 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
+### Phase 10 (in progress): plan pricing management
+
+- `plans` gained the spec §31 pricing shape through additive migration `202609160001_plan_pricing.sql`: description, price, currency, billing interval, public visibility, and display order, with an `updated_at` trigger. Existing Starter/Growth/Pro rows keep their order; price defaults to 0 and visibility defaults to hidden until the owner sets them.
+- Super Admin edits plans at `/billing/plans`. The `save_plan` security-definer RPC is Super-Admin only, re-validates every field, and audits the previous and new values. Browser roles cannot write plan rows directly.
+- No recurring charge is collected. Merchant customer payments remain entirely separate. Subscription lifecycle automation (TRIAL/PAST_DUE/GRACE_PERIOD/SUSPENDED transitions), the external Paystack recurring-charge integration, and the owner's actual prices/trial/grace policy remain the rest of Phase 10.
+- 2026-11-07: the `/billing/plans` route itself was missing (navigation linked to a 404); `app/(platform)/billing/plans/page.tsx` now composes the existing pricing screen. Unauthenticated requests redirect to `/login`.
+- Validation: format check, `npm run typecheck`, and the Webpack production build pass. Still open: the migration is not yet applied to development Supabase, so the screen has had no signed-in browser verification, and the SQL/RLS suite has not been run against it.
+
+## Stage A stabilization — 2026-11-07
+
+- The project moved from iCloud Drive to local `~/Documents/business`. iCloud had silently dropped 117 tracked files and corrupted Git objects; the repository was re-cloned from `origin/develop` and the uncommitted Phase 10 work was preserved. Keep the repository out of iCloud-synced folders.
+- `src/proxy.ts` now refreshes the Supabase session for `/billing`, `/features`, `/communications`, `/payment-operations`, and `/sms-operations`, which were previously missing from the matcher and did not receive request IDs or `no-store` caching.
+- `next.config.ts` sends baseline security headers on every route (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `nosniff`, referrer policy, HSTS, permissions policy) and drops `X-Powered-By`. A nonce-based `script-src` CSP is deferred to its own tested change. Headers verified against `next start`.
+- Owner actions still required for Stage A: apply migration `202609160001_plan_pricing.sql` and run `npm run db:test`, `npm run test:integration`, and `npm run test:ui` against development; rotate the previously exposed Paystack test secret; push and confirm GitHub Actions passes; delete `.env.local` from the old iCloud copy.
+
 ## Current limitations
 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
@@ -258,7 +273,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Email                  | 7          | Implemented; activation gated | Branded queue, templates, settings, logs, retries       |
 | SMS                    | 8          | Implemented; activation gated | Sender review, durable queue, settings, logs, webhooks  |
 | Entitlements/plans     | 9          | Implemented and verified | Central resolution, overrides, kill switches, usage limits |
-| SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
+| SaaS billing           | 10         | Plan management shipped; charging deferred | Subscriptions separate from merchant payments  |
 | Domains                | 11         | Planned                  | Verified hostname/TLS lifecycle                            |
 | Observability          | 12         | Planned                  | Audited platform visibility/monitoring                     |
 | Hardening              | 13         | Planned                  | Security, restore, performance, release checks             |
@@ -271,7 +286,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Deployment: configure Paystack callback `/payments/paystack/callback` and webhook `/api/webhooks/paystack` on each environment, then complete one owner-observed test-mode payment before production approval.
 - Email activation: create a Resend sending-only API key, provide the Resend account email for test mode, create a webhook signing secret, and later verify an owned sending domain before live delivery.
 - SMS activation: deploy the Termii variables, register `/api/webhooks/termii`, configure the protected `/api/jobs/sms-delivery` schedule, request and approve one tenant sender name, then observe one test-recipient delivery before live mode.
-- Billing: plan prices/limits, trial length, grace policy.
+- Billing: enter each plan's price, currency, billing cycle, summary, and public visibility at `/billing/plans` (feature limits stay on `/features`). Still needed before charging: trial length, grace policy, and the recurring-charge provider decision.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.
 
 Credentials stay in local environment files, never this tracker. No production deployment, outbound invitations, or real customer transactions have occurred.
