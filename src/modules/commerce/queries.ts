@@ -4,11 +4,13 @@ import { createClient } from '@/lib/supabase/server';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import {
   FULFILLMENT_STATUSES,
+  CUSTOMER_PAGE_SIZE,
   ORDER_PAGE_SIZE,
   PAYMENT_STATUSES,
   type PaymentAttempt,
   type PublicPaystackOrder,
   type CheckoutSettings,
+  type CustomerSummary,
   type OrderDetail,
   type OrderItem,
   type OrderSummary,
@@ -82,6 +84,55 @@ export async function getOrdersWorkspace(
     search,
     payment,
     fulfillment,
+  };
+}
+
+/** Strips PostgREST filter wildcards so search text can only match literally. */
+function searchText(value?: string) {
+  return (value ?? '')
+    .replace(/[%_\\,()]/g, '')
+    .trim()
+    .slice(0, 100);
+}
+
+export async function getCustomersWorkspace(
+  slug: string,
+  filters: { page?: number; search?: string } = {},
+) {
+  const workspace = await getTenantWorkspace(slug);
+  const page = Math.max(1, filters.page ?? 1);
+  const search = searchText(filters.search);
+  let query = workspace.supabase
+    .from('customers')
+    .select('id,name,email,phone,total_orders_cached,total_spent_cached,last_order_at,created_at', {
+      count: 'exact',
+    })
+    .eq('tenant_id', workspace.tenant.id)
+    .order('last_order_at', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: false });
+  if (search)
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  // Customers and the store currency are independent reads; run them together.
+  const [customers, tenant] = await Promise.all([
+    query.range((page - 1) * CUSTOMER_PAGE_SIZE, page * CUSTOMER_PAGE_SIZE - 1),
+    workspace.supabase
+      .from('tenants')
+      .select('default_currency')
+      .eq('id', workspace.tenant.id)
+      .single(),
+  ]);
+  if (customers.error || tenant.error) throw new Error('Customers could not be loaded.');
+  return {
+    ...workspace,
+    customers: (customers.data ?? []).map((customer) => ({
+      ...customer,
+      total_orders_cached: Number(customer.total_orders_cached),
+      total_spent_cached: Number(customer.total_spent_cached),
+    })) as CustomerSummary[],
+    currency: tenant.data.default_currency as string,
+    total: customers.count ?? 0,
+    page,
+    search,
   };
 }
 
