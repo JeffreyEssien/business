@@ -268,6 +268,12 @@ Stage B
 9. Sign in as a tenant owner and check `/t/{slug}` and `/t/{slug}/customers` on desktop and mobile; send yourself one real reset email end to end.
 10. Decide whether to approve a `tenant_sales_summary` database function so the dashboard can show paid revenue and average order value (needs a migration and SQL tests).
 
+Stage C (branch `feature/stage-c-subdomains`, stacked on Stage B)
+11. Choose and buy the platform domain, then set `PLATFORM_ROOT_DOMAIN`, add a wildcard DNS record, and add the wildcard domain in Vercel.
+12. Set `CRON_SECRET` in Vercel and schedule `/api/jobs/email-delivery` and `/api/jobs/sms-delivery` (Vercel Pro cron or an external scheduler; Hobby runs cron only daily).
+13. Check the development Supabase project: `/api/health/ready` returned 503 from this machine on 2026-11-07, which usually means the free project is paused or unreachable.
+14. Known issue found while testing: unknown store pages show "not found" but return HTTP 200 (soft 404), and `/store/{slug}/robots.txt` returns 500 when the database is unreachable. Worth fixing before launch.
+
 Deferred from Stage B because they need new migrations: staff invitations and role management UI (must use the `staff_limit` authority), and app-level login rate limiting (Supabase Auth's built-in limits apply today).
 
 ## Current limitations
