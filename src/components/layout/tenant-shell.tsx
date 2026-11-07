@@ -22,6 +22,7 @@ const navigationGroups: ReadonlyArray<TenantNavigationGroup> = [
     links: [
       { href: '/catalog', label: 'Products & categories' },
       { href: '/orders', label: 'Orders' },
+      { href: '/customers', label: 'Customers' },
       { href: '/orders/settings', label: 'Checkout & payments' },
     ],
   },

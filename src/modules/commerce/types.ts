@@ -1,6 +1,7 @@
 import type { SiteConfiguration } from '@/modules/content/types';
 
 export const ORDER_PAGE_SIZE = 20;
+export const CUSTOMER_PAGE_SIZE = 20;
 export const PAYMENT_STATUSES = [
   'PENDING',
   'AWAITING_VERIFICATION',
@@ -172,4 +173,16 @@ export type StoredShippingRate = {
   amount: number;
   rule_jsonb: { states?: string[]; pickup?: boolean };
   shipping_zones: { name: string } | { name: string }[] | null;
+};
+
+/** Totals are maintained by the order transaction; spend counts verified-paid orders only. */
+export type CustomerSummary = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  total_orders_cached: number;
+  total_spent_cached: number;
+  last_order_at: string | null;
+  created_at: string;
 };

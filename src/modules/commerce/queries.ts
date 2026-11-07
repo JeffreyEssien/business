@@ -4,11 +4,13 @@ import { createClient } from '@/lib/supabase/server';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import {
   FULFILLMENT_STATUSES,
+  CUSTOMER_PAGE_SIZE,
   ORDER_PAGE_SIZE,
   PAYMENT_STATUSES,
   type PaymentAttempt,
   type PublicPaystackOrder,
   type CheckoutSettings,
+  type CustomerSummary,
   type OrderDetail,
   type OrderItem,
   type OrderSummary,
@@ -82,6 +84,100 @@ export async function getOrdersWorkspace(
     search,
     payment,
     fulfillment,
+  };
+}
+
+/** Strips PostgREST filter wildcards so search text can only match literally. */
+function searchText(value?: string) {
+  return (value ?? '')
+    .replace(/[%_\\,()]/g, '')
+    .trim()
+    .slice(0, 100);
+}
+
+export async function getCustomersWorkspace(
+  slug: string,
+  filters: { page?: number; search?: string } = {},
+) {
+  const workspace = await getTenantWorkspace(slug);
+  const page = Math.max(1, filters.page ?? 1);
+  const search = searchText(filters.search);
+  let query = workspace.supabase
+    .from('customers')
+    .select('id,name,email,phone,total_orders_cached,total_spent_cached,last_order_at,created_at', {
+      count: 'exact',
+    })
+    .eq('tenant_id', workspace.tenant.id)
+    .order('last_order_at', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: false });
+  if (search)
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+  // Customers and the store currency are independent reads; run them together.
+  const [customers, tenant] = await Promise.all([
+    query.range((page - 1) * CUSTOMER_PAGE_SIZE, page * CUSTOMER_PAGE_SIZE - 1),
+    workspace.supabase
+      .from('tenants')
+      .select('default_currency')
+      .eq('id', workspace.tenant.id)
+      .single(),
+  ]);
+  if (customers.error || tenant.error) throw new Error('Customers could not be loaded.');
+  return {
+    ...workspace,
+    customers: (customers.data ?? []).map((customer) => ({
+      ...customer,
+      total_orders_cached: Number(customer.total_orders_cached),
+      total_spent_cached: Number(customer.total_spent_cached),
+    })) as CustomerSummary[],
+    currency: tenant.data.default_currency as string,
+    total: customers.count ?? 0,
+    page,
+    search,
+  };
+}
+
+const RECENT_ORDER_LIMIT = 5;
+const DASHBOARD_WINDOW_DAYS = 30;
+
+/**
+ * Bounded dashboard reads for an already-authorized workspace: head-only counts
+ * plus five recent orders, run concurrently. Revenue sums need a database
+ * aggregate and are intentionally not computed by loading orders here.
+ */
+export async function getTenantDashboard(
+  workspace: Awaited<ReturnType<typeof getTenantWorkspace>>,
+) {
+  const { supabase } = workspace;
+  const tenantId = workspace.tenant.id;
+  const since = new Date(Date.now() - DASHBOARD_WINDOW_DAYS * 86_400_000).toISOString();
+  const count = (table: 'orders' | 'customers') =>
+    supabase.from(table).select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId);
+  const [recentOrderCount, awaitingVerification, toFulfil, customers, recent] = await Promise.all([
+    count('orders').gte('created_at', since),
+    count('orders').eq('payment_status', 'AWAITING_VERIFICATION'),
+    count('orders')
+      .eq('payment_status', 'PAID')
+      .in('fulfillment_status', ['NEW', 'PROCESSING', 'READY']),
+    count('customers'),
+    supabase
+      .from('orders')
+      .select(
+        'id,reference,customer_name_snapshot,total,currency,payment_status,fulfillment_status,created_at',
+      )
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(RECENT_ORDER_LIMIT),
+  ]);
+  if ([recentOrderCount, awaitingVerification, toFulfil, customers, recent].some((r) => r.error))
+    throw new Error('Dashboard could not be loaded.');
+  return {
+    windowDays: DASHBOARD_WINDOW_DAYS,
+    recentOrderCount: recentOrderCount.count ?? 0,
+    awaitingVerification: awaitingVerification.count ?? 0,
+    toFulfil: toFulfil.count ?? 0,
+    customers: customers.count ?? 0,
+    recentOrders: (recent.data ?? []) as OrderSummary[],
   };
 }
 
