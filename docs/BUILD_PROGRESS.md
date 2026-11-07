@@ -272,7 +272,7 @@ Stage C (branch `feature/stage-c-subdomains`, stacked on Stage B)
 11. Choose and buy the platform domain, then set `PLATFORM_ROOT_DOMAIN`, add a wildcard DNS record, and add the wildcard domain in Vercel.
 12. Set `CRON_SECRET` in Vercel and schedule `/api/jobs/email-delivery` and `/api/jobs/sms-delivery` (Vercel Pro cron or an external scheduler; Hobby runs cron only daily).
 13. Check the development Supabase project: `/api/health/ready` returned 503 from this machine on 2026-11-07, which usually means the free project is paused or unreachable.
-14. Known issue found while testing: unknown store pages show "not found" but return HTTP 200 (soft 404), and `/store/{slug}/robots.txt` returns 500 when the database is unreachable. Worth fixing before launch.
+14. Fixed on `fix/store-not-found-status`: `/store/{slug}/robots.txt` and `/sitemap` now return `503` with `Retry-After` on a database failure (unknown stores still 404), and store routes have a shopper-facing error page with `noindex`. Unknown store pages still return HTTP 200 after streaming starts; Next.js adds `noindex`, which keeps them out of search results. A true 404 would need a database lookup in the proxy on every store request, which is deliberately not done.
 
 Deferred from Stage B because they need new migrations: staff invitations and role management UI (must use the `staff_limit` authority), and app-level login rate limiting (Supabase Auth's built-in limits apply today).
 
