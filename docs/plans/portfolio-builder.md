@@ -10,12 +10,14 @@ Let people launch a personal or studio **portfolio website** on BusinessCare, al
 
 Owner decisions captured on 2026-11-08:
 
-| Question       | Decision                                                                                                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Who builds it  | A portfolio is a **tenant with a new site kind**. People apply through `/get-started`; Super Admin still reviews and approves before anything is provisioned.                                                        |
-| Templates      | A **large template library**, not a single default.                                                                                                                                                                  |
-| Layout control | **Sections + reorder**: choose from a fixed set of section blocks, edit their text/images, add/remove/reorder them, pick a variant per section and a site style. No free-form canvas and no tenant code (spec §0.9). |
-| Pricing        | **Free for now**, but every portfolio capability is a real entitlement key the owner can switch on/off globally, per plan, or per tenant from `Plans & features`.                                                    |
+| Question         | Decision                                                                                                                                                                                                             |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Who builds it    | A portfolio is a **tenant with a new site kind**. People apply through `/get-started`; Super Admin still reviews and approves before anything is provisioned.                                                        |
+| Templates        | A **large template library**, not a single default.                                                                                                                                                                  |
+| Layout control   | **Sections + reorder**: choose from a fixed set of section blocks, edit their text/images, add/remove/reorder them, pick a variant per section and a site style. No free-form canvas and no tenant code (spec §0.9). |
+| Pricing          | **Free for now**, but every portfolio capability is a real entitlement key the owner can switch on/off globally, per plan, or per tenant from `Plans & features`.                                                    |
+| Starter content  | Templates seed **realistic sample content**. A portfolio can't be **published** until every visible sample field and entry is edited or removed; drafts and previews are always allowed.                             |
+| Template library | All 12 audiences approved, with **at least two templates each, every one with its own visual style and layout**: 24 at launch. Specified in `docs/plans/portfolio-templates.md`.                                     |
 
 ## 2. How it fits the existing architecture
 
@@ -111,6 +113,8 @@ create table public.portfolio_item_media (   -- project galleries
 );
 ```
 
+Starter content adds `portfolio_items.is_sample`, `content_blocks.sample_fields`, and `media_assets.is_sample`; the publish lock is specified in `portfolio-templates.md` §5.
+
 RLS: tenant members read/write their own rows through authorized RPCs, and Super Admin reads all; there is no direct anonymous access. Published items are copied into the `tenant_site_versions.configuration` snapshot at publish time, so the public site never queries these tables.
 
 ### 3.4 Contact messages (phase 4)
@@ -150,28 +154,30 @@ These are new `content_blocks.block_type` values. Each has 2–3 variants, which
 | `cta`           | banner                             | block settings                |
 | `contact`       | form, details-only                 | block settings + contact form |
 
+The templates add `embed`, `events`, `press`, `bios`, `logos`, `process`, `topics`, `team`, `downloads`, and `project-facts` (see `portfolio-templates.md` §6). `embed` renders only allowlisted providers in sandboxed iframes.
+
 The section manager gains **Add section**, **Remove section**, and **Change layout** alongside the existing move up/down. Reordering keeps using `reorderHomepageSections`, and section types are validated against an allow-list in both `modules/content/validation.ts` and the database. `STORE` tenants can't add portfolio-only sections, and `PORTFOLIO` tenants can't add `products`.
 
-## 5. Template library (launch set: 12)
+## 5. Template library (launch set: 24)
 
-Each template is a `site_templates` row: a default section order and variants, a default colour preset, a default website style, and starter placeholder copy written for that audience. Owners can change all of it after provisioning. Picking a template is a starting point, not a lock-in.
+The full template specification is in **`docs/plans/portfolio-templates.md`**. It covers the research findings, two templates per audience with distinct styles and layouts, the template style layer with self-hosted fonts, the starter content for each template, and the publish lock.
 
-| #   | Key               | For                             | Default style       | Section order (abridged)                                             |
-| --- | ----------------- | ------------------------------- | ------------------- | -------------------------------------------------------------------- |
-| 1   | `developer`       | Developers & engineers          | professional-modern | hero · about · skills · projects · experience · contact              |
-| 2   | `designer`        | Product / UI designers          | clean-minimal       | hero(split) · projects(featured) · services · testimonials · contact |
-| 3   | `photographer`    | Photographers                   | elegant-luxury      | hero(full-bleed) · gallery(masonry) · about · contact                |
-| 4   | `writer`          | Writers & journalists           | elegant-luxury      | hero · about · publications · testimonials · contact                 |
-| 5   | `freelancer`      | Freelancers & consultants       | professional-modern | hero · services · projects · stats · testimonials · cta · contact    |
-| 6   | `creative-studio` | Small agencies / studios        | bright-bold         | hero(full-bleed) · projects(masonry) · services · stats · contact    |
-| 7   | `academic`        | Researchers & lecturers         | clean-minimal       | hero · about · publications · education · awards · contact           |
-| 8   | `artist`          | Artists & illustrators          | warm-natural        | hero · gallery · about · awards · contact                            |
-| 9   | `musician`        | Musicians & performers          | bright-bold         | hero(full-bleed) · about · projects(list) · gallery · contact        |
-| 10  | `architect`       | Architects & interior designers | elegant-luxury      | hero(full-bleed) · projects(grid) · services · about · contact       |
-| 11  | `resume`          | Job seekers (one page)          | clean-minimal       | hero · about · experience · education · skills · contact             |
-| 12  | `coach-speaker`   | Coaches & speakers              | soft-friendly       | hero · about · services · stats · testimonials · cta · contact       |
+| Audience           | Templates                                                   |
+| ------------------ | ----------------------------------------------------------- |
+| Developers         | `developer` Terminal · `developer-product` Product engineer |
+| Designers          | `designer` Case study · `designer-bold` Bold canvas         |
+| Photographers      | `photographer` Darkroom · `photographer-gallery` White wall |
+| Writers            | `writer` Editorial · `writer-notebook` Notebook             |
+| Freelancers        | `freelancer` Studio of one · `freelancer-results` Results   |
+| Creative studios   | `creative-studio` Agency · `studio-atelier` Atelier         |
+| Academics          | `academic` Scholar · `academic-lab` Lab                     |
+| Artists            | `artist` Salon · `artist-sketchbook` Sketchbook             |
+| Musicians          | `musician` Stage · `musician-epk` Press kit                 |
+| Architects         | `architect` Monograph · `architect-material` Material       |
+| Job seekers        | `resume` One page · `resume-sidebar` Sidebar CV             |
+| Coaches & speakers | `coach-speaker` Keynote · `coach-warm` Warm coach           |
 
-With 12 templates × 6 styles × colour presets plus custom colours, that's well over a hundred visibly different starting points. More templates are added later as data-only migrations.
+More templates are added later as data-only migrations plus one style block each.
 
 ## 6. Routes and screens
 
@@ -203,16 +209,18 @@ Tenant navigation (`components/layout/navigation.ts`) gets its menu from `site_k
 Each phase ends with typecheck, build, SQL/RLS tests, the integration suite, and verified desktop/mobile screenshots (per `design.md`). `docs/BUILD_PROGRESS.md` and `CODE_GUIDE.md` are updated per phase.
 
 1. **Foundation** — `site_kind`, `site_templates` (store rows + 4 portfolio templates: developer, designer, photographer, resume), entitlement keys, a provisioner argument, renderer dispatch, and commerce lockout for portfolios. ADR 004.
-2. **Builder** — the `portfolio_items` tables/RPCs, the `/t/[slug]/portfolio` editors, the core sections (about, projects, experience, education, skills, contact-details), add/remove/variant controls, and publish snapshotting.
-3. **Template library + intake** — the remaining 8 templates and sections (services, testimonials, awards, publications, gallery, stats, cta), the `/get-started` portfolio branch with the template gallery, Super Admin template on/off, and preview thumbnails.
+2. **Builder** — the `portfolio_items` tables/RPCs, the `/t/[slug]/portfolio` editors, the core sections (about, projects, experience, education, skills, contact-details), add/remove/variant controls, publish snapshotting, the **starter-content model and publish lock**, the **template style layer with self-hosted fonts**, and the four phase-1 templates restyled to their final designs.
+3. **Template library + intake** — the remaining 20 templates and their sections, the `/get-started` portfolio branch with a live-preview template gallery, and Super Admin template on/off.
 4. **Reach** — project detail pages, SEO entities + sitemap, the contact form + inbox + email notification.
 
-## 9. Open questions
+## 9. Decisions log
 
-Phase 1 proceeded on the recommended defaults: portfolios build on `develop` (independent of Stage C subdomains), the site kind is one-way, portfolios use a separate free plan, and templates seed guidance copy with no sample entries. Questions 4 and 5 still benefit from an owner answer before phase 3.
+All five original questions are settled:
 
-1. **Public URL.** The unmerged `feature/stage-c-subdomains` branch already serves `{slug}.<PLATFORM_ROOT_DOMAIN>` by rewriting to `/store/{slug}`, so portfolios get a clean `jane.<domain>` address, and the internal `/store` path never shows. Recommendation: land Stage C first and build portfolios on top of it, with no new public path. Agree?
-2. **Site kind switching.** Is a one-way choice at approval acceptable, so a store can't later become a portfolio (or the reverse) without Super Admin?
-3. **Plans.** `develop` now has plan pricing (`202609160001_plan_pricing.sql`, `/billing/plans`). Should portfolios use the existing Starter/Growth/Pro plans (all portfolio features on), or get a separate free "Portfolio" plan row so their pricing can diverge from stores later? Recommendation: a separate plan row priced at 0.
-4. **Starter copy.** Should templates seed realistic placeholder content (sample projects marked as drafts), or only empty sections with guidance text?
-5. **Template set.** Are the 12 templates in §5 the right launch list? Should any be swapped (e.g., fashion model/actor comp card, real-estate agent, chef)?
+1. **Public URL.** Built on `develop` independently of Stage C. Portfolios inherit `{slug}.<domain>` when Stage C lands.
+2. **Site kind.** One-way at provisioning (ADR 004).
+3. **Plans.** A separate free `portfolio` plan.
+4. **Starter content.** Realistic samples, with publishing locked until they are edited or removed (owner, 2026-11-08).
+5. **Template set.** All 12 audiences, at least two distinct templates each (owner, 2026-11-08).
+
+**Still open for the owner:** the template specification (`portfolio-templates.md`) is proposed and awaiting approval before phase 2 implements the style layer.
