@@ -88,6 +88,10 @@ select public.accept_tenant_invitation((select id from portfolio_fixture where k
 do $$
 declare portfolio uuid := (select id from portfolio_fixture where k = 'portfolio');
 declare published jsonb;
+declare remaining_detail text;
+declare project uuid;
+declare hidden_item uuid;
+declare delete_me uuid;
 begin
   begin
     perform public.save_category(portfolio, null, 'Shirts', 'shirts', '', 'ACTIVE');
@@ -96,6 +100,80 @@ begin
 
   perform public.reorder_homepage_sections(portfolio,
     array['hero','projects','about','skills','experience','contact']);
+
+  -- Example content blocks publishing, and the refusal lists what is left.
+  begin
+    perform public.publish_site(portfolio);
+    raise exception 'Published with example content';
+  exception when invalid_parameter_value then
+    get stacked diagnostics remaining_detail = pg_exception_detail;
+    if remaining_detail not like '%"hero"%' or remaining_detail not like '%Community events app%' then
+      raise exception 'Publish refusal did not list remaining examples: %', remaining_detail;
+    end if;
+  end;
+
+  -- Editing one example field is not enough; every example field must change.
+  select id into project from public.portfolio_items
+  where tenant_id = portfolio and title = 'Payments reconciliation API';
+  perform public.save_portfolio_item(portfolio, project, jsonb_build_object(
+    'title', 'Ledger sync service', 'summary', 'Matches bank transfers to invoices automatically for a growing online store.',
+    'tags', jsonb_build_array('Go')));
+  if not (select is_sample from public.portfolio_items where id = project) then
+    raise exception 'Partly edited example entry was treated as finished';
+  end if;
+  perform public.save_portfolio_item(portfolio, project, jsonb_build_object(
+    'title', 'Ledger sync service', 'summary', 'Reconciles payouts nightly.', 'role', 'Sole engineer.',
+    'linkUrl', 'https://ledger.example.org', 'tags', jsonb_build_array('Go')));
+  if (select is_sample from public.portfolio_items where id = project) then
+    raise exception 'Fully edited example entry is still marked as an example';
+  end if;
+
+  -- Validation rejects unsafe links and unknown layouts.
+  begin
+    perform public.save_portfolio_item(portfolio, project, jsonb_build_object('title', 'X', 'linkUrl', 'javascript:alert(1)'));
+    raise exception 'Unsafe link accepted';
+  exception when invalid_parameter_value then null; end;
+  begin
+    perform public.save_portfolio_section(portfolio, 'projects', '{"heading":"Work"}', 'carousel', null);
+    raise exception 'Unknown layout accepted';
+  exception when invalid_parameter_value then null; end;
+
+  -- Clear the remaining examples: edit sections, delete or hide entries, edit skills.
+  perform public.save_portfolio_section(portfolio, 'hero',
+    '{"eyebrow":"Backend engineer","headline":"Ada Lovelace","subheadline":"I build payment systems.","primaryCta":{"label":"Email me","href":"#contact"}}',
+    'split', null);
+  perform public.save_portfolio_section(portfolio, 'about', '{"heading":"About","body":"Ten years of shipping."}', null, null);
+  perform public.save_portfolio_section(portfolio, 'contact', '{"heading":"Contact","body":"Email is best."}', null, null);
+  hidden_item := (select id from public.portfolio_items where tenant_id = portfolio and title = 'Community events app');
+  perform public.save_portfolio_item(portfolio, hidden_item, jsonb_build_object(
+    'title', 'Community events app', 'summary', 'Lets neighbourhood groups publish events and take RSVPs from their phones.', 'status', 'HIDDEN'));
+  delete_me := (select id from public.portfolio_items where tenant_id = portfolio and title = 'Open-source form library');
+  perform public.delete_portfolio_item(portfolio, delete_me);
+  begin
+    update public.portfolio_items set is_sample = false where tenant_id = portfolio;
+    raise exception 'Owner bypassed the example lock with a direct write';
+  exception when insufficient_privilege then null; end;
+  for project in select id from public.portfolio_items where tenant_id = portfolio and is_sample and status = 'ACTIVE' loop
+    perform public.delete_portfolio_item(portfolio, project);
+  end loop;
+
+  -- Adding, removing, and reordering parts and entries.
+  if public.add_portfolio_section(portfolio, 'education') <> 'education' then
+    raise exception 'Added section has an unexpected key';
+  end if;
+  perform public.remove_portfolio_section(portfolio, 'education');
+  begin
+    perform public.remove_portfolio_section(portfolio, 'hero');
+    raise exception 'Hero section was removed';
+  exception when invalid_parameter_value then null; end;
+  perform public.save_portfolio_item(portfolio, null, '{"itemType":"PROJECT","title":"Second project","summary":"New."}');
+  perform public.reorder_portfolio_items(portfolio, 'PROJECT', array(
+    select id from public.portfolio_items where tenant_id = portfolio and item_type = 'PROJECT' order by sort_order desc));
+  begin
+    perform public.reorder_portfolio_items(portfolio, 'PROJECT', array[gen_random_uuid()]);
+    raise exception 'Reorder accepted an unknown entry';
+  exception when invalid_parameter_value then null; end;
+
   perform public.publish_site(portfolio);
   select configuration into published from public.tenant_site_versions
   where tenant_id = portfolio and status = 'PUBLISHED';
@@ -104,6 +182,15 @@ begin
   end if;
   if published#>>'{sections,1,type}' <> 'projects' then
     raise exception 'Published snapshot ignored the section order';
+  end if;
+  if jsonb_path_exists(published, '$.portfolioItems[*] ? (@.title == "Community events app")') then
+    raise exception 'Hidden entry was published';
+  end if;
+  if not jsonb_path_exists(published, '$.portfolioItems[*] ? (@.title == "Ledger sync service")') then
+    raise exception 'Edited entry is missing from the published snapshot';
+  end if;
+  if published#>>'{sections,0,variant}' <> 'split' then
+    raise exception 'Section layout change was not published';
   end if;
   if public.get_public_storefront((select slug from public.tenants where id = portfolio))#>>'{tenant,siteKind}' <> 'PORTFOLIO' then
     raise exception 'Public storefront does not expose the site kind';
