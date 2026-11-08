@@ -8,6 +8,8 @@ Parent plan: `docs/plans/portfolio-builder.md` · Decision record: `docs/adr/004
 
 1. **Starter content.** Every template ships with realistic sample content. A portfolio **cannot be published** while any visible sample content remains: each sample field must be edited or removed first. Saving drafts and previewing are always allowed.
 2. **Template library.** All 12 audiences are approved. Each audience gets **at least two templates**, and every template has **its own visual style and layout**, not a recolour of another. That makes 24 templates at launch.
+3. **Contact.** **Email is the main contact** on every template and is required. WhatsApp is an **optional** extra the owner can add; it is never the primary button.
+4. **Easy for anyone.** Every part of the builder must be simple for non-technical people. No functionality is removed; each function hides its complexity behind plain words, sensible defaults, and guided steps (§5).
 
 ## 2. What the research says
 
@@ -15,16 +17,16 @@ The findings below drive every template choice. Sources are listed in §8.
 
 ### 2.1 Rules every template follows
 
-| Rule                                                                     | Why                                                                                                                                                                                     | How the templates apply it                                                                                                                                          |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Say who you are and what you do, plainly, in the first screen            | Recruiters first look for a clear professional identity, best project, and the visitor's next step [1].                                                                                 | Every hero opens with name + plain role headline (no clever slogans) + one primary button.                                                                          |
-| Lead with the strongest work, and show less of it                        | Hiring managers want 2–3 strong case studies [2]; freelancers convert best with 5–7 curated projects [3]; writers should feature their best ~3 recent clips rather than everything [4]. | Project sections default to 3 featured items and a "see all" link; starter content seeds 2–3 samples, never 10.                                                     |
-| State the visitor's own role and the outcome                             | Recruiters and clients look for your personal contribution and real results [1][3].                                                                                                     | Project/case-study entries have **Role** and **Outcome** fields; outcome is optional so nobody invents metrics.                                                     |
-| Navigation uses familiar labels; decoration never competes with the work | Plain labels (Work, About, Experience, Contact) and hierarchy over decoration [1]; busy layouts and disruptive animation hurt UX portfolios [2].                                        | Menu labels are fixed plain words. Motion is limited to fades/reveals and is switched off under `prefers-reduced-motion`.                                           |
-| Mobile first                                                             | 68% of human web requests in Nigeria come from mobile devices (Cloudflare Radar, Q3 2026) [5].                                                                                          | Every template is designed at 390px first; layouts that only work on desktop (horizontal scroll galleries, hover-only reveals) are excluded.                        |
-| WhatsApp is a first-class contact                                        | WhatsApp is installed on 95% of Nigerian smartphones surveyed (Orange/KPMG 2025) [6].                                                                                                   | Contact sections put WhatsApp beside email; the floating "Message me" button is a template option for freelancer, coach, studio, and musician styles.               |
-| Light pages                                                              | In Q1 2026 Nigerians spent nearly a fifth of poverty-line income on mobile data (NCC data via BusinessDay) [7].                                                                         | Images go through Cloudinary transformations (responsive `srcset`, WebP/AVIF, lazy below the fold); at most two self-hosted font files per page; no autoplay video. |
-| Accessible                                                               | WCAG 2.2 AA is the product baseline (`design.md`).                                                                                                                                      | Each template's palette is validated for 4.5:1 body-text contrast at seed time; focus styles are visible on every style; no information carried by colour alone.    |
+| Rule                                                                     | Why                                                                                                                                                                                                       | How the templates apply it                                                                                                                                                                |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Say who you are and what you do, plainly, in the first screen            | Recruiters first look for a clear professional identity, best project, and the visitor's next step [1].                                                                                                   | Every hero opens with name + plain role headline (no clever slogans) + one primary button.                                                                                                |
+| Lead with the strongest work, and show less of it                        | Hiring managers want 2–3 strong case studies [2]; freelancers convert best with 5–7 curated projects [3]; writers should feature their best ~3 recent clips rather than everything [4].                   | Project sections default to 3 featured items and a "see all" link; starter content seeds 2–3 samples, never 10.                                                                           |
+| State the visitor's own role and the outcome                             | Recruiters and clients look for your personal contribution and real results [1][3].                                                                                                                       | Project/case-study entries have **Role** and **Outcome** fields; outcome is optional so nobody invents metrics.                                                                           |
+| Navigation uses familiar labels; decoration never competes with the work | Plain labels (Work, About, Experience, Contact) and hierarchy over decoration [1]; busy layouts and disruptive animation hurt UX portfolios [2].                                                          | Menu labels are fixed plain words. Motion is limited to fades/reveals and is switched off under `prefers-reduced-motion`.                                                                 |
+| Mobile first                                                             | 68% of human web requests in Nigeria come from mobile devices (Cloudflare Radar, Q3 2026) [5].                                                                                                            | Every template is designed at 390px first; layouts that only work on desktop (horizontal scroll galleries, hover-only reveals) are excluded.                                              |
+| Email first, WhatsApp optional                                           | Owner decision (§1). Email is universal for recruiters, editors, and clients; WhatsApp is widely installed in Nigeria (95% of smartphones surveyed, Orange/KPMG 2025) [6], so it is offered as an opt-in. | Contact sections lead with email (and the contact form, phase 4). WhatsApp appears only if the owner adds a number, always after email. A floating "Message me" button is off by default. |
+| Light pages                                                              | In Q1 2026 Nigerians spent nearly a fifth of poverty-line income on mobile data (NCC data via BusinessDay) [7].                                                                                           | Images go through Cloudinary transformations (responsive `srcset`, WebP/AVIF, lazy below the fold); at most two self-hosted font files per page; no autoplay video.                       |
+| Accessible                                                               | WCAG 2.2 AA is the product baseline (`design.md`).                                                                                                                                                        | Each template's palette is validated for 4.5:1 body-text contrast at seed time; focus styles are visible on every style; no information carried by colour alone.                          |
 
 ### 2.2 What each audience's visitors need
 
@@ -68,7 +70,7 @@ The six store "website styles" cannot give 24 distinct identities, so portfolios
 
 ## 4. The 24 templates
 
-Each card lists the style idea, how the page is laid out, what makes it different, and its starter content. "Sample" items are seeded and locked for publishing until edited or removed (§5).
+Each card lists the style idea, how the page is laid out, what makes it different, and its starter content. "Sample" items are seeded and locked for publishing until edited or removed (§6).
 
 ### Developers & engineers
 
@@ -139,7 +141,7 @@ Each card lists the style idea, how the page is laid out, what makes it differen
 **9. `freelancer` — Studio of one**
 
 - **Look:** clean and confident: Manrope, deep teal primary with a warm sand accent, rounded 10px cards, light ground.
-- **Layout:** positioning hero ("I help **[who]** with **[what]**") with _Start a project_ and WhatsApp buttons → services (`cards`, each framed as a client problem) → process (4 steps) → projects (`case-study`) → testimonials → CTA banner → contact.
+- **Layout:** positioning hero ("I help **[who]** with **[what]**") with a _Start a project_ button that opens an email (WhatsApp shown as a secondary link only if added) → services (`cards`, each framed as a client problem) → process (4 steps) → projects (`case-study`) → testimonials → CTA banner → contact.
 - **Different because:** built to convert visitors into enquiries, with services before portfolio, per freelancer conversion guidance [3].
 - **Starter:** 3 sample services, 4 process steps, 2 case studies, 2 specific testimonials.
 
@@ -258,33 +260,88 @@ Each card lists the style idea, how the page is laid out, what makes it differen
 **24. `coach-warm` — Warm coach**
 
 - **Look:** soft and friendly: Manrope, sage and cream palette, rounded 28px shapes, gentle illustration accents.
-- **Layout:** oversized-portrait hero with a promise line → programmes/packages (`services:cards`) → how it works (3 steps) → client stories (testimonials) → about → booking with WhatsApp and email.
+- **Layout:** oversized-portrait hero with a promise line → programmes/packages (`services:cards`) → how it works (3 steps) → client stories (testimonials) → about → booking by email (optional WhatsApp link underneath).
 - **Different because:** for life, career, and wellness coaches selling programmes to individuals.
 - **Starter:** 3 sample programmes, 3 steps, 3 sample client stories.
 
-## 5. Starter content and the publish lock
+## 5. Easy for anyone to use
 
-### 5.1 Data model
+The people building these portfolios are not technical. Every feature stays, but each one should feel like filling in a simple form, never like configuring software. These rules apply to every builder screen, and each screen is checked against them before it ships.
+
+### 5.1 Plain words, never system words
+
+Technical terms stay in the code. Owners only ever see everyday language:
+
+| In the code          | What the owner sees                                 |
+| -------------------- | --------------------------------------------------- |
+| section / block      | "part of your page" (e.g. "About you", "Your work") |
+| variant / layout key | "Look" — chosen from small pictures, never names    |
+| slug / handle        | "your web address"                                  |
+| entry / item         | the real noun: "project", "job", "song", "talk"     |
+| embed                | "Add a song or video"                               |
+| publish / version    | "Make it live" / "Your live portfolio"              |
+| draft                | "Saved — only you can see this"                     |
+| sample content       | "Example text — replace it with yours"              |
+
+Errors say what happened and what to do next ("That link isn't a YouTube or Spotify link — copy the link from the share button and try again"), never codes.
+
+### 5.2 Guided from the first minute
+
+- **A three-step start:** "What do you do?" (picks the audience) → "Pick a look" (template pictures with a live preview) → "Your name and email". That is enough to get a complete portfolio full of example content.
+- **A "what's next" list** on the workspace home in plain steps ("Add your photo", "Replace the example projects", "Make it live"). Each step jumps straight to the right place.
+- **Every field has a one-line hint and an example** underneath ("e.g. Product designer at Paystack").
+
+### 5.3 Edit what you see
+
+- The editor shows the portfolio itself. **Tap any part of the page to edit it** in a panel beside it, or a sheet from the bottom on phones. No separate settings maze.
+- **Reordering** is drag-and-drop on desktop and **Move up / Move down** buttons on phones (the existing accessible pattern).
+- **Adding a part** opens a picture menu ("Add your work", "Add testimonials", "Add a song or video"), each with a one-line description. Parts that don't suit the template are hidden behind "More".
+- **Changing the look** shows a preview first and keeps all text and pictures. **Undo** is always available after a change.
+- Rarely used settings (custom link labels, alternative text overrides, SEO) sit under **"More options"**, collapsed by default.
+
+### 5.4 Smart helpers that hide complexity
+
+- **Links:** paste any link and it is fixed for you: `https://` is added, and YouTube, Spotify, Audiomack, Boomplay, Apple Music, SoundCloud, and Vimeo links are recognised automatically and turned into a player. No embed codes.
+- **Pictures:** pick from the phone or drag in. Resizing, compressing, and format conversion happen automatically. A simple "focus point" tap keeps faces in frame when cropped. Accessibility text is asked for in plain words ("Describe this picture for someone who can't see it"), with a suggestion pre-filled.
+- **Dates:** month and year pickers with a "This is my current job" switch instead of typing dates.
+- **Contact:** an email field (required) and an "Add WhatsApp (optional)" switch that reveals a phone field. The number is formatted automatically.
+- **Colours:** the template's palette by default. "Change colours" offers a few ready combinations that pass contrast checks, plus a custom picker that warns in plain words if text would be hard to read.
+
+### 5.5 Never lose work, never get stuck
+
+- **Autosave** on every change, with a quiet "Saved" indicator. There is no save button to forget.
+- **Preview on phone and computer** with one toggle.
+- **Making it live** is one button. If example content remains, the button explains why and lists what's left (§6). It never just greys out.
+- Works fully on a phone: every editing task can be done on a 390px screen with large tap targets (at least 44px).
+
+### 5.6 How we check it
+
+- **Each builder screen** gets a task test before release ("add a project with a photo", "replace all example content and make it live"). It must be doable without instructions, on a phone and on a computer.
+- **A first-time owner** should be able to go from the welcome screen to a live portfolio with their own content in one sitting. Time per step is tracked in testing so slow steps get simplified.
+
+## 6. Starter content and the publish lock
+
+### 6.1 Data model
 
 - `content_blocks.sample_fields text[] not null default '{}'` lists the content fields still holding template sample text.
 - `portfolio_items.is_sample boolean not null default false` marks seeded entries.
 - `media_assets.is_sample boolean not null default false` marks placeholder images. These are platform-owned illustrations, never photos of real people.
 - `site_templates.default_sections` and a new `default_items jsonb` hold the sample content; seeding copies it and sets the markers.
 
-### 5.2 Rules
+### 6.2 Rules
 
 - **A section field counts as edited** when its saved value differs from the template's sample value. The save RPC removes it from `sample_fields`. Clearing a field also counts.
 - **A sample entry is cleared** by deleting it, or by saving it with every sample text field changed. Changing one word of a sample project is not enough; each placeholder field (title, summary, body, role, outcome) must differ from its sample value or be empty.
 - **Sample images** must be replaced or removed.
 - **Hidden doesn't count.** Turning a section off or archiving an entry takes its samples out of the check, because unpublished content is never shown.
 
-### 5.3 Enforcement
+### 6.3 Enforcement
 
 - **In the database:** the `tenant_site_versions` insert trigger rejects a portfolio publish with `STARTER_CONTENT_PRESENT` if any enabled section has `sample_fields`, any active entry `is_sample`, or any published section references a sample image. The error detail lists them (section and field, or entry title) so the UI can point to each one. Draft saves and preview are never blocked.
-- **In the interface:** sample fields and entries get a "Sample — edit or remove before publishing" badge, and the preview shows a "Sample content" ribbon. The publish button stays disabled behind a checklist ("4 sample items left") whose entries link to the exact field. The owner checklist gains "Replace the sample content".
+- **In the interface:** sample fields and entries get an "Example text — replace it with yours" badge, and the preview shows a "Sample content" ribbon. Pressing "Make it live" while examples remain opens a short list ("4 examples left to replace") whose entries jump to the exact field. The owner checklist gains "Replace the sample content".
 - **Existing phase-1 portfolios:** a data migration marks their still-unedited template text as `sample_fields`, so the rule applies to them too.
 
-## 6. New sections needed by these templates
+## 7. New sections needed by these templates
 
 These are added to the section list in the parent plan (§4):
 
@@ -301,7 +358,7 @@ These are added to the section list in the parent plan (§4):
 | `downloads`     | EPK, speaker, résumé         | **Links only** to files hosted elsewhere (https), matching the parent plan's no-PDF-upload rule for v1.                                                                                                                                                |
 | `project-facts` | Architect (project pages)    | Type, location, year, size, status, role.                                                                                                                                                                                                              |
 
-## 7. Delivery
+## 8. Delivery
 
 The work spreads across the parent plan's phases:
 
@@ -314,13 +371,14 @@ The work spreads across the parent plan's phases:
   - the remaining 20 templates and new sections
   - the `/get-started` template gallery, with a live preview per template
   - Super Admin template on/off
+- **Every builder screen is done when** it meets §5 and passes its task test on a phone and a computer.
 - **Each template is done when:**
   - its starter content renders, and the publish lock blocks it in a SQL test
   - it is screenshot-verified at 390px and 1440px
   - it passes contrast checks
   - its pages stay within the weight budget (two fonts and lazy images)
 
-## 8. Sources
+## 9. Sources
 
 1. Fueler — _Your Portfolio Has 7 Seconds: What Recruiters Actually Look at First_ (cites TheLadders 2018; LinkedIn 2025). https://www.fueler.io/blog/your-portfolio-has-7-seconds-what-recruiters-look-at-first
 2. UX Design Institute — _What hiring managers look for in a UX portfolio_. https://www.uxdesigninstitute.com/blog/hiring-managers-ux-portfolio/

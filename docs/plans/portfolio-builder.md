@@ -18,6 +18,8 @@ Owner decisions captured on 2026-11-08:
 | Pricing          | **Free for now**, but every portfolio capability is a real entitlement key the owner can switch on/off globally, per plan, or per tenant from `Plans & features`.                                                    |
 | Starter content  | Templates seed **realistic sample content**. A portfolio can't be **published** until every visible sample field and entry is edited or removed; drafts and previews are always allowed.                             |
 | Template library | All 12 audiences approved, with **at least two templates each, every one with its own visual style and layout**: 24 at launch. Specified in `docs/plans/portfolio-templates.md`.                                     |
+| Contact          | **Email is the main contact** and is required; WhatsApp is an optional extra, never the primary button.                                                                                                              |
+| Ease of use      | Built for **non-technical people**: every function stays, but each one is simple to use, with plain words, guided steps, and defaults that hide complexity (`portfolio-templates.md` §5).                            |
 
 ## 2. How it fits the existing architecture
 
@@ -113,7 +115,7 @@ create table public.portfolio_item_media (   -- project galleries
 );
 ```
 
-Starter content adds `portfolio_items.is_sample`, `content_blocks.sample_fields`, and `media_assets.is_sample`; the publish lock is specified in `portfolio-templates.md` §5.
+Starter content adds `portfolio_items.is_sample`, `content_blocks.sample_fields`, and `media_assets.is_sample`; the publish lock is specified in `portfolio-templates.md` §6.
 
 RLS: tenant members read/write their own rows through authorized RPCs, and Super Admin reads all; there is no direct anonymous access. Published items are copied into the `tenant_site_versions.configuration` snapshot at publish time, so the public site never queries these tables.
 
@@ -154,13 +156,13 @@ These are new `content_blocks.block_type` values. Each has 2–3 variants, which
 | `cta`           | banner                             | block settings                |
 | `contact`       | form, details-only                 | block settings + contact form |
 
-The templates add `embed`, `events`, `press`, `bios`, `logos`, `process`, `topics`, `team`, `downloads`, and `project-facts` (see `portfolio-templates.md` §6). `embed` renders only allowlisted providers in sandboxed iframes.
+The templates add `embed`, `events`, `press`, `bios`, `logos`, `process`, `topics`, `team`, `downloads`, and `project-facts` (see `portfolio-templates.md` §7). `embed` renders only allowlisted providers in sandboxed iframes.
 
 The section manager gains **Add section**, **Remove section**, and **Change layout** alongside the existing move up/down. Reordering keeps using `reorderHomepageSections`, and section types are validated against an allow-list in both `modules/content/validation.ts` and the database. `STORE` tenants can't add portfolio-only sections, and `PORTFOLIO` tenants can't add `products`.
 
 ## 5. Template library (launch set: 24)
 
-The full template specification is in **`docs/plans/portfolio-templates.md`**. It covers the research findings, two templates per audience with distinct styles and layouts, the template style layer with self-hosted fonts, the starter content for each template, and the publish lock.
+The full template specification is in **`docs/plans/portfolio-templates.md`**. It covers the research findings, two templates per audience with distinct styles and layouts, the template style layer with self-hosted fonts, the starter content for each template, the ease-of-use rules, and the publish lock.
 
 | Audience           | Templates                                                   |
 | ------------------ | ----------------------------------------------------------- |
