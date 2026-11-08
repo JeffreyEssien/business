@@ -312,3 +312,42 @@ begin
   end if;
 end $$;
 reset role;
+
+-- Looks and colours: switching keeps content, and unreadable colours are refused.
+do $$ begin
+  if round(private.color_contrast('#000000', '#ffffff')::numeric) <> 21 then
+    raise exception 'Contrast maths is wrong';
+  end if;
+end $$;
+select set_config('request.jwt.claim.sub', (select id::text from portfolio_fixture where k = 'owner'), true);
+set local role authenticated;
+do $$
+declare portfolio uuid := (select id from portfolio_fixture where k = 'portfolio');
+declare before_parts integer := (select count(*) from public.content_blocks where tenant_id = (select id from portfolio_fixture where k = 'portfolio'));
+begin
+  begin
+    perform public.save_portfolio_look(portfolio, 'pf-darkroom',
+      '{"background":"#777777","text":"#888888","primary":"#c9a46a","accent":"#c9a46a","secondary":"#8f8577"}');
+    raise exception 'Unreadable colours accepted';
+  exception when invalid_parameter_value then null; end;
+  begin
+    perform public.save_portfolio_look(portfolio, 'pf-not-a-look',
+      '{"background":"#ffffff","text":"#111111","primary":"#111111","accent":"#111111","secondary":"#555555"}');
+    raise exception 'Unknown look accepted';
+  exception when invalid_parameter_value then null; end;
+  begin
+    perform public.save_portfolio_look(portfolio, 'pf-darkroom',
+      '{"background":"red","text":"#111111","primary":"#111111","accent":"#111111","secondary":"#555555"}');
+    raise exception 'Non-hex colour accepted';
+  exception when invalid_parameter_value then null; end;
+  perform public.save_portfolio_look(portfolio, 'pf-darkroom',
+    '{"background":"#121110","text":"#F2EDE4","primary":"#c9a46a","accent":"#c9a46a","secondary":"#8f8577"}');
+  if (select tokens ->> 'templateStyle' from public.tenant_theme_settings where tenant_id = portfolio) <> 'pf-darkroom'
+    or (select tokens ->> 'text' from public.tenant_theme_settings where tenant_id = portfolio) <> '#f2ede4' then
+    raise exception 'Look and colours were not saved';
+  end if;
+  if (select count(*) from public.content_blocks where tenant_id = portfolio) <> before_parts then
+    raise exception 'Switching look changed the page parts';
+  end if;
+end $$;
+reset role;

@@ -7,6 +7,9 @@ const notices: Record<string, { text: string; warning?: boolean }> = {
   deleted: { text: 'Deleted.' },
   moved: { text: 'New order saved.' },
   added: { text: 'New part added. Fill it in below, then press Save.' },
+  'look-saved': {
+    text: 'New look saved. Visitors will see it after you make your portfolio live.',
+  },
   'part-removed': { text: 'That part has been removed from your page.' },
   'not-allowed': { text: 'You do not have permission to change this portfolio.', warning: true },
   'not-deleted': { text: 'That could not be deleted. Please try again.', warning: true },

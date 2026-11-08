@@ -212,6 +212,32 @@ export async function savePart(
   redirect(`/t/${slug}/design?notice=part-saved`);
 }
 
+export async function saveLook(
+  slug: string,
+  _state: BuilderActionState,
+  form: FormData,
+): Promise<BuilderActionState> {
+  const workspace = await editableWorkspace(slug);
+  if (!workspace) return noPermission;
+  let palette: unknown;
+  try {
+    palette = JSON.parse(read(form, 'palette'));
+  } catch {
+    return { error: 'Choose your colours again, then press Save.' };
+  }
+  const { error } = await workspace.supabase.rpc('save_portfolio_look', {
+    target_tenant: workspace.tenant.id,
+    target_style: read(form, 'style'),
+    palette,
+  });
+  if (error?.message.includes('LOW_CONTRAST')) {
+    return { error: 'Text would be hard to read with these colours. Try a ready-made set.' };
+  }
+  if (error) return builderError(error.code, error.message);
+  refresh(slug);
+  redirect(`/t/${slug}/design?notice=look-saved`);
+}
+
 export async function addPart(slug: string, partType: string) {
   const workspace = await editableWorkspace(slug);
   if (!workspace) redirect(`/t/${slug}/design?notice=not-allowed`);

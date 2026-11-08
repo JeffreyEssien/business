@@ -6,6 +6,7 @@ import styles from '@/components/content/site-editor.module.css';
 import { AddPartMenu } from '@/components/portfolio/add-part-menu';
 import { BuilderNotice } from '@/components/portfolio/builder-notice';
 import { PageHeader } from '@/components/ui/page-header';
+import { ButtonLink } from '@/components/ui/button';
 import { getSiteEditor } from '@/modules/content/queries';
 import { getPortfolioBuilder } from '@/modules/portfolio/builder-queries';
 import { partEntryType } from '@/modules/portfolio/entries';
@@ -58,6 +59,11 @@ export default async function StorefrontDesignPage({
           action={<PublishSiteForm slug={slug} audience="visitors" />}
         />
         <BuilderNotice notice={notice} />
+        <p>
+          <ButtonLink variant="secondary" href={`/t/${slug}/design/look`}>
+            Change colours &amp; look
+          </ButtonLink>
+        </p>
         <SectionOrderManager
           slug={slug}
           sections={editor.configuration.sections}

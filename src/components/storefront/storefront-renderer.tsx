@@ -7,6 +7,7 @@ import { defaultWebsiteStyle, isWebsiteStyleKey, themePresets } from '@/modules/
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { SkipLink } from '@/components/ui/skip-link';
 import { cloudinaryImage, cloudinarySrcSet } from '@/lib/cloudinary/delivery';
+import { accessibleForeground, contrastRatio } from '@/lib/color';
 import { portfolioFontVariables } from './portfolio-fonts';
 import { renderPortfolioSection } from './portfolio-sections';
 import { StoreNavigation } from './store-navigation';
@@ -47,44 +48,6 @@ function storefrontPersonality(configuration: SiteConfiguration) {
 
 function themeColor(value: string | undefined, fallback: string) {
   return value && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
-}
-
-function rgbChannels(color: string) {
-  const value = color.trim().replace(/^#/, '');
-  const normalized =
-    value.length === 3
-      ? value
-          .split('')
-          .map((channel) => channel + channel)
-          .join('')
-      : value;
-  if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
-  return [0, 2, 4].map((offset) => Number.parseInt(normalized.slice(offset, offset + 2), 16));
-}
-
-function relativeLuminance(color: string) {
-  const channels = rgbChannels(color);
-  if (!channels) return null;
-  const [red, green, blue] = channels.map((channel) => {
-    const value = channel / 255;
-    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-  });
-  return red * 0.2126 + green * 0.7152 + blue * 0.0722;
-}
-
-function contrastRatio(first: string, second: string) {
-  const firstLuminance = relativeLuminance(first);
-  const secondLuminance = relativeLuminance(second);
-  if (firstLuminance === null || secondLuminance === null) return 0;
-  const lighter = Math.max(firstLuminance, secondLuminance);
-  const darker = Math.min(firstLuminance, secondLuminance);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-function accessibleForeground(background: string) {
-  return contrastRatio(background, '#ffffff') >= contrastRatio(background, '#111111')
-    ? '#ffffff'
-    : '#111111';
 }
 
 function storefrontStyle(configuration: SiteConfiguration) {
