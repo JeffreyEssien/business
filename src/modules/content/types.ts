@@ -60,6 +60,8 @@ export type PublishedSeoSettings = {
   socialImage: string | null;
 };
 export type SiteConfiguration = {
+  /** Stamped onto every published snapshot by the database; absent on older versions (STORE). */
+  siteKind?: import('@/modules/portfolio/types').SiteKind;
   business: {
     name: string;
     description: string;

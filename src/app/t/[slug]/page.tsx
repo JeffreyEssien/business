@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
 import { Checklist } from '@/components/ui/checklist';
 import { ButtonLink } from '@/components/ui/button';
+import { siteKindOf } from '@/modules/portfolio/types';
 export const metadata = { title: 'Business workspace' };
 export default async function TenantWorkspacePage({
   params,
@@ -22,6 +23,27 @@ export default async function TenantWorkspacePage({
       >
         <SignOutForm />
       </AuthLayout>
+    );
+  }
+  const siteKind = siteKindOf(tenant.site_kind);
+  if (siteKind === 'PORTFOLIO') {
+    return (
+      <main className="tenant-home">
+        <PageHeader
+          eyebrow="YOUR PORTFOLIO WORKSPACE"
+          title="Welcome to your next chapter."
+          description={`Your account is connected to ${tenant.name}. Let’s get your portfolio ready.`}
+        />
+        <Panel title="Your launch checklist">
+          <Checklist items={onboardingChecklist(setup, siteKind)} />
+        </Panel>
+        <p>
+          <ButtonLink href={`/t/${slug}/design`}>Design portfolio</ButtonLink>{' '}
+          <ButtonLink href={`/t/${slug}/marketing/search`} variant="secondary">
+            Search appearance
+          </ButtonLink>
+        </p>
+      </main>
     );
   }
   return (

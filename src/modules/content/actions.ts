@@ -58,6 +58,11 @@ export async function saveSiteDraft(
     return { error: error instanceof Error ? error.message : 'Invalid site image.', message: '' };
   }
   const workspace = await getTenantWorkspace(slug);
+  // The store design form writes store-only sections; the database rejects them for
+  // portfolios too, but refusing here avoids a Cloudinary upload that would be discarded.
+  if (workspace.tenant.site_kind === 'PORTFOLIO') {
+    return { error: 'That setting is only available for online stores.', message: '' };
+  }
   if (!canEdit(workspace.membership.role))
     return { error: 'You do not have permission to edit this storefront.', message: '' };
 

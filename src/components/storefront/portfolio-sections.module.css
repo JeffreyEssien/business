@@ -1,0 +1,116 @@
+/* Portfolio sections inherit the storefront theme variables (--store-*) and style key. */
+.section {
+  width: min(1120px, calc(100% - 40px));
+  margin-inline: auto;
+  padding-block: 72px;
+  scroll-margin-top: 96px;
+}
+
+/* Divide consecutive portfolio sections only; some styles already rule off the hero. */
+.section + .section {
+  border-top: 1px solid var(--store-border);
+}
+
+.section h2 {
+  margin: 0;
+  font-family: var(--store-heading-font);
+  font-size: clamp(28px, 3.6vw, 44px);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.about {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.prose {
+  display: grid;
+  gap: 16px;
+}
+
+.prose p,
+.contact p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+.contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.contact > div {
+  display: grid;
+  gap: 16px;
+}
+
+.contactLinks {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contactLinks li {
+  display: grid;
+  gap: 4px;
+  padding: 18px 20px;
+  border: 1px solid var(--store-border);
+  border-radius: var(--store-media-radius);
+  background: var(--store-surface);
+}
+
+.contactLinks span {
+  color: color-mix(in srgb, var(--store-text) 64%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contactLinks a {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--store-link);
+  font-size: 17px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.contactLinks a:focus-visible {
+  outline: 2px solid var(--store-link);
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .section {
+    padding-block: 52px;
+  }
+
+  .about,
+  .contact {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .prose p,
+  .contact p {
+    font-size: 16px;
+  }
+}
+
+/* Matches the storefront's narrow-screen gutter (storefront.module.css). */
+@media (max-width: 520px) {
+  .section {
+    width: min(100% - 32px, 1120px);
+  }
+}

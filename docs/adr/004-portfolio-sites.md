@@ -1,0 +1,27 @@
+# ADR 004: Portfolios as a tenant site kind
+
+Date: 2026-11-08
+
+Status: phase 1 implemented
+
+## Context
+
+The product owner wants people to build their own portfolio websites on BusinessCare, choosing from a library of templates and arranging sections, free for now but switchable like every other feature. The full plan is in `docs/plans/portfolio-builder.md`.
+
+## Decision
+
+A portfolio is a tenant with `tenants.site_kind = 'PORTFOLIO'` (the default is `STORE`). It reuses tenants, invitations, memberships, RLS, the theme/style system, content blocks, versioned publishing, SEO, and entitlements. There is no second codebase, and no copied application or table set per site type.
+
+- **The site kind is set once.** A trigger rejects later changes. A conversion between kinds needs its own audited operation, because commerce records or portfolio sections would otherwise be stranded.
+- **Plans carry a site kind.** A trigger requires a tenant's plan to match its kind. Portfolios sit on a free, non-public `portfolio` plan, so their pricing can diverge from store plans without touching them.
+- **Templates live in the database.** `public.site_templates` holds each template's preset, full theme tokens, and ordered homepage sections. The provisioner validates and seeds a template in the same transaction, and a template can be retired with `is_active` without a deployment. The four store templates are catalogued too; store provisioning keeps its existing palette logic unchanged.
+- **Provisioning is shared.** `private.provision_tenant_core` holds the tenant row set. `public.provision_tenant` keeps its exact signature and behaviour. `public.provision_portfolio_tenant` adds the template's theme and sections and re-checks `portfolio_sites` through `private.assert_feature`.
+- **Boundaries are enforced in the database.** Insert triggers reject commerce rows (products, categories, orders, shipping, bank accounts) for portfolios. A `content_blocks` trigger scopes section types: `products` is store-only, and the portfolio types are portfolio-only. The application hides the same screens and returns 404 for them, but that is a convenience, not the control.
+- **Publishing.** A `tenant_site_versions` insert trigger stamps `siteKind` into every snapshot, so the public renderer needs no extra query. For portfolios it also re-checks `portfolio_sites`. `get_public_storefront` exposes `tenant.siteKind`, so commerce routes refuse portfolios before their first publish.
+- **Entitlement.** `portfolio_sites` (BOOLEAN, default on, on for every plan) appears on Plans & features. A global pause blocks new portfolios and publishing; already-published portfolios stay online. Later phases add their own keys (project pages, contact form, gallery, item limit) when the features exist, so no switch controls nothing.
+
+## Consequences
+
+- The store design form (`save_site_draft`) writes store-only sections, so it is refused for portfolios. Portfolio section editing arrives in phase 2 with its own RPCs.
+- Entry-backed sections (projects, experience, education, skills) are seeded by templates but omitted from the public site until phase 2 gives them entries.
+- Public commerce routes on a portfolio render the 404 page. Like every `notFound()` under `/store/[slug]`, the HTTP status is 200 because `loading.tsx` streams first. That is existing behaviour, and fixing it belongs with the store not-found work, not here.

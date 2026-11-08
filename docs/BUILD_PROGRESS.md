@@ -1,6 +1,6 @@
 # BusinessCare build progress
 
-Last updated: 2026-11-07
+Last updated: 2026-11-08
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
@@ -236,6 +236,14 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - No recurring charge is collected. Merchant customer payments remain entirely separate. Subscription lifecycle automation (TRIAL/PAST_DUE/GRACE_PERIOD/SUSPENDED transitions), the external Paystack recurring-charge integration, and the owner's actual prices/trial/grace policy remain the rest of Phase 10.
 - 2026-11-07: the `/billing/plans` route itself was missing (navigation linked to a 404); `app/(platform)/billing/plans/page.tsx` now composes the existing pricing screen. Unauthenticated requests redirect to `/login`.
 - Validation: format check, `npm run typecheck`, and the Webpack production build pass. Still open: the migration is not yet applied to development Supabase, so the screen has had no signed-in browser verification, and the SQL/RLS suite has not been run against it.
+
+### Portfolio builder, phase 1 (2026-11-08)
+
+- Plan: `docs/plans/portfolio-builder.md`. Decision record: `docs/adr/004-portfolio-sites.md`. Migration `202611080001_portfolio_foundation.sql` (not yet applied to development Supabase).
+- Portfolios are tenants with `site_kind='PORTFOLIO'` on a free, non-public `portfolio` plan. Super Admin creates one from `/businesses/new` by choosing a website type and one of four database-owned templates (developer, designer, photographer, résumé).
+- The `portfolio_sites` entitlement is on for every plan and appears on Plans & features; a global pause blocks new portfolios and publishing.
+- Commerce writes and store-only sections are rejected for portfolios in the database; commerce and customer-update screens are hidden and return 404. Owners can reorder sections, preview, and publish; section text and project/experience entries arrive in phase 2.
+- Validation: format check, typecheck, Webpack production build, migrations applied twice (idempotent), and all 11 SQL suites pass on clean PostgreSQL 16, including the new `portfolio.sql`. Public portfolios, the unpublished state, a store regression, the create form, and the design screen were checked at 1440px and 390px against migrated local data. Not yet run: the Supabase integration and browser suites against development.
 
 ## Stage A stabilization — 2026-11-07
 

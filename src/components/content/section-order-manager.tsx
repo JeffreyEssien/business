@@ -60,29 +60,36 @@ export function SectionOrderManager({
   slug,
   sections,
   saved = false,
+  language,
+  audience = 'customers',
 }: {
   slug: string;
   sections: SiteSection[];
   saved?: boolean;
+  /** Section names keyed by section type; defaults to the store wording keyed by key. */
+  language?: Record<string, { name: string; description: string }>;
+  audience?: 'customers' | 'visitors';
 }) {
   const keys = sections.map((section) => section.key);
   return (
     <section className={styles.orderPanel} aria-labelledby="homepage-order-heading">
       <div>
-        <h2 id="homepage-order-heading">Choose what customers see first</h2>
+        <h2 id="homepage-order-heading">Choose what {audience} see first</h2>
         <p>
           Move homepage areas into the order that best tells your story. This changes only your
           saved version until you publish it.
         </p>
         {saved && (
           <p className={styles.orderMessage} role="status">
-            Homepage order saved. Customers will see it after you publish your saved changes.
+            Homepage order saved. {audience === 'visitors' ? 'Visitors' : 'Customers'} will see it
+            after you publish your saved changes.
           </p>
         )}
       </div>
       <ol className={styles.orderList}>
         {sections.map((section, index) => {
-          const language = sectionLanguage[section.key] ?? {
+          const described = language ? language[section.type] : sectionLanguage[section.key];
+          const sectionName = described ?? {
             name: section.key,
             description: 'A section of your homepage.',
           };
@@ -96,20 +103,20 @@ export function SectionOrderManager({
             <li key={section.key}>
               <span className={styles.orderNumber}>{index + 1}</span>
               <div className={styles.orderCopy}>
-                <strong>{language.name}</strong>
-                <p>{language.description}</p>
+                <strong>{sectionName.name}</strong>
+                <p>{sectionName.description}</p>
               </div>
               <div className={styles.orderActions}>
                 <MoveSectionForm
                   slug={slug}
                   keys={index > 0 ? move(index - 1) : keys}
-                  label={`Move ${language.name} earlier`}
+                  label={`Move ${sectionName.name} earlier`}
                   disabled={index === 0}
                 />
                 <MoveSectionForm
                   slug={slug}
                   keys={index < keys.length - 1 ? move(index + 1) : keys}
-                  label={`Move ${language.name} later`}
+                  label={`Move ${sectionName.name} later`}
                   disabled={index === keys.length - 1}
                 />
               </div>

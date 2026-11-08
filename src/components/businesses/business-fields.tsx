@@ -1,35 +1,42 @@
 import type { CreateBusinessInput } from '@/modules/tenants/validation';
+import type { SiteKind } from '@/modules/portfolio/types';
 type FieldGroupProps = { values?: Partial<CreateBusinessInput> };
 import { TextField, SelectField } from '@/components/ui/form-fields';
 import { FormGrid, FormSection } from '@/components/ui/form-layout';
 import { templateOptions, planOptions, paymentOptions } from '@/modules/tenants/onboarding-options';
 
 /** Domain field groups can be reused by onboarding and future business settings forms. */
-export function BusinessDetailsFields({ values = {} }: FieldGroupProps) {
+export function BusinessDetailsFields({
+  values = {},
+  siteKind = 'STORE',
+}: FieldGroupProps & { siteKind?: SiteKind }) {
+  const isPortfolio = siteKind === 'PORTFOLIO';
   return (
-    <FormSection title="01 · Business details">
+    <FormSection title={isPortfolio ? '01 · Portfolio details' : '01 · Business details'}>
       <FormGrid>
         <TextField
           name="name"
           defaultValue={values.name}
-          label="Business name"
+          label={isPortfolio ? 'Name shown on the portfolio' : 'Business name'}
           required
           maxLength={160}
-          placeholder="e.g. Xelle"
+          placeholder={isPortfolio ? 'e.g. Ada Lovelace or Studio Ada' : 'e.g. Xelle'}
           autoComplete="organization"
         />
         <TextField
           name="slug"
           defaultValue={values.slug}
-          label="Store handle"
+          label={isPortfolio ? 'Website handle' : 'Store handle'}
           required
           minLength={3}
           maxLength={63}
           pattern="[a-z0-9]+(-[a-z0-9]+)*"
-          placeholder="e.g. xelle"
+          placeholder={isPortfolio ? 'e.g. ada' : 'e.g. xelle'}
           autoCapitalize="none"
           spellCheck={false}
-          hint="Use lowercase letters, numbers, and hyphens. This reserves your future store address."
+          hint={`Use lowercase letters, numbers, and hyphens. This reserves the future ${
+            isPortfolio ? 'website' : 'store'
+          } address.`}
         />
       </FormGrid>
     </FormSection>

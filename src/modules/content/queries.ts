@@ -1,6 +1,7 @@
 import 'server-only';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import type { PublicProduct } from '@/modules/catalog/types';
+import { siteKindOf } from '@/modules/portfolio/types';
 import type {
   ContentPage,
   SiteConfiguration,
@@ -108,6 +109,7 @@ export async function getSiteEditor(
     enabled: item.is_enabled,
   })) as SiteNavigationItem[];
   const configuration: SiteConfiguration = {
+    siteKind: siteKindOf(workspace.tenant.site_kind),
     business: {
       name: business.business_name,
       description: business.description,

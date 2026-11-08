@@ -4,7 +4,9 @@ import {
   reservedHandles,
   templateOptions,
 } from './onboarding-options';
+import { isSiteKind, type SiteKind } from '@/modules/portfolio/types';
 export type CreateBusinessInput = {
+  siteKind: SiteKind;
   name: string;
   slug: string;
   owner: string;
@@ -22,7 +24,9 @@ const hasOption = (options: readonly { value: string }[], value: string) =>
 /** Normalize untrusted form input once. PostgreSQL repeats validation at the write boundary. */
 export function validateBusinessForm(form: FormData): ValidationResult {
   const read = (name: string) => String(form.get(name) ?? '').trim();
+  const requestedKind = read('siteKind');
   const input: CreateBusinessInput = {
+    siteKind: isSiteKind(requestedKind) ? requestedKind : 'STORE',
     name: read('name'),
     slug: read('slug'),
     owner: read('owner'),
@@ -54,6 +58,14 @@ export function validateBusinessForm(form: FormData): ValidationResult {
   ) {
     return { valid: false, input, error: 'Enter the owner’s name and a valid email address.' };
   }
+  // Portfolio templates live in the database catalog; the provisioning RPC rejects
+  // unknown or inactive keys, so only the shape is checked here.
+  if (input.siteKind === 'PORTFOLIO') {
+    if (!/^[a-z][a-z0-9-]{1,47}$/.test(input.template)) {
+      return { valid: false, input, error: 'Choose a portfolio template.' };
+    }
+    return { valid: true, input };
+  }
   if (
     !hasOption(templateOptions, input.template) ||
     !hasOption(planOptions, input.plan) ||
@@ -63,8 +75,10 @@ export function validateBusinessForm(form: FormData): ValidationResult {
   }
   return { valid: true, input };
 }
-export function provisioningErrorMessage(code?: string) {
-  if (code === '23505') return 'That store handle is already in use. Choose another.';
+export function provisioningErrorMessage(code?: string, siteKind: SiteKind = 'STORE') {
+  if (code === '23505') return 'That handle is already in use. Choose another.';
+  if (code === '42501' && siteKind === 'PORTFOLIO')
+    return 'Portfolio websites are switched off in Plans & features. Turn them on to continue.';
   if (code === '22023')
     return 'One of the setup values is invalid or reserved. Please check the form.';
   return 'The business could not be created. Please try again.';

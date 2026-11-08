@@ -12,7 +12,7 @@ export async function listBusinesses(search = '', status = '', page = 1) {
   const { supabase } = await requirePlatformAdmin();
   let query = supabase
     .from('tenants')
-    .select('id,name,slug,status,template_key,created_at,plans(name)', { count: 'exact' })
+    .select('id,name,slug,status,template_key,site_kind,created_at,plans(name)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .order('id');
   const term = search.replace(/[%_\\]/g, '').slice(0, 100);
@@ -32,7 +32,7 @@ export async function getBusinessDetails(id: string): Promise<BusinessDetails | 
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const { data, error } = await supabase
     .from('tenants')
-    .select('id,name,slug,status,template_key,created_at,plans(name)')
+    .select('id,name,slug,status,template_key,site_kind,created_at,plans(name)')
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error('Business could not be loaded.');

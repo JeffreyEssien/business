@@ -6,7 +6,13 @@ import { FormError } from '@/components/ui/form-layout';
 import styles from './site-editor.module.css';
 
 const initialState: ContentActionState = { error: '', message: '' };
-export function PublishSiteForm({ slug }: { slug: string }) {
+export function PublishSiteForm({
+  slug,
+  audience = 'customers',
+}: {
+  slug: string;
+  audience?: 'customers' | 'visitors';
+}) {
   const [state, action, pending] = useActionState(publishSite.bind(null, slug), initialState);
   return (
     <form action={action} className={styles.publishForm}>
@@ -17,7 +23,7 @@ export function PublishSiteForm({ slug }: { slug: string }) {
         </p>
       )}
       <Button type="submit" disabled={pending}>
-        {pending ? 'Making changes visible…' : 'Make saved changes visible to customers'}
+        {pending ? 'Making changes visible…' : `Make saved changes visible to ${audience}`}
       </Button>
     </form>
   );
