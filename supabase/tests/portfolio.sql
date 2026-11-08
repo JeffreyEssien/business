@@ -251,3 +251,64 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+
+-- Photos: tenant-scoped storage keys, replace/remove cleanup, and live-page safety.
+select set_config('request.jwt.claim.sub', (select id::text from portfolio_fixture where k = 'owner'), true);
+set local role authenticated;
+do $$
+declare portfolio uuid := (select id from portfolio_fixture where k = 'portfolio');
+declare project uuid;
+declare result jsonb;
+declare folder text := 'businesscare/tenants/' || (select id from portfolio_fixture where k = 'portfolio')::text || '/portfolio/';
+begin
+  select id into project from public.portfolio_items where tenant_id = portfolio and item_type = 'PROJECT' limit 1;
+  begin
+    perform public.set_portfolio_photo(portfolio, 'cover', project::text, jsonb_build_object(
+      'storageKey', 'businesscare/tenants/' || gen_random_uuid()::text || '/x', 'publicUrl', 'https://res.cloudinary.com/x.jpg',
+      'mimeType', 'image/jpeg', 'fileSize', 1000), 'Someone else''s file', false);
+    raise exception 'Accepted another tenant''s file';
+  exception when invalid_parameter_value then null; end;
+  begin
+    perform public.set_portfolio_photo(portfolio, 'cover', project::text, jsonb_build_object(
+      'storageKey', folder || 'big', 'publicUrl', 'https://res.cloudinary.com/big.jpg',
+      'mimeType', 'image/jpeg', 'fileSize', 9000000), '', false);
+    raise exception 'Accepted an oversized file';
+  exception when invalid_parameter_value then null; end;
+
+  result := public.set_portfolio_photo(portfolio, 'cover', project::text, jsonb_build_object(
+    'storageKey', folder || 'a', 'publicUrl', 'https://res.cloudinary.com/a.jpg', 'mimeType', 'image/jpeg', 'fileSize', 1000),
+    'First cover', false);
+  if result <> '{}'::jsonb then raise exception 'First photo reported a replacement'; end if;
+  result := public.set_portfolio_photo(portfolio, 'cover', project::text, null, 'Better description', false);
+  if (select a.alt_text from public.portfolio_items i join public.media_assets a on a.id = i.cover_asset_id where i.id = project) <> 'Better description' then
+    raise exception 'Description-only change was not saved';
+  end if;
+  result := public.set_portfolio_photo(portfolio, 'cover', project::text, jsonb_build_object(
+    'storageKey', folder || 'b', 'publicUrl', 'https://res.cloudinary.com/b.jpg', 'mimeType', 'image/webp', 'fileSize', 1000),
+    'Second cover', false);
+  if result ->> 'storageKey' <> folder || 'a' then raise exception 'Replaced photo was not reported for cleanup: %', result; end if;
+
+  result := public.set_portfolio_photo(portfolio, 'about', 'about', jsonb_build_object(
+    'storageKey', folder || 'c', 'publicUrl', 'https://res.cloudinary.com/c.jpg', 'mimeType', 'image/png', 'fileSize', 1000),
+    'Portrait', false);
+  if (select settings #>> '{photo,url}' from public.content_blocks where tenant_id = portfolio and block_key = 'about') <> 'https://res.cloudinary.com/c.jpg' then
+    raise exception 'About photo was not placed';
+  end if;
+end $$;
+reset role;
+
+-- A photo shown on the live page is kept when replaced, so visitors never see a broken image.
+update public.tenant_site_versions set configuration = configuration || '{"probe":"https://res.cloudinary.com/b.jpg"}'
+where tenant_id = (select id from portfolio_fixture where k = 'portfolio') and status = 'PUBLISHED';
+select set_config('request.jwt.claim.sub', (select id::text from portfolio_fixture where k = 'owner'), true);
+set local role authenticated;
+do $$
+declare portfolio uuid := (select id from portfolio_fixture where k = 'portfolio');
+declare project uuid := (select cover_ref.id from public.portfolio_items cover_ref
+  where cover_ref.tenant_id = (select id from portfolio_fixture where k = 'portfolio') and cover_ref.cover_asset_id is not null limit 1);
+begin
+  if public.set_portfolio_photo(portfolio, 'cover', project::text, null, '', true) <> '{}'::jsonb then
+    raise exception 'A photo used by the live page was deleted';
+  end if;
+end $$;
+reset role;

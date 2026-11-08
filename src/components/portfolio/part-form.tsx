@@ -14,6 +14,7 @@ import { savePart, type BuilderActionState } from '@/modules/portfolio/actions';
 import { entryCopy, partEntryType, partLooks } from '@/modules/portfolio/entries';
 import type { PortfolioPart } from '@/modules/portfolio/types';
 import { ExampleBadge } from './example-badge';
+import { PhotoField } from './photo-field';
 import styles from './builder.module.css';
 
 const initialState: BuilderActionState = { error: '' };
@@ -126,6 +127,12 @@ export function PartForm({
               defaultValue={text(part, 'subheadline')}
               labelAddon={example('subheadline')}
             />
+            <PhotoField
+              prefix="photo"
+              label="Big picture (optional)"
+              hint="Shown beside or behind your introduction, depending on the look you choose."
+              photo={part.photo}
+            />
           </FormSection>
           <FormSection title="Main button">
             <FormGrid>
@@ -187,6 +194,14 @@ export function PartForm({
             defaultValue={text(part, 'body')}
             labelAddon={example('body')}
           />
+          {part.type === 'about' && (
+            <PhotoField
+              prefix="photo"
+              label="Your photo (optional)"
+              hint="A friendly photo of you or your work. Choose a photo layout below to show it."
+              photo={part.photo}
+            />
+          )}
         </FormSection>
       )}
 

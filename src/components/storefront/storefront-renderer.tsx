@@ -6,6 +6,7 @@ import type { PublicProduct } from '@/modules/catalog/types';
 import { defaultWebsiteStyle, isWebsiteStyleKey, themePresets } from '@/modules/content/presets';
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { SkipLink } from '@/components/ui/skip-link';
+import { cloudinaryImage, cloudinarySrcSet } from '@/lib/cloudinary/delivery';
 import { portfolioFontVariables } from './portfolio-fonts';
 import { renderPortfolioSection } from './portfolio-sections';
 import { StoreNavigation } from './store-navigation';
@@ -335,8 +336,14 @@ export function StorefrontRenderer({
                     // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
                     <img
                       className={styles.heroImage}
-                      src={configuration.business.heroMedia.url}
+                      src={cloudinaryImage(configuration.business.heroMedia.url, { width: 1600 })}
+                      srcSet={cloudinarySrcSet(
+                        configuration.business.heroMedia.url,
+                        [640, 1080, 1600, 2200],
+                      )}
+                      sizes="100vw"
                       alt={configuration.business.heroMedia.alt ?? ''}
+                      fetchPriority="high"
                     />
                   )}
                 </section>

@@ -1,7 +1,7 @@
 import 'server-only';
 import { sampleColumnToField, type EntryField, type EntryType } from './entries';
 import { requirePortfolioWorkspace } from './guards';
-import type { PortfolioEntry, PortfolioPart } from './types';
+import type { PortfolioEntry, PortfolioPart, PortfolioPhoto } from './types';
 
 type ItemRow = {
   id: string;
@@ -19,7 +19,23 @@ type ItemRow = {
   tags: string[];
   status: 'ACTIVE' | 'HIDDEN';
   sample_content: Record<string, unknown>;
+  cover_asset_id: string | null;
 };
+
+type AssetRow = { id: string; public_url_or_resolvable_key: string; alt_text: string | null };
+
+function photoOf(assets: AssetRow[], id: string | null | undefined): PortfolioPhoto | null {
+  const asset = id ? assets.find((item) => item.id === id) : undefined;
+  return asset ? { url: asset.public_url_or_resolvable_key, alt: asset.alt_text ?? '' } : null;
+}
+
+/** About photos are stored on the part itself (settings.photo) by set_portfolio_photo. */
+function settingsPhoto(settings: unknown): PortfolioPhoto | null {
+  const photo = (settings as { photo?: { url?: unknown; alt?: unknown } } | null)?.photo;
+  return photo && typeof photo.url === 'string'
+    ? { url: photo.url, alt: typeof photo.alt === 'string' ? photo.alt : '' }
+    : null;
+}
 
 /** Mirrors private.unedited_sample_fields: equal to the example value and not empty. */
 function exampleFieldsOf(row: ItemRow): EntryField[] {
@@ -33,7 +49,7 @@ function exampleFieldsOf(row: ItemRow): EntryField[] {
     .filter((field): field is EntryField => Boolean(field));
 }
 
-function toEntry(row: ItemRow): PortfolioEntry {
+function toEntry(row: ItemRow, assets: AssetRow[] = []): PortfolioEntry {
   return {
     id: row.id,
     type: row.item_type,
@@ -49,12 +65,30 @@ function toEntry(row: ItemRow): PortfolioEntry {
     isCurrent: row.is_current,
     tags: row.tags ?? [],
     hidden: row.status === 'HIDDEN',
+    cover: photoOf(assets, row.cover_asset_id),
     exampleFields: exampleFieldsOf(row),
   };
 }
 
 const itemColumns =
-  'id,item_type,title,subtitle,summary,role,outcome,link_url,source_url,starts_on,ends_on,is_current,tags,status,sample_content';
+  'id,item_type,title,subtitle,summary,role,outcome,link_url,source_url,starts_on,ends_on,is_current,tags,status,sample_content,cover_asset_id';
+
+async function loadAssets(
+  supabase: Awaited<ReturnType<typeof requirePortfolioWorkspace>>['supabase'],
+  tenantId: string,
+  ids: Array<string | null | undefined>,
+) {
+  const wanted = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  if (!wanted.length) return [];
+  const { data, error } = await supabase
+    .from('media_assets')
+    .select('id,public_url_or_resolvable_key,alt_text')
+    .eq('tenant_id', tenantId)
+    .in('id', wanted)
+    .returns<AssetRow[]>();
+  if (error) throw new Error('Your photos could not be loaded.');
+  return data ?? [];
+}
 
 /** Homepage parts and every entry, loaded together in one authorized operation. */
 export async function getPortfolioBuilder(slug: string) {
@@ -70,7 +104,7 @@ export async function getPortfolioBuilder(slug: string) {
   const [blocks, items, business] = await Promise.all([
     workspace.supabase
       .from('content_blocks')
-      .select('block_key,block_type,variant,is_enabled,content,sample_fields')
+      .select('block_key,block_type,variant,is_enabled,content,settings,sample_fields')
       .eq('tenant_id', tenantId)
       .eq('page_id', page.data.id)
       .order('sort_order'),
@@ -83,13 +117,18 @@ export async function getPortfolioBuilder(slug: string) {
       .returns<ItemRow[]>(),
     workspace.supabase
       .from('tenant_business_settings')
-      .select('contact_email')
+      .select('contact_email,hero_asset_id')
       .eq('tenant_id', tenantId)
       .single(),
   ]);
   if (blocks.error || items.error || business.error) {
     throw new Error('Your portfolio could not be loaded.');
   }
+  const itemRows = items.data ?? [];
+  const assets = await loadAssets(workspace.supabase, tenantId, [
+    business.data.hero_asset_id,
+    ...itemRows.map((row) => row.cover_asset_id),
+  ]);
   const parts: PortfolioPart[] = (blocks.data ?? []).map((block) => ({
     key: block.block_key,
     type: block.block_type,
@@ -97,11 +136,15 @@ export async function getPortfolioBuilder(slug: string) {
     enabled: block.is_enabled,
     content: (block.content ?? {}) as Record<string, unknown>,
     exampleFields: block.sample_fields ?? [],
+    photo:
+      block.block_type === 'hero'
+        ? photoOf(assets, business.data.hero_asset_id)
+        : settingsPhoto(block.settings),
   }));
   return {
     workspace,
     parts,
-    entries: (items.data ?? []).map(toEntry),
+    entries: itemRows.map((row) => toEntry(row, assets)),
     contactEmail: business.data.contact_email as string,
   };
 }
@@ -117,5 +160,7 @@ export async function getPortfolioEntry(slug: string, id: string) {
     .eq('id', id)
     .maybeSingle<ItemRow>();
   if (error) throw new Error('This entry could not be loaded.');
-  return data ? toEntry(data) : null;
+  if (!data) return null;
+  const assets = await loadAssets(workspace.supabase, workspace.tenant.id, [data.cover_asset_id]);
+  return toEntry(data, assets);
 }

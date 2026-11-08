@@ -35,7 +35,11 @@ export type PortfolioPart = {
   enabled: boolean;
   content: Record<string, unknown>;
   exampleFields: string[];
+  /** The opening image (hero) or the part's own photo (About). */
+  photo: PortfolioPhoto | null;
 };
+
+export type PortfolioPhoto = { url: string; alt: string };
 
 /** One portfolio entry as the builder edits it. */
 export type PortfolioEntry = {
@@ -53,6 +57,7 @@ export type PortfolioEntry = {
   isCurrent: boolean;
   tags: string[];
   hidden: boolean;
+  cover: PortfolioPhoto | null;
   /** Form fields that still hold the template's example value. */
   exampleFields: import('./entries').EntryField[];
 };

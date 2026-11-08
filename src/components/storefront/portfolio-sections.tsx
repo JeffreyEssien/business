@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cloudinaryImage, cloudinarySrcSet } from '@/lib/cloudinary/delivery';
 import type { SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { partEntryType } from '@/modules/portfolio/entries';
 import type { PublishedPortfolioEntry } from '@/modules/portfolio/types';
@@ -70,19 +71,34 @@ function SectionShell({
 function ProjectCard({
   entry,
   large = false,
+  keepShape = false,
 }: {
   entry: PublishedPortfolioEntry;
   large?: boolean;
+  keepShape?: boolean;
 }) {
+  // Masonry keeps each picture's own shape; large cards use a wide crop, others 4:3.
+  // Fixed crops centre on the subject automatically (Cloudinary g_auto).
+  const coverAspect = large ? 16 / 9 : 4 / 3;
   return (
     <article className={`${styles.project} ${large ? styles.projectLarge : ''}`}>
       {entry.cover && (
         // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
         <img
-          className={styles.projectCover}
-          src={entry.cover.url}
+          className={`${styles.projectCover} ${keepShape ? styles.projectCoverNatural : ''}`}
+          src={cloudinaryImage(entry.cover.url, {
+            width: 900,
+            aspect: keepShape ? undefined : coverAspect,
+          })}
+          srcSet={cloudinarySrcSet(
+            entry.cover.url,
+            [480, 900, 1400],
+            keepShape ? undefined : coverAspect,
+          )}
+          sizes={large ? '(min-width: 1120px) 1120px, 100vw' : '(min-width: 760px) 33vw, 100vw'}
           alt={entry.cover.alt ?? ''}
           loading="lazy"
+          decoding="async"
         />
       )}
       <div className={styles.projectBody}>
@@ -168,7 +184,12 @@ function Projects({
     <SectionShell section={section} wide>
       <div className={layout}>
         {entries.map((entry) => (
-          <ProjectCard entry={entry} large={section.variant === 'featured'} key={entry.id} />
+          <ProjectCard
+            entry={entry}
+            large={section.variant === 'featured'}
+            keepShape={section.variant === 'masonry'}
+            key={entry.id}
+          />
         ))}
       </div>
     </SectionShell>
@@ -303,6 +324,8 @@ export function renderPortfolioSection(
     return <Timeline section={section} entries={entries} key={section.key} />;
   }
   if (section.type === 'about') {
+    const photo = (section.settings as { photo?: { url?: string; alt?: string | null } }).photo;
+    const showPhoto = Boolean(photo?.url) && section.variant !== 'text';
     return (
       <section
         className={styles.section}
@@ -311,11 +334,37 @@ export function renderPortfolioSection(
         data-look={section.variant}
         key={section.key}
       >
-        <div className={styles.about}>
-          <h2 id={`${section.key}-title`}>{text(section, 'heading')}</h2>
-          <div className={styles.prose}>
-            <Paragraphs value={text(section, 'body')} />
-          </div>
+        <div
+          className={showPhoto ? styles.aboutWithPhoto : styles.about}
+          data-look={section.variant}
+        >
+          {showPhoto && photo?.url && (
+            // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
+            <img
+              className={styles.aboutPhoto}
+              src={cloudinaryImage(photo.url, { width: 800, aspect: 4 / 5 })}
+              srcSet={cloudinarySrcSet(photo.url, [400, 800, 1200], 4 / 5)}
+              sizes="(min-width: 760px) 40vw, 100vw"
+              alt={photo.alt ?? ''}
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          {showPhoto ? (
+            <div className={styles.aboutText}>
+              <h2 id={`${section.key}-title`}>{text(section, 'heading')}</h2>
+              <div className={styles.prose}>
+                <Paragraphs value={text(section, 'body')} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <h2 id={`${section.key}-title`}>{text(section, 'heading')}</h2>
+              <div className={styles.prose}>
+                <Paragraphs value={text(section, 'body')} />
+              </div>
+            </>
+          )}
         </div>
       </section>
     );

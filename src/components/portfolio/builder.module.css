@@ -460,3 +460,109 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Photo picker: a preview frame beside a large, labelled button. */
+.photoField {
+  display: grid;
+  gap: 12px;
+}
+
+.photoLabel {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.photoRow {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.photoFrame {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-medium);
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.photoFrame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoControls {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+/* The real file input stays focusable and announced; its label is the visible button. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.fileInput:focus-visible + .photoHint,
+.photoControls:has(.fileInput:focus-visible) > label:first-child {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.photoHint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.photoProblem {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.photoAlt {
+  display: grid;
+  gap: 8px;
+}
+
+.photoAlt label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.photoAlt input {
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  font: inherit;
+}
+
+.photoAlt input:focus {
+  border-color: var(--primary);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .photoRow {
+    grid-template-columns: 1fr;
+  }
+
+  .photoFrame {
+    max-width: 260px;
+  }
+}

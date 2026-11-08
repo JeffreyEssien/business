@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { entryCopy, isEntryType, type EntryType } from './entries';
 import { requirePortfolioWorkspace } from './guards';
+import { applyPhoto, readPhoto, releaseReplaced, type PhotoSlot } from './photos';
 
 export type BuilderActionState = { error: string };
 
@@ -84,8 +85,11 @@ export async function saveEntry(
   if (!workspace) return noPermission;
   const title = read(form, 'title');
   if (!title) return { error: `Give this ${entryCopy[entryType].singular} a name first.` };
+  // Only projects have a cover photo; check it before saving anything.
+  const photo = entryType === 'PROJECT' ? readPhoto(form, 'cover') : null;
+  if (photo && 'error' in photo) return photo;
   const isCurrent = form.get('isCurrent') === 'on';
-  const { error } = await workspace.supabase.rpc('save_portfolio_item', {
+  const { data: savedId, error } = await workspace.supabase.rpc('save_portfolio_item', {
     target_tenant: workspace.tenant.id,
     target_item: entryId,
     payload: {
@@ -105,6 +109,19 @@ export async function saveEntry(
     },
   });
   if (error) return builderError(error.code, error.message);
+  if (photo && typeof savedId === 'string') {
+    const photoError = await applyPhoto(
+      workspace.supabase,
+      workspace.tenant.id,
+      'cover',
+      savedId,
+      photo,
+    );
+    if (photoError) {
+      refresh(slug);
+      return { error: `Your words were saved. ${photoError}` };
+    }
+  }
   refresh(slug);
   redirect(entriesPath(slug, entryType, 'saved'));
 }
@@ -112,10 +129,11 @@ export async function saveEntry(
 export async function deleteEntry(slug: string, entryId: string, entryType: EntryType) {
   const workspace = await editableWorkspace(slug);
   if (!workspace) redirect(entriesPath(slug, entryType, 'not-allowed'));
-  const { error } = await workspace.supabase.rpc('delete_portfolio_item', {
+  const { data: released, error } = await workspace.supabase.rpc('delete_portfolio_item', {
     target_tenant: workspace.tenant.id,
     target_item: entryId,
   });
+  if (!error) await releaseReplaced(released);
   refresh(slug);
   redirect(entriesPath(slug, entryType, error ? 'not-deleted' : 'deleted'));
 }
@@ -164,6 +182,11 @@ export async function savePart(
   if (partType === 'hero' && !read(form, 'headline')) {
     return { error: 'Add your name or a main heading first.' };
   }
+  // The opening part and About parts can carry a photo; check it before saving anything.
+  const photoSlot: PhotoSlot | null =
+    partType === 'hero' ? 'hero' : partType === 'about' ? 'about' : null;
+  const photo = photoSlot ? readPhoto(form, 'photo') : null;
+  if (photo && 'error' in photo) return photo;
   const { error } = await workspace.supabase.rpc('save_portfolio_section', {
     target_tenant: workspace.tenant.id,
     target_key: partKey,
@@ -172,6 +195,19 @@ export async function savePart(
     section_visible: form.get('visible') === 'on',
   });
   if (error) return builderError(error.code, error.message);
+  if (photo && photoSlot) {
+    const photoError = await applyPhoto(
+      workspace.supabase,
+      workspace.tenant.id,
+      photoSlot,
+      partKey,
+      photo,
+    );
+    if (photoError) {
+      refresh(slug);
+      return { error: `Your words were saved. ${photoError}` };
+    }
+  }
   refresh(slug);
   redirect(`/t/${slug}/design?notice=part-saved`);
 }
@@ -191,10 +227,11 @@ export async function addPart(slug: string, partType: string) {
 export async function removePart(slug: string, partKey: string) {
   const workspace = await editableWorkspace(slug);
   if (!workspace) redirect(`/t/${slug}/design?notice=not-allowed`);
-  const { error } = await workspace.supabase.rpc('remove_portfolio_section', {
+  const { data: released, error } = await workspace.supabase.rpc('remove_portfolio_section', {
     target_tenant: workspace.tenant.id,
     target_key: partKey,
   });
+  if (!error) await releaseReplaced(released);
   refresh(slug);
   redirect(`/t/${slug}/design?notice=${error ? 'not-removed' : 'part-removed'}`);
 }

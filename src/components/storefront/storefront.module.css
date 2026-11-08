@@ -257,7 +257,9 @@
 .hero.image-overlay {
   position: relative;
   isolation: isolate;
-  color: var(--store-background);
+  /* Text over a photo is always white on a dark scrim, whatever the theme. Deriving it
+     from theme colours made light-on-light text on dark themes. */
+  color: #ffffff;
 }
 .hero.image-overlay .heroImage {
   position: absolute;
@@ -271,7 +273,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: color-mix(in srgb, var(--store-text) 55%, transparent);
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.42));
 }
 .hero.image-overlay p {
   color: inherit;

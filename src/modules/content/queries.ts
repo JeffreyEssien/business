@@ -140,13 +140,26 @@ export async function getSiteEditor(
     const { data: items, error: itemError } = await workspace.supabase
       .from('portfolio_items')
       .select(
-        'id,item_type,title,subtitle,summary,body,role,outcome,link_url,source_url,starts_on,ends_on,is_current,tags',
+        'id,item_type,title,subtitle,summary,body,role,outcome,link_url,source_url,starts_on,ends_on,is_current,tags,cover_asset_id',
       )
       .eq('tenant_id', tenantId)
       .eq('status', 'ACTIVE')
       .order('item_type')
       .order('sort_order');
     if (itemError) throw new Error('Portfolio entries could not be loaded.');
+    const coverIds = [...new Set((items ?? []).map((item) => item.cover_asset_id).filter(Boolean))];
+    const { data: covers, error: coverError } = coverIds.length
+      ? await workspace.supabase
+          .from('media_assets')
+          .select('id,public_url_or_resolvable_key,alt_text')
+          .eq('tenant_id', tenantId)
+          .in('id', coverIds)
+      : { data: [], error: null };
+    if (coverError) throw new Error('Portfolio photos could not be loaded.');
+    const coverOf = (id: string | null) => {
+      const asset = (covers ?? []).find((item) => item.id === id);
+      return asset ? { url: asset.public_url_or_resolvable_key, alt: asset.alt_text } : null;
+    };
     configuration.portfolioItems = (items ?? []).map((item) => ({
       id: item.id,
       type: item.item_type,
@@ -162,7 +175,7 @@ export async function getSiteEditor(
       endsOn: item.ends_on,
       isCurrent: item.is_current,
       tags: item.tags ?? [],
-      cover: null,
+      cover: coverOf(item.cover_asset_id),
     }));
   }
   const storefront = productResult.data as { products?: PublicProduct[] } | null;

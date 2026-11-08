@@ -128,8 +128,11 @@ export const partLooks: Record<string, Array<{ value: string; label: string }>> 
     { value: 'split', label: 'Text beside a picture' },
     { value: 'image-overlay', label: 'Text over a big picture' },
   ],
-  // Photo layouts arrive with photo uploads; until then only the text layout is offered.
-  about: [{ value: 'text', label: 'Text only' }],
+  about: [
+    { value: 'text', label: 'Text only' },
+    { value: 'photo-left', label: 'Photo on the left' },
+    { value: 'photo-right', label: 'Photo on the right' },
+  ],
   projects: [
     { value: 'grid', label: 'Cards in a grid' },
     { value: 'featured', label: 'Large, one after another' },

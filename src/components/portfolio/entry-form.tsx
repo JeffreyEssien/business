@@ -13,6 +13,7 @@ import { saveEntry, type BuilderActionState } from '@/modules/portfolio/actions'
 import { entryCopy, type EntryField, type EntryType } from '@/modules/portfolio/entries';
 import type { PortfolioEntry } from '@/modules/portfolio/types';
 import { ExampleBadge } from './example-badge';
+import { PhotoField } from './photo-field';
 import styles from './builder.module.css';
 
 const initialState: BuilderActionState = { error: '' };
@@ -80,6 +81,14 @@ export function EntryForm({
         {text('summary', true)}
         {has('role') && text('role', true)}
         {has('outcome') && text('outcome')}
+        {type === 'PROJECT' && (
+          <PhotoField
+            prefix="cover"
+            label="Cover picture (optional)"
+            hint="A screenshot, photo, or design that shows this project at a glance."
+            photo={entry?.cover ?? null}
+          />
+        )}
         {has('tags') && (
           <TextField
             name="tags"

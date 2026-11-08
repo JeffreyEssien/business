@@ -510,3 +510,51 @@
     background: none;
   }
 }
+
+/* Photos */
+.projectLarge .projectCover {
+  aspect-ratio: 16 / 9;
+}
+
+.projectCoverNatural {
+  aspect-ratio: auto;
+  height: auto;
+}
+
+.aboutWithPhoto {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: clamp(28px, 5vw, 64px);
+}
+
+.aboutWithPhoto[data-look='photo-right'] .aboutPhoto {
+  order: 2;
+}
+
+.aboutText {
+  display: grid;
+  gap: 20px;
+}
+
+.aboutPhoto {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--store-media-radius);
+}
+
+@media (max-width: 760px) {
+  .aboutWithPhoto {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutWithPhoto[data-look='photo-right'] .aboutPhoto {
+    order: 0;
+  }
+
+  .aboutPhoto {
+    max-width: 420px;
+  }
+}
