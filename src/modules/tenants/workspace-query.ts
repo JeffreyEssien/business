@@ -1,9 +1,13 @@
 import 'server-only';
+import { cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-/** Tenant resolution and membership authorization run before any workspace is rendered. */
-export async function getTenantWorkspace(slug: string) {
+/**
+ * Tenant resolution and membership authorization run before any workspace is rendered.
+ * Request-scoped caching lets layouts and pages share one authorization round trip.
+ */
+export const getTenantWorkspace = cache(async function getTenantWorkspace(slug: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,7 +22,7 @@ export async function getTenantWorkspace(slug: string) {
   if (!profile || profile.status !== 'ACTIVE') notFound();
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id,name,status,template_key,plan_id')
+    .select('id,name,status,template_key,plan_id,site_kind')
     .eq('slug', slug)
     .maybeSingle();
   if (tenantError) throw new Error('Workspace could not be loaded.');
@@ -40,4 +44,4 @@ export async function getTenantWorkspace(slug: string) {
   if (setupError) throw new Error('Onboarding could not be loaded.');
 
   return { tenant, setup, membership, supabase };
-}
+});

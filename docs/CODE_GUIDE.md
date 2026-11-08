@@ -215,6 +215,19 @@ Application website styles are real storefront personality profiles stored in `t
 6. Numeric limits distinguish zero from JSON null (unlimited). Every quota-sensitive growth mutation must serialize its usage check with a tenant-and-feature transaction lock and enforce the effective value in the database.
 7. Quota downgrades are non-destructive: preserve existing customer data, block new creation or reactivation while usage is at or above the allowance, and explain how to reduce usage or upgrade. Product creation/restoration and owner invitation acceptance currently follow this rule; future staff invitation and reactivation mutations must use the same `staff_limit` authority.
 
+## Follow a portfolio site (ADR 004)
+
+1. `tenants.site_kind` (`STORE` or `PORTFOLIO`) is set once by provisioning and is immutable. `modules/portfolio/types.ts` is its TypeScript shape; normalize database values with `siteKindOf`, never by comparing raw strings ad hoc.
+2. Super Admin chooses the website type on `/businesses/new`. `modules/tenants/actions.ts` calls `provision_portfolio_tenant` for portfolios (free `portfolio` plan, template theme and sections, `portfolio_sites` check) and the unchanged `provision_tenant` for stores. Both delegate to `private.provision_tenant_core`.
+3. Templates are rows in `public.site_templates`; `modules/portfolio/queries.ts` lists the active portfolio ones. Add or retire a template with a data migration, not a code constant.
+4. Store-only screens are hidden by `siteKinds` on the tenant navigation groups and return 404 through `requireStoreWorkspace` / `requirePublicStore` layouts. The database is the real boundary: commerce inserts and store-only section types are rejected by triggers for portfolios.
+5. Published snapshots carry `siteKind`. `StorefrontRenderer` dispatches portfolio sections to `components/storefront/portfolio-sections.tsx`; entry-backed sections (`entryBackedSectionTypes`) render only once they have entries.
+6. Never call `save_site_draft` for a portfolio: it writes store-only sections. Portfolios use `save_portfolio_section`, `add_portfolio_section`, and `remove_portfolio_section`.
+7. Owner wording lives in one place: `modules/portfolio/entries.ts` (entry types, field labels and hints, part looks) and `modules/portfolio/sections.ts` (part names). Never show database words such as "section", "variant", or "slug" in the builder.
+8. Entries: `/t/{slug}/portfolio` lists by type, `components/portfolio/entry-form.tsx` edits any type, and `modules/portfolio/actions.ts` normalizes links (`https://` added), months, and comma lists before calling `save_portfolio_item`.
+9. Example content: never clear `sample_fields` or `is_sample` from the app. Triggers derive them from `sample_content`. `describeRemainingExamples` turns a refused publish into links to each field.
+10. Template styles: add a style by adding a `pf-*` block in `storefront.module.css` (page frame) and `portfolio-sections.module.css` (parts), plus its fonts in `portfolio-fonts.ts`. Keep at most two font files per style.
+
 ## Follow a plan pricing change
 
 1. `app/(platform)/billing/plans/page.tsx` authorizes the Super Admin and composes the pricing screen. Plan _pricing_ (price, cycle, visibility) lives here; plan _feature values_ stay on `/features`. These are two canonical surfaces over one `plans` table — do not duplicate price editing into the feature matrix.

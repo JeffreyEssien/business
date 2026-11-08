@@ -6,6 +6,8 @@ import type { PublicProduct } from '@/modules/catalog/types';
 import { defaultWebsiteStyle, isWebsiteStyleKey, themePresets } from '@/modules/content/presets';
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { SkipLink } from '@/components/ui/skip-link';
+import { portfolioFontVariables } from './portfolio-fonts';
+import { renderPortfolioSection } from './portfolio-sections';
 import { StoreNavigation } from './store-navigation';
 import { StructuredData } from './structured-data';
 import styles from './storefront.module.css';
@@ -104,6 +106,23 @@ function storefrontStyle(configuration: SiteConfiguration) {
   } as CSSProperties;
 }
 
+/**
+ * Attributes shared by every public page root. Portfolios add their template style and
+ * the font variables it may use; stores are unchanged.
+ */
+function storefrontRootProps(configuration: SiteConfiguration) {
+  const portfolio = configuration.siteKind === 'PORTFOLIO';
+  const templateStyle = configuration.theme.tokens.templateStyle;
+  return {
+    className: portfolio ? `${styles.storefront} ${portfolioFontVariables}` : styles.storefront,
+    style: storefrontStyle(configuration),
+    'data-preset': configuration.theme.presetKey,
+    'data-style': storefrontPersonality(configuration),
+    'data-template-style':
+      portfolio && templateStyle && /^pf-[a-z-]+$/.test(templateStyle) ? templateStyle : undefined,
+  };
+}
+
 function StoreHeader({ slug, configuration }: { slug: string; configuration: SiteConfiguration }) {
   const headerLinks = configuration.navigation.filter(
     (item) => item.enabled && item.location === 'HEADER',
@@ -113,6 +132,7 @@ function StoreHeader({ slug, configuration }: { slug: string; configuration: Sit
       slug={slug}
       businessName={configuration.business.name}
       logo={configuration.business.logo}
+      showCart={configuration.siteKind !== 'PORTFOLIO'}
       links={headerLinks.map((item) => ({
         label: item.label,
         href: publicStoreHref(slug, item.target),
@@ -148,12 +168,7 @@ export function StorefrontShell({
   children: ReactNode;
 }) {
   return (
-    <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
-    >
+    <div {...storefrontRootProps(configuration)}>
       <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       {children}
@@ -162,7 +177,16 @@ export function StorefrontShell({
   );
 }
 
-function StoreFooter({ slug, configuration }: { slug: string; configuration: SiteConfiguration }) {
+function StoreFooter({
+  slug,
+  configuration,
+  showContact = true,
+}: {
+  slug: string;
+  configuration: SiteConfiguration;
+  /** False when the page already shows a contact section, to avoid repeating it. */
+  showContact?: boolean;
+}) {
   const socialLinks = [
     ['Instagram', configuration.business.instagram, 'https://instagram.com/'],
     ['Facebook', configuration.business.facebook, 'https://facebook.com/'],
@@ -180,14 +204,14 @@ function StoreFooter({ slug, configuration }: { slug: string; configuration: Sit
         <p>{configuration.business.description}</p>
       </div>
       <div className={styles.contactLinks}>
-        {configuration.business.address && <p>{configuration.business.address}</p>}
-        {configuration.business.phone && <p>{configuration.business.phone}</p>}
-        {configuration.business.contactEmail && (
+        {showContact && configuration.business.address && <p>{configuration.business.address}</p>}
+        {showContact && configuration.business.phone && <p>{configuration.business.phone}</p>}
+        {showContact && configuration.business.contactEmail && (
           <a href={`mailto:${configuration.business.contactEmail}`}>
             {configuration.business.contactEmail}
           </a>
         )}
-        {configuration.business.whatsapp && (
+        {showContact && configuration.business.whatsapp && (
           <a
             href={`https://wa.me/${configuration.business.whatsapp.replace(/\D/g, '')}`}
             target="_blank"
@@ -230,28 +254,44 @@ export function StorefrontRenderer({
   products: PublicProduct[];
   preview?: boolean;
 }) {
+  const isPortfolio = configuration.siteKind === 'PORTFOLIO';
   return (
     <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
+      {...storefrontRootProps(configuration)}
+      data-site-kind={isPortfolio ? 'portfolio' : 'store'}
     >
       <SkipLink className={styles.skipLink} href="#store-main" />
       <StructuredData
-        value={{
-          '@context': 'https://schema.org',
-          '@type': 'Organization',
-          name: configuration.business.name,
-          description: configuration.business.description || undefined,
-          telephone: configuration.business.phone || undefined,
-          address: configuration.business.address || undefined,
-          logo: configuration.business.logo?.url,
-        }}
+        value={
+          isPortfolio
+            ? {
+                '@context': 'https://schema.org',
+                '@type': 'ProfilePage',
+                name: configuration.business.name,
+                description: configuration.business.description || undefined,
+                mainEntity: {
+                  '@type': 'Person',
+                  name: configuration.business.name,
+                  email: configuration.business.contactEmail || undefined,
+                  image: configuration.business.logo?.url,
+                },
+              }
+            : {
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: configuration.business.name,
+                description: configuration.business.description || undefined,
+                telephone: configuration.business.phone || undefined,
+                address: configuration.business.address || undefined,
+                logo: configuration.business.logo?.url,
+              }
+        }
       />
       {preview && (
         <div className={styles.previewBanner}>
-          Preview of saved changes — customers cannot see these changes yet
+          {isPortfolio
+            ? 'Preview — visitors cannot see this yet. Example text must be replaced before your portfolio goes live.'
+            : 'Preview of saved changes — customers cannot see these changes yet'}
         </div>
       )}
       <StoreHeader slug={slug} configuration={configuration} />
@@ -259,6 +299,10 @@ export function StorefrontRenderer({
         {configuration.sections
           .filter((section) => section.enabled)
           .map((section) => {
+            if (isPortfolio) {
+              const portfolioSection = renderPortfolioSection(section, configuration);
+              if (portfolioSection !== undefined) return portfolioSection;
+            }
             if (section.type === 'announcement') {
               return (
                 <aside className={styles.announcement} key={section.key}>
@@ -298,7 +342,7 @@ export function StorefrontRenderer({
                 </section>
               );
             }
-            if (section.type === 'products') {
+            if (section.type === 'products' && !isPortfolio) {
               return (
                 <section className={styles.products} id="products" key={section.key}>
                   <h2>{contentText(section, 'heading')}</h2>
@@ -327,7 +371,16 @@ export function StorefrontRenderer({
             return null;
           })}
       </main>
-      <StoreFooter slug={slug} configuration={configuration} />
+      <StoreFooter
+        slug={slug}
+        configuration={configuration}
+        showContact={
+          !(
+            isPortfolio &&
+            configuration.sections.some((section) => section.enabled && section.type === 'contact')
+          )
+        }
+      />
     </div>
   );
 }
@@ -342,12 +395,7 @@ export function StorefrontContentPage({
   page: PublishedContentPage;
 }) {
   return (
-    <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
-    >
+    <div {...storefrontRootProps(configuration)}>
       <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       <main id="store-main" className={styles.informationPage}>
@@ -383,12 +431,7 @@ export function StorefrontCategoryPage({
   emptyDescription?: string;
 }) {
   return (
-    <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
-    >
+    <div {...storefrontRootProps(configuration)}>
       <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       {beforeContent}

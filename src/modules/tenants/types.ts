@@ -5,6 +5,7 @@ export type Business = {
   slug: string;
   status: string;
   template_key: string;
+  site_kind: import('@/modules/portfolio/types').SiteKind;
   created_at: string;
   plans: { name: string } | null;
 };

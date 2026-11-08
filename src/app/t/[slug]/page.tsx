@@ -9,6 +9,8 @@ import { Panel } from '@/components/ui/panel';
 import { Checklist } from '@/components/ui/checklist';
 import { ButtonLink } from '@/components/ui/button';
 import { StatCard } from '@/components/ui/stat-card';
+import { siteKindOf } from '@/modules/portfolio/types';
+import { getPortfolioBuilder } from '@/modules/portfolio/builder-queries';
 export const metadata = { title: 'Business workspace' };
 export default async function TenantWorkspacePage({
   params,
@@ -28,6 +30,36 @@ export default async function TenantWorkspacePage({
       </AuthLayout>
     );
   }
+  const siteKind = siteKindOf(tenant.site_kind);
+  if (siteKind === 'PORTFOLIO') {
+    // Counts what the publish lock would refuse: visible parts and entries with examples.
+    const { parts, entries } = await getPortfolioBuilder(slug);
+    const examplesLeft =
+      parts.filter((part) => part.enabled && part.exampleFields.length).length +
+      entries.filter((entry) => !entry.hidden && entry.exampleFields.length).length;
+    return (
+      <main className="tenant-home">
+        <PageHeader
+          eyebrow="YOUR PORTFOLIO WORKSPACE"
+          title="Welcome to your next chapter."
+          description={`Your account is connected to ${tenant.name}. Let’s get your portfolio ready.`}
+        />
+        <Panel title="Your launch checklist">
+          <Checklist items={onboardingChecklist(setup, siteKind, examplesLeft)} />
+        </Panel>
+        <p>
+          <ButtonLink href={`/t/${slug}/design`}>Edit your page</ButtonLink>{' '}
+          <ButtonLink href={`/t/${slug}/portfolio`} variant="secondary">
+            Work &amp; experience
+          </ButtonLink>{' '}
+          <ButtonLink href={`/t/${slug}/marketing/search`} variant="secondary">
+            Search appearance
+          </ButtonLink>
+        </p>
+      </main>
+    );
+  }
+  // Store dashboard only: portfolios returned above and never run commerce queries.
   const dashboard = await getTenantDashboard(workspace);
   const checklist = onboardingChecklist(setup);
   const launched = checklist.every((item) => item.complete);
