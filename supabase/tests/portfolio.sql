@@ -351,3 +351,35 @@ begin
   end if;
 end $$;
 reset role;
+
+-- Guided start: answers saved together; email required; WhatsApp optional and checked.
+select set_config('request.jwt.claim.sub', (select id::text from portfolio_fixture where k = 'owner'), true);
+set local role authenticated;
+do $$
+declare portfolio uuid := (select id from portfolio_fixture where k = 'portfolio');
+declare look jsonb := '{"background":"#ffffff","text":"#1d2733","primary":"#1f3a64","accent":"#9a6416","secondary":"#5b6b82"}';
+begin
+  if (select portfolio_setup_completed from public.tenant_onboarding where tenant_id = portfolio) then
+    raise exception 'Guided start was marked done before it ran';
+  end if;
+  begin
+    perform public.complete_portfolio_setup(portfolio, jsonb_build_object(
+      'name', 'Ada Lovelace', 'role', 'Engineer', 'email', 'not-an-email', 'style', 'pf-one-page', 'palette', look));
+    raise exception 'Invalid email accepted';
+  exception when invalid_parameter_value then null; end;
+  begin
+    perform public.complete_portfolio_setup(portfolio, jsonb_build_object(
+      'name', 'Ada Lovelace', 'email', 'ada@example.org', 'whatsapp', 'call me', 'style', 'pf-one-page', 'palette', look));
+    raise exception 'Invalid WhatsApp number accepted';
+  exception when invalid_parameter_value then null; end;
+  perform public.complete_portfolio_setup(portfolio, jsonb_build_object(
+    'name', 'Ada Lovelace', 'role', 'Backend engineer', 'email', 'Ada@Example.org', 'whatsapp', '',
+    'style', 'pf-one-page', 'palette', look));
+  if (select contact_email from public.tenant_business_settings where tenant_id = portfolio) <> 'ada@example.org'
+    or (select content ->> 'eyebrow' from public.content_blocks where tenant_id = portfolio and block_type = 'hero') <> 'Backend engineer'
+    or (select tokens ->> 'templateStyle' from public.tenant_theme_settings where tenant_id = portfolio) <> 'pf-one-page'
+    or not (select portfolio_setup_completed from public.tenant_onboarding where tenant_id = portfolio) then
+    raise exception 'Guided start answers were not all saved';
+  end if;
+end $$;
+reset role;

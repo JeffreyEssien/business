@@ -7,6 +7,9 @@ const notices: Record<string, { text: string; warning?: boolean }> = {
   deleted: { text: 'Deleted.' },
   moved: { text: 'New order saved.' },
   added: { text: 'New part added. Fill it in below, then press Save.' },
+  'setup-done': {
+    text: 'Your page is ready. Replace the example text marked in yellow, then make it live.',
+  },
   'look-saved': {
     text: 'New look saved. Visitors will see it after you make your portfolio live.',
   },

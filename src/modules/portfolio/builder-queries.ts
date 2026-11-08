@@ -117,7 +117,7 @@ export async function getPortfolioBuilder(slug: string) {
       .returns<ItemRow[]>(),
     workspace.supabase
       .from('tenant_business_settings')
-      .select('contact_email,hero_asset_id')
+      .select('contact_email,whatsapp,business_name,hero_asset_id')
       .eq('tenant_id', tenantId)
       .single(),
   ]);
@@ -146,6 +146,8 @@ export async function getPortfolioBuilder(slug: string) {
     parts,
     entries: itemRows.map((row) => toEntry(row, assets)),
     contactEmail: business.data.contact_email as string,
+    whatsapp: (business.data.whatsapp as string | null) ?? '',
+    displayName: business.data.business_name as string,
   };
 }
 

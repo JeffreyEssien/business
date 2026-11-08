@@ -18,6 +18,8 @@ export type OnboardingProgress = {
   products_added: boolean;
   payment_configured: boolean;
   store_published: boolean;
+  /** Portfolio only: the guided start was completed or skipped. */
+  portfolio_setup_completed?: boolean;
   application_product_readiness: '' | 'READY' | 'NOT_YET' | 'SERVICES';
   expected_product_range: '' | '1_10' | '11_50' | '51_100' | 'OVER_100';
   suggested_categories: string[];

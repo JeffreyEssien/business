@@ -238,6 +238,51 @@ export async function saveLook(
   redirect(`/t/${slug}/design?notice=look-saved`);
 }
 
+export async function completeSetup(
+  slug: string,
+  _state: BuilderActionState,
+  form: FormData,
+): Promise<BuilderActionState> {
+  const workspace = await editableWorkspace(slug);
+  if (!workspace) return noPermission;
+  if (!read(form, 'name')) return { error: 'Add your name, or your studio’s name.' };
+  let palette: unknown;
+  try {
+    palette = JSON.parse(read(form, 'palette'));
+  } catch {
+    return { error: 'Pick a look again, then press Create my page.' };
+  }
+  const { error } = await workspace.supabase.rpc('complete_portfolio_setup', {
+    target_tenant: workspace.tenant.id,
+    payload: {
+      name: read(form, 'name'),
+      role: read(form, 'role'),
+      email: read(form, 'email'),
+      whatsapp: read(form, 'whatsapp'),
+      style: read(form, 'style'),
+      palette,
+    },
+  });
+  if (error?.message.includes('INVALID_EMAIL')) {
+    return { error: 'That email address does not look right. Check it and try again.' };
+  }
+  if (error?.message.includes('INVALID_PHONE')) {
+    return { error: 'Add the WhatsApp number with its country code, e.g. +234 801 234 5678.' };
+  }
+  if (error) return builderError(error.code, error.message);
+  refresh(slug);
+  redirect(`/t/${slug}/design?notice=setup-done`);
+}
+
+export async function skipSetup(slug: string) {
+  const workspace = await editableWorkspace(slug);
+  if (workspace) {
+    await workspace.supabase.rpc('skip_portfolio_setup', { target_tenant: workspace.tenant.id });
+  }
+  refresh(slug);
+  redirect(`/t/${slug}`);
+}
+
 export async function addPart(slug: string, partType: string) {
   const workspace = await editableWorkspace(slug);
   if (!workspace) redirect(`/t/${slug}/design?notice=not-allowed`);
