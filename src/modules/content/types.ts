@@ -62,6 +62,8 @@ export type PublishedSeoSettings = {
 export type SiteConfiguration = {
   /** Stamped onto every published snapshot by the database; absent on older versions (STORE). */
   siteKind?: import('@/modules/portfolio/types').SiteKind;
+  /** Portfolio only: visible entries, in display order. */
+  portfolioItems?: import('@/modules/portfolio/types').PublishedPortfolioEntry[];
   business: {
     name: string;
     description: string;

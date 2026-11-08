@@ -21,3 +21,10 @@ export async function requirePublicStore(slug: string) {
   if (siteKindOf(store.tenant.siteKind) !== 'STORE') notFound();
   return store;
 }
+
+/** Portfolio builder areas do not exist for stores. */
+export async function requirePortfolioWorkspace(slug: string) {
+  const workspace = await getTenantWorkspace(slug);
+  if (siteKindOf(workspace.tenant.site_kind) !== 'PORTFOLIO') notFound();
+  return workspace;
+}

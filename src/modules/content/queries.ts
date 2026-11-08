@@ -134,6 +134,37 @@ export async function getSiteEditor(
     pages: [],
     navigation,
   };
+  // Portfolio previews show every visible entry, examples included, exactly as the
+  // published snapshot would (minus the publish lock, which only applies to going live).
+  if (configuration.siteKind === 'PORTFOLIO') {
+    const { data: items, error: itemError } = await workspace.supabase
+      .from('portfolio_items')
+      .select(
+        'id,item_type,title,subtitle,summary,body,role,outcome,link_url,source_url,starts_on,ends_on,is_current,tags',
+      )
+      .eq('tenant_id', tenantId)
+      .eq('status', 'ACTIVE')
+      .order('item_type')
+      .order('sort_order');
+    if (itemError) throw new Error('Portfolio entries could not be loaded.');
+    configuration.portfolioItems = (items ?? []).map((item) => ({
+      id: item.id,
+      type: item.item_type,
+      title: item.title,
+      subtitle: item.subtitle,
+      summary: item.summary,
+      body: item.body,
+      role: item.role,
+      outcome: item.outcome,
+      linkUrl: item.link_url,
+      sourceUrl: item.source_url,
+      startsOn: item.starts_on,
+      endsOn: item.ends_on,
+      isCurrent: item.is_current,
+      tags: item.tags ?? [],
+      cover: null,
+    }));
+  }
   const storefront = productResult.data as { products?: PublicProduct[] } | null;
   return {
     workspace,

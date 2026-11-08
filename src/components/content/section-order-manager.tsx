@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useActionState } from 'react';
 import { reorderHomepageSections, type ContentActionState } from '@/modules/content/actions';
 import type { SiteSection } from '@/modules/content/types';
@@ -62,6 +63,8 @@ export function SectionOrderManager({
   saved = false,
   language,
   audience = 'customers',
+  editHrefBase,
+  badges = {},
 }: {
   slug: string;
   sections: SiteSection[];
@@ -69,6 +72,10 @@ export function SectionOrderManager({
   /** Section names keyed by section type; defaults to the store wording keyed by key. */
   language?: Record<string, { name: string; description: string }>;
   audience?: 'customers' | 'visitors';
+  /** When set, each part links to `${editHrefBase}/${key}` to edit it. */
+  editHrefBase?: string;
+  /** Short status labels per part key, e.g. "Example text", "Hidden". */
+  badges?: Record<string, string[]>;
 }) {
   const keys = sections.map((section) => section.key);
   return (
@@ -103,10 +110,22 @@ export function SectionOrderManager({
             <li key={section.key}>
               <span className={styles.orderNumber}>{index + 1}</span>
               <div className={styles.orderCopy}>
-                <strong>{sectionName.name}</strong>
+                <strong>
+                  {sectionName.name}
+                  {(badges[section.key] ?? []).map((badge) => (
+                    <span className={styles.orderBadge} key={badge}>
+                      {badge}
+                    </span>
+                  ))}
+                </strong>
                 <p>{sectionName.description}</p>
               </div>
               <div className={styles.orderActions}>
+                {editHrefBase && (
+                  <Link className={styles.orderEdit} href={`${editHrefBase}/${section.key}`}>
+                    Edit
+                  </Link>
+                )}
                 <MoveSectionForm
                   slug={slug}
                   keys={index > 0 ? move(index - 1) : keys}

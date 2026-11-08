@@ -32,10 +32,3 @@ export const portfolioSectionLanguage: Record<string, { name: string; descriptio
     description: 'How visitors can reach you. Uses the contact details in your settings.',
   },
 };
-
-/**
- * These sections list portfolio entries (projects, roles, skills, schooling). Entries are
- * managed in the next release; until a section has published entries the public site
- * omits it rather than showing an empty heading.
- */
-export const entryBackedSectionTypes = new Set(['skills', 'projects', 'experience', 'education']);

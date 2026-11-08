@@ -279,8 +279,9 @@ export function StorefrontRenderer({
       />
       {preview && (
         <div className={styles.previewBanner}>
-          Preview of saved changes — {isPortfolio ? 'visitors' : 'customers'} cannot see these
-          changes yet
+          {isPortfolio
+            ? 'Preview — visitors cannot see this yet. Example text must be replaced before your portfolio goes live.'
+            : 'Preview of saved changes — customers cannot see these changes yet'}
         </div>
       )}
       <StoreHeader slug={slug} configuration={configuration} />

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SiteConfiguration, SiteSection } from '@/modules/content/types';
-import { entryBackedSectionTypes } from '@/modules/portfolio/sections';
+import { partEntryType } from '@/modules/portfolio/entries';
+import type { PublishedPortfolioEntry } from '@/modules/portfolio/types';
 import styles from './portfolio-sections.module.css';
 
 function text(section: SiteSection, key: string) {
@@ -17,6 +18,217 @@ function Paragraphs({ value }: { value: string }) {
     .map((paragraph, index) => <p key={index}>{paragraph}</p>);
 }
 
+function formatMonth(value: string | null) {
+  if (!value) return '';
+  return new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric' }).format(
+    new Date(`${value.slice(0, 10)}T00:00:00`),
+  );
+}
+
+function dateRange(entry: PublishedPortfolioEntry) {
+  if (!entry.startsOn) return '';
+  return `${formatMonth(entry.startsOn)} – ${entry.isCurrent ? 'Present' : formatMonth(entry.endsOn) || ''}`;
+}
+
+/** Only https links reach the snapshot (database check); external links open safely. */
+function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+      <span aria-hidden="true"> ↗</span>
+      <span className={styles.visuallyHidden}> (opens in a new tab)</span>
+    </a>
+  );
+}
+
+function SectionShell({
+  section,
+  children,
+  wide = false,
+}: {
+  section: SiteSection;
+  children: ReactNode;
+  wide?: boolean;
+}) {
+  return (
+    <section
+      className={styles.section}
+      id={section.key}
+      aria-labelledby={`${section.key}-title`}
+      data-part={section.type}
+      data-look={section.variant}
+    >
+      <header className={wide ? styles.sectionHeaderWide : styles.sectionHeader}>
+        <h2 id={`${section.key}-title`}>{text(section, 'heading')}</h2>
+        {text(section, 'intro') && <p className={styles.intro}>{text(section, 'intro')}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function ProjectCard({
+  entry,
+  large = false,
+}: {
+  entry: PublishedPortfolioEntry;
+  large?: boolean;
+}) {
+  return (
+    <article className={`${styles.project} ${large ? styles.projectLarge : ''}`}>
+      {entry.cover && (
+        // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
+        <img
+          className={styles.projectCover}
+          src={entry.cover.url}
+          alt={entry.cover.alt ?? ''}
+          loading="lazy"
+        />
+      )}
+      <div className={styles.projectBody}>
+        {entry.subtitle && <p className={styles.kicker}>{entry.subtitle}</p>}
+        <h3>{entry.title}</h3>
+        {entry.summary && <p>{entry.summary}</p>}
+        {(entry.role || entry.outcome) && (
+          <dl className={styles.facts}>
+            {entry.role && (
+              <div>
+                <dt>My role</dt>
+                <dd>{entry.role}</dd>
+              </div>
+            )}
+            {entry.outcome && (
+              <div>
+                <dt>Result</dt>
+                <dd>{entry.outcome}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+        {entry.tags.length > 0 && (
+          <ul className={styles.tags} aria-label="Tools and topics">
+            {entry.tags.map((tag) => (
+              <li key={tag}>{tag}</li>
+            ))}
+          </ul>
+        )}
+        {(entry.linkUrl || entry.sourceUrl) && (
+          <p className={styles.links}>
+            {entry.linkUrl && <ExternalLink href={entry.linkUrl}>View</ExternalLink>}
+            {entry.sourceUrl && <ExternalLink href={entry.sourceUrl}>Source</ExternalLink>}
+          </p>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function Projects({
+  section,
+  entries,
+}: {
+  section: SiteSection;
+  entries: PublishedPortfolioEntry[];
+}) {
+  if (section.variant === 'list') {
+    return (
+      <SectionShell section={section}>
+        <ol className={styles.projectList}>
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <div>
+                <h3>{entry.title}</h3>
+                {entry.summary && <p>{entry.summary}</p>}
+              </div>
+              <p className={styles.links}>
+                {entry.linkUrl && <ExternalLink href={entry.linkUrl}>View</ExternalLink>}
+                {entry.sourceUrl && <ExternalLink href={entry.sourceUrl}>Source</ExternalLink>}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </SectionShell>
+    );
+  }
+  const layout =
+    section.variant === 'featured'
+      ? styles.projectsFeatured
+      : section.variant === 'masonry'
+        ? styles.projectsMasonry
+        : styles.projectsGrid;
+  return (
+    <SectionShell section={section} wide>
+      <div className={layout}>
+        {entries.map((entry) => (
+          <ProjectCard entry={entry} large={section.variant === 'featured'} key={entry.id} />
+        ))}
+      </div>
+    </SectionShell>
+  );
+}
+
+function Timeline({
+  section,
+  entries,
+}: {
+  section: SiteSection;
+  entries: PublishedPortfolioEntry[];
+}) {
+  return (
+    <SectionShell section={section}>
+      <ol className={section.variant === 'compact' ? styles.compactList : styles.timeline}>
+        {entries.map((entry) => (
+          <li key={entry.id}>
+            <div className={styles.timelineHead}>
+              <h3>{entry.title}</h3>
+              {dateRange(entry) && <p className={styles.dates}>{dateRange(entry)}</p>}
+            </div>
+            {entry.subtitle && <p className={styles.kicker}>{entry.subtitle}</p>}
+            {entry.summary && section.variant !== 'compact' && <p>{entry.summary}</p>}
+          </li>
+        ))}
+      </ol>
+    </SectionShell>
+  );
+}
+
+function Skills({
+  section,
+  entries,
+}: {
+  section: SiteSection;
+  entries: PublishedPortfolioEntry[];
+}) {
+  if (section.variant === 'grouped') {
+    return (
+      <SectionShell section={section}>
+        <div className={styles.skillGroups}>
+          {entries.map((entry) => (
+            <div key={entry.id}>
+              <h3>{entry.title}</h3>
+              <ul className={styles.tags}>
+                {entry.tags.map((tag) => (
+                  <li key={tag}>{tag}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </SectionShell>
+    );
+  }
+  const all = [...new Set(entries.flatMap((entry) => entry.tags))];
+  return (
+    <SectionShell section={section}>
+      <ul className={`${styles.tags} ${styles.tagsLarge}`}>
+        {all.map((tag) => (
+          <li key={tag}>{tag}</li>
+        ))}
+      </ul>
+    </SectionShell>
+  );
+}
+
 function ContactSection({
   section,
   business,
@@ -24,6 +236,7 @@ function ContactSection({
   section: SiteSection;
   business: SiteConfiguration['business'];
 }) {
+  // Email first; WhatsApp only appears when the owner has added a number (owner decision).
   const whatsapp = business.whatsapp?.replace(/\D/g, '');
   const phone = business.phone?.replace(/[^\d+]/g, '');
   return (
@@ -49,7 +262,7 @@ function ContactSection({
           {whatsapp && (
             <li>
               <span>WhatsApp</span>
-              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer">
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">
                 Message on WhatsApp
               </a>
             </li>
@@ -61,22 +274,33 @@ function ContactSection({
 }
 
 /**
- * Renders a portfolio-only section, or `undefined` when the type is not a portfolio type
- * so the caller can fall through to shared sections (hero, announcement).
+ * Renders a portfolio-only section, `null` when it has nothing to show yet, or
+ * `undefined` when the type is shared (hero, announcement) so the caller handles it.
  */
 export function renderPortfolioSection(
   section: SiteSection,
   configuration: SiteConfiguration,
 ): ReactNode | undefined {
-  // Entry-backed sections list projects, roles, skills, or schooling. With no published
-  // entries they are omitted instead of showing an empty heading.
-  if (entryBackedSectionTypes.has(section.type)) return null;
+  const entryType = partEntryType[section.type];
+  if (entryType) {
+    const entries = (configuration.portfolioItems ?? []).filter(
+      (entry) => entry.type === entryType,
+    );
+    // A list part with no visible entries is omitted rather than showing an empty heading.
+    if (!entries.length) return null;
+    if (section.type === 'projects')
+      return <Projects section={section} entries={entries} key={section.key} />;
+    if (section.type === 'skills')
+      return <Skills section={section} entries={entries} key={section.key} />;
+    return <Timeline section={section} entries={entries} key={section.key} />;
+  }
   if (section.type === 'about') {
     return (
       <section
         className={styles.section}
         id={section.key}
         aria-labelledby={`${section.key}-title`}
+        data-look={section.variant}
         key={section.key}
       >
         <div className={styles.about}>

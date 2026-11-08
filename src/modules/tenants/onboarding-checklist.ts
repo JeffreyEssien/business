@@ -2,7 +2,7 @@ import type { SiteKind } from '@/modules/portfolio/types';
 import type { OnboardingProgress } from './types';
 
 /** Portfolios share the persisted onboarding flags but have no catalog or payment steps. */
-function portfolioChecklist(progress: OnboardingProgress | null) {
+function portfolioChecklist(progress: OnboardingProgress | null, examplesLeft?: number) {
   return [
     {
       label: 'Accept the owner invitation',
@@ -14,6 +14,16 @@ function portfolioChecklist(progress: OnboardingProgress | null) {
       label: 'Start from a template',
       description: 'A template set up the colours, style, and starting sections.',
       complete: progress?.theme_selected ?? false,
+    },
+    {
+      label: 'Replace the example content',
+      description:
+        examplesLeft === undefined
+          ? 'Swap the template’s example text and entries for your own.'
+          : examplesLeft === 0
+            ? 'All example text and entries have been replaced.'
+            : `${examplesLeft} example ${examplesLeft === 1 ? 'item is' : 'items are'} still on your page. Replace or remove ${examplesLeft === 1 ? 'it' : 'them'} before going live.`,
+      complete: examplesLeft === 0,
     },
     {
       label: 'Set how the portfolio appears in search',
@@ -32,8 +42,10 @@ function portfolioChecklist(progress: OnboardingProgress | null) {
 export function onboardingChecklist(
   progress: OnboardingProgress | null,
   siteKind: SiteKind = 'STORE',
+  /** Portfolio only: visible example parts and entries still to replace. */
+  examplesLeft?: number,
 ) {
-  if (siteKind === 'PORTFOLIO') return portfolioChecklist(progress);
+  if (siteKind === 'PORTFOLIO') return portfolioChecklist(progress, examplesLeft);
   const categoryNames = progress?.suggested_categories ?? [];
   const productGuidance = progress?.products_added
     ? 'Your first customer-ready product is in the catalog.'

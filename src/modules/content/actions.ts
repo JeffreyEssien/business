@@ -8,6 +8,7 @@ import {
   type UploadedMedia,
 } from '@/lib/cloudinary/server';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
+import { describeRemainingExamples, type RemainingExample } from '@/modules/portfolio/examples';
 import {
   contentErrorMessage,
   validateNavigation,
@@ -16,7 +17,12 @@ import {
   validateSiteDraft,
 } from './validation';
 
-export type ContentActionState = { error: string; message: string };
+export type ContentActionState = {
+  error: string;
+  message: string;
+  /** Portfolio publishing only: example content still to replace, with links to each. */
+  remaining?: RemainingExample[];
+};
 type StoredSiteMedia = {
   id: string;
   storage_provider: string;
@@ -225,6 +231,14 @@ export async function publishSite(
   const { data, error } = await workspace.supabase.rpc('publish_site', {
     target_tenant: workspace.tenant.id,
   });
+  if (error?.message.includes('STARTER_CONTENT_PRESENT')) {
+    const remaining = describeRemainingExamples(slug, error.details);
+    return {
+      error: `Almost there. Replace or remove ${remaining.length === 1 ? 'this example' : `these ${remaining.length} examples`} first, then try again:`,
+      message: '',
+      remaining,
+    };
+  }
   if (error)
     return {
       error: error.message.includes('UNPUBLISHED_INTERNAL_LINK')

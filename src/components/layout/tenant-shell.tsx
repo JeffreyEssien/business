@@ -14,6 +14,8 @@ type TenantNavigationLink = {
   /** Portfolio wording for the same destination, where it differs. */
   portfolioLabel?: string;
   feature?: string;
+  /** Omitted means the link applies to every site kind. */
+  siteKinds?: ReadonlyArray<SiteKind>;
 };
 type TenantNavigationGroup = {
   label: string;
@@ -51,7 +53,8 @@ const navigationGroups: ReadonlyArray<TenantNavigationGroup> = [
   {
     label: 'Website',
     links: [
-      { href: '/design', label: 'Store design', portfolioLabel: 'Portfolio design' },
+      { href: '/design', label: 'Store design', portfolioLabel: 'Your page' },
+      { href: '/portfolio', label: 'Work & experience', siteKinds: ['PORTFOLIO'] },
       { href: '/content/pages', label: 'Website pages' },
       { href: '/content/navigation', label: 'Store menus', portfolioLabel: 'Menus' },
       { href: '/marketing/search', label: 'Search appearance' },
@@ -65,10 +68,12 @@ function groupsFor(siteKind: SiteKind) {
     .filter((group) => !group.siteKinds || group.siteKinds.includes(siteKind))
     .map((group) => ({
       ...group,
-      links: group.links.map((link) => ({
-        ...link,
-        label: siteKind === 'PORTFOLIO' ? (link.portfolioLabel ?? link.label) : link.label,
-      })),
+      links: group.links
+        .filter((link) => !link.siteKinds || link.siteKinds.includes(siteKind))
+        .map((link) => ({
+          ...link,
+          label: siteKind === 'PORTFOLIO' ? (link.portfolioLabel ?? link.label) : link.label,
+        })),
     }));
 }
 
