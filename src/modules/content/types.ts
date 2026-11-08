@@ -86,6 +86,8 @@ export type SiteConfiguration = {
       primary: string;
       secondary?: string;
       styleKey?: string;
+      /** Portfolio template style, e.g. "pf-terminal"; selects fonts and layout details. */
+      templateStyle?: string;
       accent: string;
       background: string;
       text: string;

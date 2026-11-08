@@ -2,7 +2,7 @@
 
 Date: 2026-11-08
 
-Status: phase 1 implemented
+Status: phases 1 and 2 (core) implemented
 
 ## Context
 
@@ -25,3 +25,11 @@ A portfolio is a tenant with `tenants.site_kind = 'PORTFOLIO'` (the default is `
 - The store design form (`save_site_draft`) writes store-only sections, so it is refused for portfolios. Portfolio section editing arrives in phase 2 with its own RPCs.
 - Entry-backed sections (projects, experience, education, skills) are seeded by templates but omitted from the public site until phase 2 gives them entries.
 - Public commerce routes on a portfolio render the 404 page. Like every `notFound()` under `/store/[slug]`, the HTTP status is 200 because `loading.tsx` streams first. That is existing behaviour, and fixing it belongs with the store not-found work, not here.
+
+## Phase 2 decisions (2026-11-08)
+
+- **Entries** live in `portfolio_items` (projects, jobs, education, skill groups). Owners write only through `save/delete/reorder_portfolio_item(s)`; RLS grants members read access only. The `portfolio_item_limit` entitlement (unlimited by default) is enforced under a per-tenant advisory lock, like `product_limit`.
+- **Page parts** are edited through `save/add/remove_portfolio_section`, which validate fields and layouts per part type. The hero cannot be hidden or removed because it carries the name and main button. Button links accept only `#part`, `https://`, or `mailto:`.
+- **Example content is tracked by the database, not the app.** Templates record example values (`sample_content`). Triggers recompute `content_blocks.sample_fields` and `portfolio_items.is_sample` on every write, so a partial edit never clears an example, and direct writes cannot bypass it (members have no write grant).
+- **Publish lock.** `tenant_site_versions` refuses a portfolio with `STARTER_CONTENT_PRESENT` while any visible part or entry still holds example values. The error detail lists them, and the app turns that into plain sentences linking to each field. Hidden parts and entries do not count, because visitors never see them. Visible entries are copied into the snapshot as `portfolioItems`.
+- **Template styles.** `tokens.templateStyle` (e.g. `pf-terminal`) selects a CSS block per template and self-hosted OFL fonts in `src/fonts` (latin subsets, `next/font/local`, not preloaded). Each page downloads at most two font files, and stores download none.

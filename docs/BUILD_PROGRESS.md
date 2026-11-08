@@ -245,6 +245,15 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Commerce writes and store-only sections are rejected for portfolios in the database; commerce and customer-update screens are hidden and return 404. Owners can reorder sections, preview, and publish; section text and project/experience entries arrive in phase 2.
 - Validation: format check, typecheck, Webpack production build, migrations applied twice (idempotent), and all 11 SQL suites pass on clean PostgreSQL 16, including the new `portfolio.sql`. Public portfolios, the unpublished state, a store regression, the create form, and the design screen were checked at 1440px and 390px against migrated local data. Not yet run: the Supabase integration and browser suites against development.
 
+### Portfolio builder, phase 2 core (2026-11-08)
+
+- Migrations `202611080002_portfolio_builder.sql` and `202611080003_portfolio_template_styles.sql` (not yet applied to development Supabase).
+- Owners manage projects, jobs, education, and skill groups at `/t/{slug}/portfolio`, and edit, add, hide, reorder, and remove page parts from `/t/{slug}/design`. Everything uses plain words, picture-based layout choices, and a two-step delete.
+- Templates now ship realistic example content. "Make my portfolio live" refuses while visible examples remain and lists each one with a link to fix it, enforced in the database. Phase-1 portfolios were backfilled.
+- The four launch templates are restyled as Terminal, Case study, Darkroom, and One page, with self-hosted open-licence fonts (at most two files per page; stores load none) and a print stylesheet for One page.
+- Validation: format check, typecheck, Webpack build, `npm audit` (0 high), migrations applied twice on clean PostgreSQL, and all 11 SQL suites. The backfill was also tested on phase-1 data. Public pages were screenshot at 1440px and 390px (no overflow, no console errors); builder screens were checked in a component harness at both widths.
+- **Still to do from the ease-of-use standard (§5):** the three-step guided start, tap-the-preview editing, autosave and undo, photo uploads (project covers, about photo, hero image), and the colour picker. The Supabase integration and browser suites have not been run against development.
+
 ## Stage A stabilization — 2026-11-07
 
 - The project moved from iCloud Drive to local `~/Documents/business`. iCloud had silently dropped 117 tracked files and corrupted Git objects; the repository was re-cloned from `origin/develop` and the uncommitted Phase 10 work was preserved. Keep the repository out of iCloud-synced folders.

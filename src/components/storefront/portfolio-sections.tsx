@@ -137,8 +137,16 @@ function Projects({
           {entries.map((entry) => (
             <li key={entry.id}>
               <div>
+                {entry.subtitle && <p className={styles.kicker}>{entry.subtitle}</p>}
                 <h3>{entry.title}</h3>
                 {entry.summary && <p>{entry.summary}</p>}
+                {entry.tags.length > 0 && (
+                  <ul className={styles.tags} aria-label="Tools and topics">
+                    {entry.tags.map((tag) => (
+                      <li key={tag}>{tag}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <p className={styles.links}>
                 {entry.linkUrl && <ExternalLink href={entry.linkUrl}>View</ExternalLink>}

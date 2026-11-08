@@ -288,7 +288,7 @@
   list-style: none;
 }
 
-.projectList li {
+.projectList > li {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -391,5 +391,122 @@
 
   .projectBody {
     padding: 20px;
+  }
+}
+
+/* Template styles for portfolio parts (see storefront.module.css for the page frame). */
+
+/* Terminal */
+:global([data-template-style='pf-terminal']) .section h2::before {
+  content: '> ';
+  color: var(--store-primary);
+}
+:global([data-template-style='pf-terminal']) :is(.tags li, .kicker, .dates) {
+  font-family: var(--pf-font-mono), ui-monospace, monospace;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:global([data-template-style='pf-terminal']) .tags li {
+  border-color: color-mix(in srgb, var(--store-primary) 40%, transparent);
+  color: var(--store-primary);
+}
+:global([data-template-style='pf-terminal']) .projectList > li {
+  padding: 22px 0;
+}
+:global([data-template-style='pf-terminal']) .projectList h3 {
+  font-size: 18px;
+}
+:global([data-template-style='pf-terminal']) .timeline li::before {
+  border-radius: 0;
+}
+
+/* Case study */
+:global([data-template-style='pf-case-study']) .section + .section {
+  border-top-color: color-mix(in srgb, var(--store-text) 10%, transparent);
+}
+:global([data-template-style='pf-case-study']) .section h2 {
+  font-size: clamp(36px, 5vw, 60px);
+  font-weight: 400;
+}
+:global([data-template-style='pf-case-study']) .project {
+  border: 0;
+  background: transparent;
+}
+:global([data-template-style='pf-case-study']) .projectsFeatured .project {
+  border-top: 1px solid color-mix(in srgb, var(--store-text) 14%, transparent);
+  border-radius: 0;
+}
+:global([data-template-style='pf-case-study']) .projectLarge .projectBody {
+  padding-inline: 0;
+}
+:global([data-template-style='pf-case-study']) .projectLarge h3 {
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 400;
+}
+:global([data-template-style='pf-case-study']) .kicker {
+  color: var(--store-accent);
+}
+
+/* Darkroom */
+:global([data-template-style='pf-darkroom']) .section h2 {
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 500;
+}
+:global([data-template-style='pf-darkroom']) .project {
+  border: 0;
+  background: transparent;
+}
+:global([data-template-style='pf-darkroom']) .projectBody {
+  padding: 16px 0 8px;
+}
+:global([data-template-style='pf-darkroom']) .projectBody h3 {
+  font-size: 28px;
+  font-weight: 500;
+}
+:global([data-template-style='pf-darkroom']) :is(.kicker, .contactLinks span, .facts dt) {
+  letter-spacing: 0.24em;
+}
+:global([data-template-style='pf-darkroom']) .contactLinks li {
+  border-color: color-mix(in srgb, var(--store-primary) 35%, transparent);
+  background: transparent;
+}
+
+/* One page */
+:global([data-template-style='pf-one-page']) .section {
+  padding-block: 40px;
+}
+:global([data-template-style='pf-one-page']) .section h2 {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--store-primary);
+}
+:global([data-template-style='pf-one-page']) .sectionHeader,
+:global([data-template-style='pf-one-page']) .sectionHeaderWide {
+  margin-bottom: 20px;
+}
+:global([data-template-style='pf-one-page']) .about,
+:global([data-template-style='pf-one-page']) .contact {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+:global([data-template-style='pf-one-page']) .timeline {
+  gap: 20px;
+}
+:global([data-template-style='pf-one-page']) .prose p,
+:global([data-template-style='pf-one-page']) .contact p {
+  font-size: 16px;
+}
+
+@media print {
+  :global([data-template-style='pf-one-page']) .section {
+    padding-block: 10pt;
+    break-inside: avoid;
+  }
+  :global([data-template-style='pf-one-page']) .contactLinks li {
+    padding: 4pt 0;
+    border: 0;
+    background: none;
   }
 }

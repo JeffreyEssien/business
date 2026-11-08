@@ -41,6 +41,9 @@ begin
   if (select tokens->>'styleKey' from public.tenant_theme_settings where tenant_id = portfolio) <> 'professional-modern' then
     raise exception 'Template theme tokens were not applied';
   end if;
+  if (select tokens->>'templateStyle' from public.tenant_theme_settings where tenant_id = portfolio) <> 'pf-terminal' then
+    raise exception 'Template style was not applied';
+  end if;
   select array_agg(c.block_type order by c.sort_order) into section_types
   from public.content_blocks c join public.pages p on p.id = c.page_id
   where c.tenant_id = portfolio and p.page_type = 'HOME';

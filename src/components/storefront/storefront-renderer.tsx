@@ -6,6 +6,7 @@ import type { PublicProduct } from '@/modules/catalog/types';
 import { defaultWebsiteStyle, isWebsiteStyleKey, themePresets } from '@/modules/content/presets';
 import type { PublishedContentPage, SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { SkipLink } from '@/components/ui/skip-link';
+import { portfolioFontVariables } from './portfolio-fonts';
 import { renderPortfolioSection } from './portfolio-sections';
 import { StoreNavigation } from './store-navigation';
 import { StructuredData } from './structured-data';
@@ -105,6 +106,23 @@ function storefrontStyle(configuration: SiteConfiguration) {
   } as CSSProperties;
 }
 
+/**
+ * Attributes shared by every public page root. Portfolios add their template style and
+ * the font variables it may use; stores are unchanged.
+ */
+function storefrontRootProps(configuration: SiteConfiguration) {
+  const portfolio = configuration.siteKind === 'PORTFOLIO';
+  const templateStyle = configuration.theme.tokens.templateStyle;
+  return {
+    className: portfolio ? `${styles.storefront} ${portfolioFontVariables}` : styles.storefront,
+    style: storefrontStyle(configuration),
+    'data-preset': configuration.theme.presetKey,
+    'data-style': storefrontPersonality(configuration),
+    'data-template-style':
+      portfolio && templateStyle && /^pf-[a-z-]+$/.test(templateStyle) ? templateStyle : undefined,
+  };
+}
+
 function StoreHeader({ slug, configuration }: { slug: string; configuration: SiteConfiguration }) {
   const headerLinks = configuration.navigation.filter(
     (item) => item.enabled && item.location === 'HEADER',
@@ -150,12 +168,7 @@ export function StorefrontShell({
   children: ReactNode;
 }) {
   return (
-    <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
-    >
+    <div {...storefrontRootProps(configuration)}>
       <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       {children}
@@ -244,10 +257,7 @@ export function StorefrontRenderer({
   const isPortfolio = configuration.siteKind === 'PORTFOLIO';
   return (
     <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
+      {...storefrontRootProps(configuration)}
       data-site-kind={isPortfolio ? 'portfolio' : 'store'}
     >
       <SkipLink className={styles.skipLink} href="#store-main" />
@@ -385,12 +395,7 @@ export function StorefrontContentPage({
   page: PublishedContentPage;
 }) {
   return (
-    <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
-    >
+    <div {...storefrontRootProps(configuration)}>
       <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       <main id="store-main" className={styles.informationPage}>
@@ -426,12 +431,7 @@ export function StorefrontCategoryPage({
   emptyDescription?: string;
 }) {
   return (
-    <div
-      className={styles.storefront}
-      style={storefrontStyle(configuration)}
-      data-preset={configuration.theme.presetKey}
-      data-style={storefrontPersonality(configuration)}
-    >
+    <div {...storefrontRootProps(configuration)}>
       <SkipLink className={styles.skipLink} href="#store-main" />
       <StoreHeader slug={slug} configuration={configuration} />
       {beforeContent}
