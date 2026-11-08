@@ -558,3 +558,59 @@
     max-width: 420px;
   }
 }
+
+/* Owner preview: edit buttons and empty-part prompts (never on the public site). */
+.editable {
+  position: relative;
+}
+
+.editable:hover {
+  outline: 2px dashed color-mix(in srgb, #6655d7 55%, transparent);
+  outline-offset: -2px;
+}
+
+.editPill {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  right: max(12px, calc((100% - 1120px) / 2));
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #6655d7;
+  color: #ffffff;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+}
+
+.editPill:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.emptyPart {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  width: min(1120px, calc(100% - 40px));
+  margin: 24px auto;
+  padding: 28px 24px;
+  border: 2px dashed var(--store-border);
+  border-radius: 12px;
+}
+
+.emptyPart p {
+  margin: 0;
+}
+
+.emptyPart a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--store-link);
+  font-weight: 700;
+}

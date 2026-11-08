@@ -59,8 +59,9 @@
 }
 .previewBanner {
   padding: 8px 20px;
-  background: var(--store-accent);
-  color: var(--store-text);
+  /* Owner-only chrome: fixed colours stay readable on every theme. */
+  background: #1b1d24;
+  color: #ffffff;
   text-align: center;
   font-size: 12px;
   font-weight: 700;

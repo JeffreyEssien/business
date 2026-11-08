@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { cloudinaryImage, cloudinarySrcSet } from '@/lib/cloudinary/delivery';
 import type { SiteConfiguration, SiteSection } from '@/modules/content/types';
-import { partEntryType } from '@/modules/portfolio/entries';
+import { entryCopy, partEntryType } from '@/modules/portfolio/entries';
+import { portfolioSectionLanguage } from '@/modules/portfolio/sections';
 import type { PublishedPortfolioEntry } from '@/modules/portfolio/types';
 import styles from './portfolio-sections.module.css';
 
@@ -373,4 +374,44 @@ export function renderPortfolioSection(
     return <ContactSection section={section} business={configuration.business} key={section.key} />;
   }
   return undefined;
+}
+
+/**
+ * Owner preview only. Adds an "Edit" button to a part (it opens the editor in the whole
+ * window, not inside the preview frame) and, for list parts with no entries, a prompt to
+ * add the first one. Never rendered on the public site.
+ */
+export function EditablePart({
+  section,
+  href,
+  entriesHref,
+  children,
+}: {
+  section: SiteSection;
+  href: string;
+  entriesHref: string;
+  children: ReactNode;
+}) {
+  const name = portfolioSectionLanguage[section.type]?.name ?? 'this part';
+  const entryType = partEntryType[section.type];
+  return (
+    <div className={styles.editable}>
+      <a className={styles.editPill} href={href} target="_top">
+        ✎ Edit {name.toLowerCase()}
+      </a>
+      {children ??
+        (entryType ? (
+          <div className={styles.emptyPart}>
+            <strong>{text(section, 'heading') || name}</strong>
+            <p>
+              No {entryCopy[entryType].plural.toLowerCase()} yet. This part stays hidden from
+              visitors until you add one.
+            </p>
+            <a href={`${entriesHref}?show=${entryCopy[entryType].param}`} target="_top">
+              {entryCopy[entryType].addLabel}
+            </a>
+          </div>
+        ) : null)}
+    </div>
+  );
 }

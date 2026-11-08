@@ -9,7 +9,7 @@ import { SkipLink } from '@/components/ui/skip-link';
 import { cloudinaryImage, cloudinarySrcSet } from '@/lib/cloudinary/delivery';
 import { accessibleForeground, contrastRatio } from '@/lib/color';
 import { portfolioFontVariables } from './portfolio-fonts';
-import { renderPortfolioSection } from './portfolio-sections';
+import { EditablePart, renderPortfolioSection } from './portfolio-sections';
 import { StoreNavigation } from './store-navigation';
 import { StructuredData } from './structured-data';
 import styles from './storefront.module.css';
@@ -212,13 +212,89 @@ export function StorefrontRenderer({
   configuration,
   products,
   preview = false,
+  editBase,
 }: {
   slug: string;
   configuration: SiteConfiguration;
   products: PublicProduct[];
   preview?: boolean;
+  /** Owner preview only: the workspace design path, e.g. /t/{slug}/design. */
+  editBase?: string;
 }) {
   const isPortfolio = configuration.siteKind === 'PORTFOLIO';
+  /** One homepage part, exactly as visitors see it (null when it has nothing to show). */
+  const renderSection = (section: SiteConfiguration['sections'][number]): ReactNode => {
+    if (isPortfolio) {
+      const portfolioSection = renderPortfolioSection(section, configuration);
+      if (portfolioSection !== undefined) return portfolioSection;
+    }
+    if (section.type === 'announcement') {
+      return (
+        <aside className={styles.announcement} key={section.key}>
+          {contentText(section, 'text')}
+        </aside>
+      );
+    }
+    if (section.type === 'hero') {
+      const action = cta(section);
+      return (
+        <section className={`${styles.hero} ${styles[section.variant] ?? ''}`} key={section.key}>
+          <div className={styles.heroCopy}>
+            {contentText(section, 'eyebrow') && (
+              <p className={styles.eyebrow}>{contentText(section, 'eyebrow')}</p>
+            )}
+            <h1>{contentText(section, 'headline')}</h1>
+            {contentText(section, 'subheadline') && <p>{contentText(section, 'subheadline')}</p>}
+            {action?.label && (
+              <Link className={styles.cta} href={publicStoreHref(slug, action.href)}>
+                {action.label}
+              </Link>
+            )}
+          </div>
+          {configuration.business.heroMedia && (
+            // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
+            <img
+              className={styles.heroImage}
+              src={cloudinaryImage(configuration.business.heroMedia.url, { width: 1600 })}
+              srcSet={cloudinarySrcSet(
+                configuration.business.heroMedia.url,
+                [640, 1080, 1600, 2200],
+              )}
+              sizes="100vw"
+              alt={configuration.business.heroMedia.alt ?? ''}
+              fetchPriority="high"
+            />
+          )}
+        </section>
+      );
+    }
+    if (section.type === 'products' && !isPortfolio) {
+      return (
+        <section className={styles.products} id="products" key={section.key}>
+          <h2>{contentText(section, 'heading')}</h2>
+          {products.length ? (
+            <div className={styles.productGrid}>
+              {products.map((product) => (
+                <ProductCard slug={slug} product={product} key={product.id} />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyProducts}>
+              <h3>New products are on the way</h3>
+              <p>This store has not published anything to buy yet. Please check back soon.</p>
+            </div>
+          )}
+          {products.length > 0 && (
+            <Link className={styles.viewAllProducts} href={`/store/${slug}/products`}>
+              Browse all products
+            </Link>
+          )}
+        </section>
+      );
+    }
+    return null;
+  };
+
   return (
     <div
       {...storefrontRootProps(configuration)}
@@ -263,82 +339,22 @@ export function StorefrontRenderer({
         {configuration.sections
           .filter((section) => section.enabled)
           .map((section) => {
-            if (isPortfolio) {
-              const portfolioSection = renderPortfolioSection(section, configuration);
-              if (portfolioSection !== undefined) return portfolioSection;
-            }
-            if (section.type === 'announcement') {
+            const node = renderSection(section);
+            // Owner preview only: every portfolio part gets an Edit button, and list parts
+            // with no entries yet show how to add one (visitors never see either).
+            if (preview && isPortfolio && editBase) {
               return (
-                <aside className={styles.announcement} key={section.key}>
-                  {contentText(section, 'text')}
-                </aside>
-              );
-            }
-            if (section.type === 'hero') {
-              const action = cta(section);
-              return (
-                <section
-                  className={`${styles.hero} ${styles[section.variant] ?? ''}`}
+                <EditablePart
                   key={section.key}
+                  section={section}
+                  href={`${editBase}/parts/${encodeURIComponent(section.key)}`}
+                  entriesHref={`${editBase.replace(/\/design$/, '')}/portfolio`}
                 >
-                  <div className={styles.heroCopy}>
-                    {contentText(section, 'eyebrow') && (
-                      <p className={styles.eyebrow}>{contentText(section, 'eyebrow')}</p>
-                    )}
-                    <h1>{contentText(section, 'headline')}</h1>
-                    {contentText(section, 'subheadline') && (
-                      <p>{contentText(section, 'subheadline')}</p>
-                    )}
-                    {action?.label && (
-                      <Link className={styles.cta} href={publicStoreHref(slug, action.href)}>
-                        {action.label}
-                      </Link>
-                    )}
-                  </div>
-                  {configuration.business.heroMedia && (
-                    // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
-                    <img
-                      className={styles.heroImage}
-                      src={cloudinaryImage(configuration.business.heroMedia.url, { width: 1600 })}
-                      srcSet={cloudinarySrcSet(
-                        configuration.business.heroMedia.url,
-                        [640, 1080, 1600, 2200],
-                      )}
-                      sizes="100vw"
-                      alt={configuration.business.heroMedia.alt ?? ''}
-                      fetchPriority="high"
-                    />
-                  )}
-                </section>
+                  {node}
+                </EditablePart>
               );
             }
-            if (section.type === 'products' && !isPortfolio) {
-              return (
-                <section className={styles.products} id="products" key={section.key}>
-                  <h2>{contentText(section, 'heading')}</h2>
-                  {products.length ? (
-                    <div className={styles.productGrid}>
-                      {products.map((product) => (
-                        <ProductCard slug={slug} product={product} key={product.id} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className={styles.emptyProducts}>
-                      <h3>New products are on the way</h3>
-                      <p>
-                        This store has not published anything to buy yet. Please check back soon.
-                      </p>
-                    </div>
-                  )}
-                  {products.length > 0 && (
-                    <Link className={styles.viewAllProducts} href={`/store/${slug}/products`}>
-                      Browse all products
-                    </Link>
-                  )}
-                </section>
-              );
-            }
-            return null;
+            return node;
           })}
       </main>
       <StoreFooter
