@@ -9,11 +9,12 @@ import {
   FormSection,
   FormStack,
 } from '@/components/ui/form-layout';
-import { saveEntry, type BuilderActionState } from '@/modules/portfolio/actions';
+import { autosaveEntry, saveEntry, type BuilderActionState } from '@/modules/portfolio/actions';
 import { entryCopy, type EntryField, type EntryType } from '@/modules/portfolio/entries';
 import type { PortfolioEntry } from '@/modules/portfolio/types';
 import { ExampleBadge } from './example-badge';
 import { PhotoField } from './photo-field';
+import { autosaveLabel, useAutosave } from './use-autosave';
 import styles from './builder.module.css';
 
 const initialState: BuilderActionState = { error: '' };
@@ -38,6 +39,11 @@ export function EntryForm({
   const [state, action, pending] = useActionState(
     saveEntry.bind(null, slug, entry?.id ?? null, type),
     initialState,
+  );
+  // Existing entries save themselves while typing; a new one is created by its first Save.
+  const autosave = useAutosave(
+    (form) => autosaveEntry(slug, entry?.id ?? '', type, form),
+    Boolean(entry),
   );
   const has = (field: EntryField) => Boolean(copy.fields[field]);
   const badge = (field: EntryField) =>
@@ -66,7 +72,7 @@ export function EntryForm({
   };
   const exampleCount = entry?.exampleFields.length ?? 0;
   return (
-    <FormStack action={action} aria-busy={pending}>
+    <FormStack action={action} aria-busy={pending} onInput={autosave.onInput}>
       {exampleCount > 0 && (
         <p className={`${styles.notice} ${styles.noticeExample}`}>
           This {copy.singular} is an example from your template. Replace the marked parts with your
@@ -135,12 +141,17 @@ export function EntryForm({
         Show this {copy.singular} on my portfolio
       </label>
       <FormError message={state.error} />
-      <FormActions note="Changes are saved privately. Visitors see them after you make your portfolio live.">
+      {entry && (
+        <p className={styles.autosave} aria-live="polite" data-state={autosave.status.state}>
+          {autosaveLabel(autosave.status)}
+        </p>
+      )}
+      <FormActions note="Saved privately. Visitors see changes after you make your portfolio live.">
         <ButtonLink variant="secondary" href={`/t/${slug}/portfolio?show=${copy.param}`}>
           Cancel
         </ButtonLink>
         <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : `Save ${copy.singular}`}
+          {pending ? 'Saving…' : entry ? 'Save and go back' : `Save ${copy.singular}`}
         </Button>
       </FormActions>
     </FormStack>

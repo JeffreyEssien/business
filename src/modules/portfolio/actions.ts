@@ -65,6 +65,26 @@ function splitTags(value: string) {
     .slice(0, 20);
 }
 
+/** The stored shape of an entry form; shared by Save and autosave so they never drift. */
+function entryPayload(entryType: EntryType, form: FormData) {
+  const isCurrent = form.get('isCurrent') === 'on';
+  return {
+    itemType: entryType,
+    title: read(form, 'title'),
+    subtitle: read(form, 'subtitle'),
+    summary: read(form, 'summary'),
+    role: read(form, 'role'),
+    outcome: read(form, 'outcome'),
+    linkUrl: normalizeLink(read(form, 'linkUrl')),
+    sourceUrl: normalizeLink(read(form, 'sourceUrl')),
+    startsOn: monthToDate(read(form, 'startsOn')),
+    endsOn: isCurrent ? '' : monthToDate(read(form, 'endsOn')),
+    isCurrent,
+    tags: splitTags(read(form, 'tags')),
+    status: form.get('visible') === 'on' ? 'ACTIVE' : 'HIDDEN',
+  };
+}
+
 function entriesPath(slug: string, type: EntryType, notice: string) {
   return `/t/${slug}/portfolio?show=${entryCopy[type].param}&notice=${notice}`;
 }
@@ -88,25 +108,10 @@ export async function saveEntry(
   // Only projects have a cover photo; check it before saving anything.
   const photo = entryType === 'PROJECT' ? readPhoto(form, 'cover') : null;
   if (photo && 'error' in photo) return photo;
-  const isCurrent = form.get('isCurrent') === 'on';
   const { data: savedId, error } = await workspace.supabase.rpc('save_portfolio_item', {
     target_tenant: workspace.tenant.id,
     target_item: entryId,
-    payload: {
-      itemType: entryType,
-      title,
-      subtitle: read(form, 'subtitle'),
-      summary: read(form, 'summary'),
-      role: read(form, 'role'),
-      outcome: read(form, 'outcome'),
-      linkUrl: normalizeLink(read(form, 'linkUrl')),
-      sourceUrl: normalizeLink(read(form, 'sourceUrl')),
-      startsOn: monthToDate(read(form, 'startsOn')),
-      endsOn: isCurrent ? '' : monthToDate(read(form, 'endsOn')),
-      isCurrent,
-      tags: splitTags(read(form, 'tags')),
-      status: form.get('visible') === 'on' ? 'ACTIVE' : 'HIDDEN',
-    },
+    payload: entryPayload(entryType, form),
   });
   if (error) return builderError(error.code, error.message);
   if (photo && typeof savedId === 'string') {
@@ -305,4 +310,70 @@ export async function removePart(slug: string, partKey: string) {
   if (!error) await releaseReplaced(released);
   refresh(slug);
   redirect(`/t/${slug}/design?notice=${error ? 'not-removed' : 'part-removed'}`);
+}
+
+export type AutosaveResult = { ok: boolean; error?: string };
+
+/**
+ * Autosave while typing: text and choices only (photos wait for Save, because uploads
+ * take time and use data). Never redirects. Incomplete forms are skipped quietly.
+ */
+export async function autosaveEntry(
+  slug: string,
+  entryId: string,
+  entryType: string,
+  form: FormData,
+): Promise<AutosaveResult> {
+  if (!isEntryType(entryType)) return { ok: false };
+  const workspace = await editableWorkspace(slug);
+  if (!workspace) return { ok: false, error: noPermission.error };
+  if (!read(form, 'title')) return { ok: false, error: 'Add a name to keep saving.' };
+  const { error } = await workspace.supabase.rpc('save_portfolio_item', {
+    target_tenant: workspace.tenant.id,
+    target_item: entryId,
+    payload: entryPayload(entryType, form),
+  });
+  if (error) return { ok: false, error: builderError(error.code, error.message).error };
+  refresh(slug);
+  return { ok: true };
+}
+
+export async function autosavePart(
+  slug: string,
+  partKey: string,
+  partType: string,
+  form: FormData,
+): Promise<AutosaveResult> {
+  const workspace = await editableWorkspace(slug);
+  if (!workspace) return { ok: false, error: noPermission.error };
+  if (partType === 'hero' && !read(form, 'headline')) {
+    return { ok: false, error: 'Add your name or a main heading to keep saving.' };
+  }
+  const { error } = await workspace.supabase.rpc('save_portfolio_section', {
+    target_tenant: workspace.tenant.id,
+    target_key: partKey,
+    payload: partPayload(partType, form),
+    section_variant: read(form, 'look') || null,
+    section_visible: form.get('visible') === 'on',
+  });
+  if (error) return { ok: false, error: builderError(error.code, error.message).error };
+  refresh(slug);
+  return { ok: true };
+}
+
+/** Reverts the last burst of changes to one part or entry, then returns to its editor. */
+export async function undoChange(slug: string, kind: 'part' | 'entry', ref: string) {
+  const back =
+    kind === 'part'
+      ? `/t/${slug}/design/parts/${encodeURIComponent(ref)}`
+      : `/t/${slug}/portfolio/${encodeURIComponent(ref)}`;
+  const workspace = await editableWorkspace(slug);
+  if (!workspace) redirect(`${back}?notice=not-allowed`);
+  const { data, error } = await workspace.supabase.rpc('undo_portfolio_change', {
+    target_tenant: workspace.tenant.id,
+    kind,
+    ref,
+  });
+  refresh(slug);
+  redirect(`${back}?notice=${error ? 'not-undone' : data ? 'undone' : 'nothing-to-undo'}`);
 }

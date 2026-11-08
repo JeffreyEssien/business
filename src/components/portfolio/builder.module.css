@@ -566,3 +566,23 @@
     max-width: 260px;
   }
 }
+
+/* Autosave status: quiet, but colour-independent wording when something goes wrong. */
+.autosave {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.autosave[data-state='saved'] {
+  color: var(--success-text);
+}
+
+.autosave[data-state='error'] {
+  color: var(--danger-text);
+}
+
+.undo {
+  margin: 0 0 16px;
+}

@@ -6,7 +6,8 @@ import styles from '@/components/portfolio/builder.module.css';
 import { ButtonLink } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { removePart } from '@/modules/portfolio/actions';
-import { getPortfolioBuilder } from '@/modules/portfolio/builder-queries';
+import { getPortfolioBuilder, hasUndoStep } from '@/modules/portfolio/builder-queries';
+import { UndoButton } from '@/components/portfolio/undo-button';
 import { portfolioSectionLanguage } from '@/modules/portfolio/sections';
 
 export const metadata = { title: 'Edit part of your page' };
@@ -23,6 +24,7 @@ export default async function EditPortfolioPartPage({
   const part = parts.find((candidate) => candidate.key === decodeURIComponent(key));
   if (!part) notFound();
   const name = portfolioSectionLanguage[part.type]?.name ?? 'Part of your page';
+  const canUndo = await hasUndoStep(slug, 'part', part.key);
   // The main button can jump to any other visible part of the page.
   const destinations = parts
     .filter((candidate) => candidate.type !== 'hero' && candidate.enabled)
@@ -49,6 +51,7 @@ export default async function EditPortfolioPartPage({
         }
       />
       <BuilderNotice notice={notice} />
+      {canUndo && <UndoButton slug={slug} kind="part" refKey={part.key} />}
       <PartForm slug={slug} part={part} partName={name} destinations={destinations} />
       {part.type !== 'hero' && (
         <form className={styles.dangerZone} action={removePart.bind(null, slug, part.key)}>

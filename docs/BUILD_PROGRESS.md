@@ -252,7 +252,16 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Templates now ship realistic example content. "Make my portfolio live" refuses while visible examples remain and lists each one with a link to fix it, enforced in the database. Phase-1 portfolios were backfilled.
 - The four launch templates are restyled as Terminal, Case study, Darkroom, and One page, with self-hosted open-licence fonts (at most two files per page; stores load none) and a print stylesheet for One page.
 - Validation: format check, typecheck, Webpack build, `npm audit` (0 high), migrations applied twice on clean PostgreSQL, and all 11 SQL suites. The backfill was also tested on phase-1 data. Public pages were screenshot at 1440px and 390px (no overflow, no console errors); builder screens were checked in a component harness at both widths.
-- **Still to do from the ease-of-use standard (§5):** the three-step guided start, tap-the-preview editing, autosave and undo, photo uploads (project covers, about photo, hero image), and the colour picker. The Supabase integration and browser suites have not been run against development.
+- **Phase 2 completed later the same day** (migrations `202611080004`–`202611080007`):
+  - photo uploads for the opening image, the About photo, and project covers, with responsive Cloudinary delivery
+  - colours and look switching, with readability enforced in the database
+  - tap-the-preview editing
+  - the three-step guided start
+  - autosave
+  - undo
+- Text over images now uses a fixed dark scrim, which fixes low contrast on dark themes, stores included.
+- **Verified:** 42 unit tests and all SQL suites, on clean PostgreSQL with migrations applied twice. Visual checks at 390px and 1440px.
+- **Not yet run:** the Supabase integration and browser suites against development, and a real Cloudinary upload, which needs development credentials.
 
 ## Stage A stabilization — 2026-11-07
 

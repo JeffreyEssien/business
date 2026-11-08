@@ -1,6 +1,6 @@
 # Portfolio templates and starter content — specification
 
-Status: **Proposed — awaiting product-owner approval**
+Status: **Approved 2026-11-08. Phase 2 items (§5 ease of use, §6 starter content, four launch templates) are implemented; the remaining 20 templates are phase 3.**
 Date: 2026-11-08
 Parent plan: `docs/plans/portfolio-builder.md` · Decision record: `docs/adr/004-portfolio-sites.md`
 

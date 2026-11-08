@@ -10,11 +10,12 @@ import {
   FormSection,
   FormStack,
 } from '@/components/ui/form-layout';
-import { savePart, type BuilderActionState } from '@/modules/portfolio/actions';
+import { autosavePart, savePart, type BuilderActionState } from '@/modules/portfolio/actions';
 import { entryCopy, partEntryType, partLooks } from '@/modules/portfolio/entries';
 import type { PortfolioPart } from '@/modules/portfolio/types';
 import { ExampleBadge } from './example-badge';
 import { PhotoField } from './photo-field';
+import { autosaveLabel, useAutosave } from './use-autosave';
 import styles from './builder.module.css';
 
 const initialState: BuilderActionState = { error: '' };
@@ -81,6 +82,7 @@ export function PartForm({
     savePart.bind(null, slug, part.key, part.type),
     initialState,
   );
+  const autosave = useAutosave((form) => autosavePart(slug, part.key, part.type, form));
   const cta = ctaOf(part);
   const external = /^https:\/\//.test(cta.href);
   const [target, setTarget] = useState(
@@ -91,7 +93,7 @@ export function PartForm({
   const entryType = partEntryType[part.type];
 
   return (
-    <FormStack action={action} aria-busy={pending}>
+    <FormStack action={action} aria-busy={pending} onInput={autosave.onInput}>
       {part.exampleFields.length > 0 && (
         <p className={`${styles.notice} ${styles.noticeExample}`}>
           This part still has example text from your template. Replace the marked fields with your
@@ -242,12 +244,15 @@ export function PartForm({
         </label>
       )}
       <FormError message={state.error} />
-      <FormActions note="Changes are saved privately. Visitors see them after you make your portfolio live.">
+      <p className={styles.autosave} aria-live="polite" data-state={autosave.status.state}>
+        {autosaveLabel(autosave.status)}
+      </p>
+      <FormActions note="Saved privately. Visitors see changes after you make your portfolio live.">
         <ButtonLink variant="secondary" href={`/t/${slug}/design`}>
           Cancel
         </ButtonLink>
         <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : 'Save'}
+          {pending ? 'Saving…' : 'Save and go back'}
         </Button>
       </FormActions>
     </FormStack>

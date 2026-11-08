@@ -166,3 +166,16 @@ export async function getPortfolioEntry(slug: string, id: string) {
   const assets = await loadAssets(workspace.supabase, workspace.tenant.id, [data.cover_asset_id]);
   return toEntry(data, assets);
 }
+
+/** Whether "Undo last change" has anything to restore for one part or entry. */
+export async function hasUndoStep(slug: string, kind: 'part' | 'entry', ref: string) {
+  const workspace = await requirePortfolioWorkspace(slug);
+  const { count, error } = await workspace.supabase
+    .from('portfolio_revisions')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', workspace.tenant.id)
+    .eq('target_kind', kind)
+    .eq('target_ref', ref);
+  if (error) return false;
+  return (count ?? 0) > 0;
+}

@@ -383,3 +383,43 @@ begin
   end if;
 end $$;
 reset role;
+
+-- Undo: a burst of edits is one step; undo restores the state before it.
+select set_config('request.jwt.claim.sub', (select id::text from portfolio_fixture where k = 'owner'), true);
+set local role authenticated;
+do $$
+declare portfolio uuid := (select id from portfolio_fixture where k = 'portfolio');
+declare original jsonb := (select content from public.content_blocks where tenant_id = (select id from portfolio_fixture where k = 'portfolio') and block_key = 'about');
+declare entry uuid := (select id from public.portfolio_items where tenant_id = (select id from portfolio_fixture where k = 'portfolio') and item_type = 'PROJECT' order by sort_order limit 1);
+declare original_title text := (select title from public.portfolio_items where id = (select id from public.portfolio_items where tenant_id = (select id from portfolio_fixture where k = 'portfolio') and item_type = 'PROJECT' order by sort_order limit 1));
+begin
+  perform public.save_portfolio_section(portfolio, 'about', '{"heading":"About","body":"First draft"}', null, null);
+  perform public.save_portfolio_section(portfolio, 'about', '{"heading":"About","body":"Second draft"}', null, null);
+  if (select count(*) from public.portfolio_revisions where tenant_id = portfolio and target_kind = 'part' and target_ref = 'about') <> 1 then
+    raise exception 'A burst of edits did not form one undo step';
+  end if;
+  -- Tests share one transaction (one timestamp), so earlier edits in this suite belong to
+  -- the same step; compare against the recorded step rather than the content seen here.
+  original := (select snapshot -> 'content' from public.portfolio_revisions
+    where tenant_id = portfolio and target_kind = 'part' and target_ref = 'about' order by id desc limit 1);
+  if not public.undo_portfolio_change(portfolio, 'part', 'about') then raise exception 'Undo reported nothing to undo'; end if;
+  if (select content from public.content_blocks where tenant_id = portfolio and block_key = 'about') <> original then
+    raise exception 'Undo did not restore the part';
+  end if;
+  if public.undo_portfolio_change(portfolio, 'part', 'about') then
+    raise exception 'Undo invented a step';
+  end if;
+
+  perform public.save_portfolio_item(portfolio, entry, jsonb_build_object('title', 'Renamed project'));
+  original_title := (select snapshot ->> 'title' from public.portfolio_revisions
+    where tenant_id = portfolio and target_kind = 'entry' and target_ref = entry::text order by id desc limit 1);
+  perform public.undo_portfolio_change(portfolio, 'entry', entry::text);
+  if (select title from public.portfolio_items where id = entry) <> original_title then
+    raise exception 'Undo did not restore the entry';
+  end if;
+  begin
+    update public.portfolio_revisions set snapshot = '{}' where tenant_id = portfolio;
+    raise exception 'Owner rewrote undo history directly';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;

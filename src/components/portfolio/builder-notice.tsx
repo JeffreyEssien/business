@@ -7,6 +7,9 @@ const notices: Record<string, { text: string; warning?: boolean }> = {
   deleted: { text: 'Deleted.' },
   moved: { text: 'New order saved.' },
   added: { text: 'New part added. Fill it in below, then press Save.' },
+  undone: { text: 'Your last change was undone.' },
+  'nothing-to-undo': { text: 'There is nothing left to undo here.' },
+  'not-undone': { text: 'That could not be undone. Please try again.', warning: true },
   'setup-done': {
     text: 'Your page is ready. Replace the example text marked in yellow, then make it live.',
   },

@@ -2,7 +2,7 @@
 
 Date: 2026-11-08
 
-Status: phases 1 and 2 (core) implemented
+Status: phases 1 and 2 implemented
 
 ## Context
 
@@ -33,3 +33,11 @@ A portfolio is a tenant with `tenants.site_kind = 'PORTFOLIO'` (the default is `
 - **Example content is tracked by the database, not the app.** Templates record example values (`sample_content`). Triggers recompute `content_blocks.sample_fields` and `portfolio_items.is_sample` on every write, so a partial edit never clears an example, and direct writes cannot bypass it (members have no write grant).
 - **Publish lock.** `tenant_site_versions` refuses a portfolio with `STARTER_CONTENT_PRESENT` while any visible part or entry still holds example values. The error detail lists them, and the app turns that into plain sentences linking to each field. Hidden parts and entries do not count, because visitors never see them. Visible entries are copied into the snapshot as `portfolioItems`.
 - **Template styles.** `tokens.templateStyle` (e.g. `pf-terminal`) selects a CSS block per template and self-hosted OFL fonts in `src/fonts` (latin subsets, `next/font/local`, not preloaded). Each page downloads at most two font files, and stores download none.
+
+## Phase 2 completion (2026-11-08)
+
+- **Photos.** `set_portfolio_photo` places, replaces, or removes the opening image, an About photo, or a project cover. Files must sit under the tenant's Cloudinary folder (`businesscare/tenants/{id}/`), be JPG/PNG/WebP, and be at most 5 MB. A replaced file is deleted from Cloudinary only when nothing else uses it **and** the live page no longer shows it. A photo on the live page is kept until the next publish, so visitors never see a broken image. Delivery uses `f_auto,q_auto`, width-limited srcsets, and `g_auto` crops (`src/lib/cloudinary/delivery.ts`).
+- **Looks and colours.** `save_portfolio_look` switches style and colours without touching content. Body-text contrast below WCAG AA is refused in SQL (`private.color_contrast`), and the picker uses the same maths (`src/lib/color.ts`).
+- **Guided start.** `complete_portfolio_setup` saves look, name, role line, email (required), and WhatsApp (optional) together. `tenant_onboarding.portfolio_setup_completed` ends it, whether completed or skipped.
+- **Undo.** Triggers keep the previous state of a portfolio part or entry in `portfolio_revisions` (members read-only). Edits within 30 seconds form one step, and the latest 20 steps are kept. `undo_portfolio_change` restores the last step without recording itself. Photos are not part of undo, because the old file may already be gone.
+- **Autosave** sends text and choices about 1.2 s after typing stops, through the same validated RPCs as Save. Photos upload only on Save.

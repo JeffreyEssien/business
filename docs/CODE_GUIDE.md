@@ -227,6 +227,9 @@ Application website styles are real storefront personality profiles stored in `t
 8. Entries: `/t/{slug}/portfolio` lists by type, `components/portfolio/entry-form.tsx` edits any type, and `modules/portfolio/actions.ts` normalizes links (`https://` added), months, and comma lists before calling `save_portfolio_item`.
 9. Example content: never clear `sample_fields` or `is_sample` from the app. Triggers derive them from `sample_content`. `describeRemainingExamples` turns a refused publish into links to each field.
 10. Template styles: add a style by adding a `pf-*` block in `storefront.module.css` (page frame) and `portfolio-sections.module.css` (parts), plus its fonts in `portfolio-fonts.ts`. Keep at most two font files per style.
+11. Photos: forms use `components/portfolio/photo-field.tsx` (inputs `${prefix}File/Alt/Remove/OriginalAlt`); actions call `readPhoto` before saving text and `applyPhoto` after, which uploads to Cloudinary, calls `set_portfolio_photo`, deletes the upload if the database refuses it, and releases the replaced file. Always render tenant images through `cloudinaryImage`/`cloudinarySrcSet`.
+12. Looks and colours: ready-made sets live in `modules/portfolio/looks.ts` and must pass `tests/unit/portfolio-looks.test.mjs`. Colour maths is `src/lib/color.ts`; never duplicate it.
+13. Autosave and undo: forms call `useAutosave` with `autosavePart`/`autosaveEntry`, which share their payload builders with Save. Undo history is written by triggers; never insert into `portfolio_revisions` from the app.
 
 ## Follow a plan pricing change
 
