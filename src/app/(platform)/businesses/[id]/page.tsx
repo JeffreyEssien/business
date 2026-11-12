@@ -28,7 +28,7 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
       <div className="setup-grid">
         <div className="section-stack">
           <Panel title="Onboarding checklist">
-            <Checklist items={onboardingChecklist(onboarding)} />
+            <Checklist items={onboardingChecklist(onboarding, business.site_kind)} />
           </Panel>
           <Panel title="Recent activity">
             <ActivityList events={activity} />

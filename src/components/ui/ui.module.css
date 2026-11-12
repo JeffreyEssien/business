@@ -50,6 +50,22 @@
   font-weight: 400;
   line-height: 1.6;
 }
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-medium);
+  background: var(--success-surface);
+  color: var(--success-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.authLink {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .error {
   margin: 0;
   padding: 12px 14px;

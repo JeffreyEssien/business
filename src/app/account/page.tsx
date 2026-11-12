@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PasswordForm } from '@/components/auth/password-form';
 import { AuthLayout } from '@/components/auth/auth-layout';
+import { setOwnerPassword } from '@/modules/tenants/invitations';
 export const metadata = { title: 'Set your password' };
 export default async function AccountPage({
   searchParams,
@@ -20,7 +21,11 @@ export default async function AccountPage({
       title="Make yourself at home."
       description="Set a password for your business workspace."
     >
-      <PasswordForm id={invitation} />
+      <PasswordForm
+        id={invitation}
+        action={setOwnerPassword}
+        submitLabel="Set password & open workspace →"
+      />
     </AuthLayout>
   );
 }

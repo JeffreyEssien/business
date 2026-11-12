@@ -40,3 +40,11 @@ export function FormError({ message }: { message?: string }) {
     </p>
   ) : null;
 }
+
+export function FormNotice({ message }: { message?: string }) {
+  return message ? (
+    <p className={styles.notice} role="status">
+      {message}
+    </p>
+  ) : null;
+}

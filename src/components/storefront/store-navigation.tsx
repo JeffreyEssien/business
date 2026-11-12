@@ -14,11 +14,14 @@ export function StoreNavigation({
   businessName,
   logo,
   links,
+  showCart = true,
 }: {
   slug: string;
   businessName: string;
   logo: { url: string; alt: string | null } | null;
   links: StoreLink[];
+  /** Portfolios have no cart. */
+  showCart?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -64,19 +67,22 @@ export function StoreNavigation({
           {navigationLinks()}
         </nav>
         <div className={styles.headerActions}>
-          <CartLink className={styles.cartLink} slug={slug} />
-          <button
-            ref={menuTriggerRef}
-            className={styles.storeMenuButton}
-            type="button"
-            aria-label="Open store navigation"
-            aria-expanded={open}
-            aria-controls="store-navigation"
-            onClick={() => setOpen(true)}
-          >
-            <span aria-hidden="true" />
-            <span aria-hidden="true" />
-          </button>
+          {showCart && <CartLink className={styles.cartLink} slug={slug} />}
+          {/* An unpublished portfolio has no menu links; don't offer an empty drawer. */}
+          {links.length > 0 && (
+            <button
+              ref={menuTriggerRef}
+              className={styles.storeMenuButton}
+              type="button"
+              aria-label="Open store navigation"
+              aria-expanded={open}
+              aria-controls="store-navigation"
+              onClick={() => setOpen(true)}
+            >
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+            </button>
+          )}
         </div>
       </header>
       <button

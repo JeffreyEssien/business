@@ -1,11 +1,18 @@
+import { DraftPreviewPanel } from '@/components/content/draft-preview-panel';
 import { PublishSiteForm } from '@/components/content/publish-site-form';
 import { SiteEditorForm } from '@/components/content/site-editor-form';
 import { SectionOrderManager } from '@/components/content/section-order-manager';
 import styles from '@/components/content/site-editor.module.css';
+import { AddPartMenu } from '@/components/portfolio/add-part-menu';
+import { BuilderNotice } from '@/components/portfolio/builder-notice';
 import { PageHeader } from '@/components/ui/page-header';
+import { ButtonLink } from '@/components/ui/button';
 import { getSiteEditor } from '@/modules/content/queries';
+import { getPortfolioBuilder } from '@/modules/portfolio/builder-queries';
+import { partEntryType } from '@/modules/portfolio/entries';
+import { portfolioSectionLanguage } from '@/modules/portfolio/sections';
 
-export const metadata = { title: 'Storefront design' };
+export const metadata = { title: 'Website design' };
 export default async function StorefrontDesignPage({
   params,
   searchParams,
@@ -16,12 +23,72 @@ export default async function StorefrontDesignPage({
   const { slug } = await params;
   const { notice } = await searchParams;
   const editor = await getSiteEditor(slug);
+  const published = editor.publishedVersion;
+
+  // Portfolios never render the store form: its save writes store-only sections.
+  if (editor.configuration.siteKind === 'PORTFOLIO') {
+    const { parts, entries } = await getPortfolioBuilder(slug);
+    const badges = Object.fromEntries(
+      parts.map((part) => {
+        const entryType = partEntryType[part.type];
+        const exampleEntries = entryType
+          ? entries.filter(
+              (entry) => entry.type === entryType && !entry.hidden && entry.exampleFields.length,
+            )
+          : [];
+        return [
+          part.key,
+          [
+            ...(part.exampleFields.length ? ['Example text'] : []),
+            ...(exampleEntries.length
+              ? [
+                  `${exampleEntries.length} example ${exampleEntries.length === 1 ? 'entry' : 'entries'}`,
+                ]
+              : []),
+            ...(!part.enabled ? ['Hidden'] : []),
+          ],
+        ];
+      }),
+    );
+    return (
+      <main className="tenant-home">
+        <PageHeader
+          eyebrow="YOUR PAGE"
+          title="Design your portfolio"
+          description={`Edit each part of your page, put them in order, and preview the result. Visitors only see changes after you make your portfolio live.${published ? ` Version ${published} is live now.` : ' Your portfolio is not live yet.'}`}
+          action={<PublishSiteForm slug={slug} audience="visitors" />}
+        />
+        <BuilderNotice notice={notice} />
+        <p>
+          <ButtonLink variant="secondary" href={`/t/${slug}/design/look`}>
+            Change colours &amp; look
+          </ButtonLink>
+        </p>
+        <SectionOrderManager
+          slug={slug}
+          sections={editor.configuration.sections}
+          saved={notice === 'order-saved'}
+          language={portfolioSectionLanguage}
+          audience="visitors"
+          editHrefBase={`/t/${slug}/design/parts`}
+          badges={badges}
+        />
+        <div className={styles.editorLayout}>
+          <section className={styles.editorPanel} aria-label="Add to your page">
+            <AddPartMenu slug={slug} />
+          </section>
+          <DraftPreviewPanel slug={slug} label="portfolio" />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="tenant-home">
       <PageHeader
         eyebrow="THEME & CONTENT"
         title="Design your storefront"
-        description={`Edit and preview saved changes without affecting customers. When everything looks right, make the saved version visible on your store.${editor.publishedVersion ? ` Published version ${editor.publishedVersion} is currently visible to customers.` : ' Your store design has not been made visible to customers yet.'}`}
+        description={`Edit and preview saved changes without affecting customers. When everything looks right, make the saved version visible on your store.${published ? ` Published version ${published} is currently visible to customers.` : ' Your store design has not been made visible to customers yet.'}`}
         action={<PublishSiteForm slug={slug} />}
       />
       <SectionOrderManager
@@ -37,19 +104,7 @@ export default async function StorefrontDesignPage({
             saved={notice === 'saved'}
           />
         </section>
-        <section className={styles.previewPanel} aria-label="Draft preview">
-          <div className={styles.previewHeader}>
-            <strong>Preview of saved changes</strong>
-            <a href={`/t/${slug}/design/preview`} target="_blank">
-              Open full preview ↗
-            </a>
-          </div>
-          <iframe
-            className={styles.previewFrame}
-            title="Saved storefront draft preview"
-            src={`/t/${slug}/design/preview`}
-          />
-        </section>
+        <DraftPreviewPanel slug={slug} label="storefront" />
       </div>
     </main>
   );

@@ -15,6 +15,7 @@ export default async function StorefrontPreviewPage({
       configuration={editor.configuration}
       products={editor.products}
       preview
+      editBase={editor.configuration.siteKind === 'PORTFOLIO' ? `/t/${slug}/design` : undefined}
     />
   );
 }

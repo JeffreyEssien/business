@@ -1,14 +1,25 @@
 'use client';
 import { useActionState } from 'react';
-import { setOwnerPassword } from '@/modules/tenants/invitations';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/form-fields';
 import { FormStack, FormError } from '@/components/ui/form-layout';
-export function PasswordForm({ id }: { id: string }) {
-  const [state, submitAction, isPending] = useActionState(setOwnerPassword, { error: '' });
+
+type PasswordAction = (state: { error: string }, form: FormData) => Promise<{ error: string }>;
+
+/** New-password form shared by owner invitation acceptance and password reset. */
+export function PasswordForm({
+  action,
+  submitLabel,
+  id,
+}: {
+  action: PasswordAction;
+  submitLabel: string;
+  id?: string;
+}) {
+  const [state, submitAction, isPending] = useActionState(action, { error: '' });
   return (
     <FormStack action={submitAction} aria-busy={isPending}>
-      <input type="hidden" name="id" value={id} />
+      {id && <input type="hidden" name="id" value={id} />}
       <TextField
         name="password"
         label="New password"
@@ -29,7 +40,7 @@ export function PasswordForm({ id }: { id: string }) {
         required
       />
       <Button type="submit" disabled={isPending}>
-        {isPending ? 'Saving…' : 'Set password & open workspace →'}
+        {isPending ? 'Saving…' : submitLabel}
       </Button>
       <FormError message={state.error} />
     </FormStack>

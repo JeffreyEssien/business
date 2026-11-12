@@ -22,16 +22,29 @@ export async function createBusiness(
   const input = validation.input;
 
   // One RPC owns the transaction, so setup cannot leave a half-created business.
-  const { data: tenantId, error } = await supabase.rpc('provision_tenant', {
-    business_name: input.name,
-    business_slug: input.slug,
-    owner_name: input.owner,
-    owner_email: input.email,
-    template: input.template,
-    plan_slug: input.plan,
-    payment_mode: input.payment,
-  });
-  if (error) return { error: provisioningErrorMessage(error.code), values: input };
+  // Portfolios use their own provisioner: it fixes the free portfolio plan, checks the
+  // portfolio entitlement, and seeds the chosen template's sections.
+  const { data: tenantId, error } =
+    input.siteKind === 'PORTFOLIO'
+      ? await supabase.rpc('provision_portfolio_tenant', {
+          business_name: input.name,
+          business_slug: input.slug,
+          owner_name: input.owner,
+          owner_email: input.email,
+          template: input.template,
+        })
+      : await supabase.rpc('provision_tenant', {
+          business_name: input.name,
+          business_slug: input.slug,
+          owner_name: input.owner,
+          owner_email: input.email,
+          template: input.template,
+          plan_slug: input.plan,
+          payment_mode: input.payment,
+        });
+  if (error) {
+    return { error: provisioningErrorMessage(error.code, input.siteKind), values: input };
+  }
   revalidatePath('/');
   revalidatePath('/businesses');
   redirect(`/businesses/${tenantId}`);

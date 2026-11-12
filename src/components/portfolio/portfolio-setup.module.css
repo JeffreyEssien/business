@@ -1,0 +1,111 @@
+/* Matches the platform's choice-card language (see applications.module.css). */
+.kindGrid,
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  gap: 12px;
+  min-height: 64px;
+  padding: 15px;
+  border: 1px solid #dcd9e4;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+
+.card:hover {
+  border-color: #aaa0dc;
+}
+
+.card:has(input:focus-visible) {
+  outline: 2px solid #6655d7;
+  outline-offset: 2px;
+}
+
+.card.selected {
+  border-color: #6655d7;
+  background: #f7f5ff;
+  box-shadow: 0 0 0 2px #6655d71a;
+}
+
+.card input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: #6655d7;
+}
+
+.card span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.card strong {
+  color: #2d2a35;
+  font-size: 14px;
+}
+
+.card small {
+  color: #5d6270;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.card em {
+  color: #6655d7;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.templateCard span {
+  gap: 6px;
+}
+
+.palette {
+  flex-direction: row !important;
+  gap: 0 !important;
+  width: max-content;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border: 1px solid #dedbe5;
+  border-radius: 6px;
+}
+
+.palette i {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.sections {
+  color: #737b8c !important;
+  font-size: 12px !important;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed #dcd9e4;
+  border-radius: 12px;
+  color: #5d6270;
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .kindGrid,
+  .templateGrid {
+    grid-template-columns: 1fr;
+  }
+}

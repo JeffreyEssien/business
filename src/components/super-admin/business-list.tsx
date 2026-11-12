@@ -33,7 +33,9 @@ export function BusinessList({ businesses }: { businesses: Business[] }) {
                   <span className="business-logo lavender">{b.name.charAt(0).toUpperCase()}</span>
                   <div>
                     <strong>{b.name}</strong>
-                    <small>{b.slug} · Store handle</small>
+                    <small>
+                      {b.slug} · {b.site_kind === 'PORTFOLIO' ? 'Portfolio' : 'Store'}
+                    </small>
                   </div>
                 </div>
               </td>

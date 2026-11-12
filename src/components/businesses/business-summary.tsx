@@ -20,13 +20,15 @@ export function BusinessSummary({
           )}
         </section>
         <section>
-          <h3>Storefront</h3>
+          <h3>{business.site_kind === 'PORTFOLIO' ? 'Portfolio' : 'Storefront'}</h3>
           <p>
             Handle reserved: <strong>{business.slug}</strong>
           </p>
           <p>
-            Template: {business.template_key}. Your storefront is a draft. Publishing and domain
-            activation arrive in later stages.
+            Template: {business.template_key}.{' '}
+            {business.site_kind === 'PORTFOLIO'
+              ? 'The owner publishes the portfolio from their workspace.'
+              : 'Your storefront is a draft. Publishing and domain activation arrive in later stages.'}
           </p>
         </section>
         <section>

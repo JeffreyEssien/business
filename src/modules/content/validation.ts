@@ -124,6 +124,10 @@ export function validateNavigation(form: FormData) {
 }
 
 export function contentErrorMessage(code?: string, message?: string) {
+  if (message?.includes('FEATURE_NOT_AVAILABLE'))
+    return 'Portfolio publishing is switched off for this website. Contact the platform team.';
+  if (message?.includes('STORE_ONLY_FEATURE'))
+    return 'That setting is only available for online stores.';
   if (code === '42501') return 'You do not have permission to edit this storefront.';
   if (code === '22023') return 'The storefront settings were rejected. Check every field.';
   if (code === '23505' || message?.includes('duplicate'))

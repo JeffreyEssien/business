@@ -59,8 +59,9 @@
 }
 .previewBanner {
   padding: 8px 20px;
-  background: var(--store-accent);
-  color: var(--store-text);
+  /* Owner-only chrome: fixed colours stay readable on every theme. */
+  background: #1b1d24;
+  color: #ffffff;
   text-align: center;
   font-size: 12px;
   font-weight: 700;
@@ -257,7 +258,9 @@
 .hero.image-overlay {
   position: relative;
   isolation: isolate;
-  color: var(--store-background);
+  /* Text over a photo is always white on a dark scrim, whatever the theme. Deriving it
+     from theme colours made light-on-light text on dark themes. */
+  color: #ffffff;
 }
 .hero.image-overlay .heroImage {
   position: absolute;
@@ -271,7 +274,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: color-mix(in srgb, var(--store-text) 55%, transparent);
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.42));
 }
 .hero.image-overlay p {
   color: inherit;
@@ -780,5 +783,176 @@
   .loadingCopy span,
   .loadingGrid span {
     animation: none;
+  }
+}
+
+/*
+ * Portfolio template styles (docs/plans/portfolio-templates.md §3–4). Each block changes
+ * type, shape, and composition, not just colour. Fonts come from portfolio-fonts.ts;
+ * system stacks remain the fallback.
+ */
+
+/* Terminal — developers. */
+.storefront[data-template-style='pf-terminal'] {
+  --store-heading-font: var(--pf-font-mono), ui-monospace, 'SFMono-Regular', monospace;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-terminal'] .brand {
+  font-family: var(--store-heading-font);
+  font-weight: 700;
+}
+.storefront[data-template-style='pf-terminal'] .brand strong::before {
+  content: '~/';
+  color: var(--store-primary);
+}
+.storefront[data-template-style='pf-terminal'] .hero h1 {
+  font-family: var(--store-heading-font);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.storefront[data-template-style='pf-terminal'] .eyebrow {
+  font-family: var(--store-heading-font);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.storefront[data-template-style='pf-terminal'] .eyebrow::before {
+  content: '$ ';
+  color: var(--store-primary);
+}
+.storefront[data-template-style='pf-terminal'] .cta {
+  font-family: var(--store-heading-font);
+}
+
+/* Case study — designers. A text-led, left-aligned opening with a large serif line. */
+.storefront[data-template-style='pf-case-study'] {
+  --store-heading-font: var(--pf-font-instrument), Georgia, 'Times New Roman', serif;
+  --store-control-radius: 999px;
+  --store-media-radius: 18px;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-case-study'] .hero {
+  min-height: auto;
+  padding-block: clamp(72px, 12vw, 160px) clamp(56px, 8vw, 96px);
+  border-bottom: 0;
+}
+/* Full-width, left-aligned opening: lines up with every section below it. */
+.storefront[data-template-style='pf-case-study'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-case-study'] .hero.centered .heroCopy {
+  max-width: 980px;
+  margin: 0;
+  text-align: left;
+  justify-items: start;
+}
+.storefront[data-template-style='pf-case-study'] .hero h1 {
+  font-family: var(--store-heading-font);
+  font-size: clamp(52px, 9vw, 112px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+}
+.storefront[data-template-style='pf-case-study'] .eyebrow {
+  color: var(--store-accent);
+}
+
+/* Darkroom — photographers. Serif display, letter-spaced labels, no chrome. */
+.storefront[data-template-style='pf-darkroom'] {
+  --store-heading-font: var(--pf-font-cormorant), Georgia, 'Times New Roman', serif;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-darkroom'] .header {
+  border-bottom-color: transparent;
+}
+.storefront[data-template-style='pf-darkroom'] .brand {
+  font-family: var(--store-heading-font);
+  font-size: 22px;
+  font-weight: 600;
+}
+.storefront[data-template-style='pf-darkroom'] .desktopNavigation a {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.storefront[data-template-style='pf-darkroom'] .hero h1 {
+  font-family: var(--store-heading-font);
+  font-size: clamp(56px, 10vw, 128px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+.storefront[data-template-style='pf-darkroom'] .eyebrow {
+  letter-spacing: 0.32em;
+}
+.storefront[data-template-style='pf-darkroom'] .cta {
+  border: 1px solid var(--store-primary);
+  background: transparent;
+  color: var(--store-primary);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* One page — job seekers. Compact, left-aligned, and printable. */
+.storefront[data-template-style='pf-one-page'] {
+  --store-heading-font: var(--pf-font-inter), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 6px;
+  --store-media-radius: 8px;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-one-page'] .hero {
+  min-height: auto;
+  padding-block: 64px 40px;
+}
+/* Full-width, left-aligned opening: lines up with every section below it. */
+.storefront[data-template-style='pf-one-page'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-one-page'] .hero.centered .heroCopy {
+  max-width: 760px;
+  margin: 0;
+  text-align: left;
+  justify-items: start;
+}
+.storefront[data-template-style='pf-one-page'] .hero h1 {
+  font-size: clamp(36px, 6vw, 56px);
+  letter-spacing: -0.03em;
+}
+.storefront[data-template-style='pf-one-page'] .eyebrow {
+  color: var(--store-accent);
+}
+
+@media print {
+  .storefront[data-template-style='pf-one-page'] {
+    --store-background: #ffffff;
+    --store-text: #111111;
+    font-size: 11pt;
+  }
+  .storefront[data-template-style='pf-one-page'] :is(.header, .cta, .skipLink, .previewBanner) {
+    display: none;
+  }
+  .storefront[data-template-style='pf-one-page'] .hero {
+    padding-block: 0 12pt;
   }
 }

@@ -1,10 +1,10 @@
 # BusinessCare build progress
 
-Last updated: 2026-09-14
+Last updated: 2026-11-08
 
 This living tracker records completed work, validation, outstanding work, and owner inputs. BUSINESSCARE_BUILD_SPEC.md remains authoritative. Update after each stage.
 
-## Current stage: Phase 9 implemented; provider activation and pricing inputs pending
+## Current stage: Phase 10 plan management shipped; recurring charging and pricing inputs pending
 
 Status: Phases 0–9 are implemented and verified. Feature access resolves centrally from global safety state, an active tenant override, the tenant plan, and finally the catalog default. Super Admin can change plan values, pause boolean features, and manage documented expiring business overrides without a deployment. SMS and product limits use the same database authority, while tenant navigation and catalog usage explain effective access. Transactional email and SMS still require provider activation in the deployed environment. No real customer email, SMS, transaction, sender request, or settlement subaccount was created by the agent; automated database, Auth, and Cloudinary fixtures were removed.
 
@@ -229,6 +229,79 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - CI workflow configured for frontend plus PostgreSQL RLS checks; remote GitHub Actions has not been executed from this session.
 - Browser verification added during the modularity refactor below; owner design review remains welcome.
 
+### Phase 10 (in progress): plan pricing management
+
+- `plans` gained the spec §31 pricing shape through additive migration `202609160001_plan_pricing.sql`: description, price, currency, billing interval, public visibility, and display order, with an `updated_at` trigger. Existing Starter/Growth/Pro rows keep their order; price defaults to 0 and visibility defaults to hidden until the owner sets them.
+- Super Admin edits plans at `/billing/plans`. The `save_plan` security-definer RPC is Super-Admin only, re-validates every field, and audits the previous and new values. Browser roles cannot write plan rows directly.
+- No recurring charge is collected. Merchant customer payments remain entirely separate. Subscription lifecycle automation (TRIAL/PAST_DUE/GRACE_PERIOD/SUSPENDED transitions), the external Paystack recurring-charge integration, and the owner's actual prices/trial/grace policy remain the rest of Phase 10.
+- 2026-11-07: the `/billing/plans` route itself was missing (navigation linked to a 404); `app/(platform)/billing/plans/page.tsx` now composes the existing pricing screen. Unauthenticated requests redirect to `/login`.
+- Validation: format check, `npm run typecheck`, and the Webpack production build pass. Still open: the migration is not yet applied to development Supabase, so the screen has had no signed-in browser verification, and the SQL/RLS suite has not been run against it.
+
+### Portfolio builder, phase 1 (2026-11-08)
+
+- Plan: `docs/plans/portfolio-builder.md`. Decision record: `docs/adr/004-portfolio-sites.md`. Migration `202611080001_portfolio_foundation.sql` (not yet applied to development Supabase).
+- Portfolios are tenants with `site_kind='PORTFOLIO'` on a free, non-public `portfolio` plan. Super Admin creates one from `/businesses/new` by choosing a website type and one of four database-owned templates (developer, designer, photographer, résumé).
+- The `portfolio_sites` entitlement is on for every plan and appears on Plans & features; a global pause blocks new portfolios and publishing.
+- Commerce writes and store-only sections are rejected for portfolios in the database; commerce and customer-update screens are hidden and return 404. Owners can reorder sections, preview, and publish; section text and project/experience entries arrive in phase 2.
+- Validation: format check, typecheck, Webpack production build, migrations applied twice (idempotent), and all 11 SQL suites pass on clean PostgreSQL 16, including the new `portfolio.sql`. Public portfolios, the unpublished state, a store regression, the create form, and the design screen were checked at 1440px and 390px against migrated local data. Not yet run: the Supabase integration and browser suites against development.
+
+### Portfolio builder, phase 2 core (2026-11-08)
+
+- Migrations `202611080002_portfolio_builder.sql` and `202611080003_portfolio_template_styles.sql` (not yet applied to development Supabase).
+- Owners manage projects, jobs, education, and skill groups at `/t/{slug}/portfolio`, and edit, add, hide, reorder, and remove page parts from `/t/{slug}/design`. Everything uses plain words, picture-based layout choices, and a two-step delete.
+- Templates now ship realistic example content. "Make my portfolio live" refuses while visible examples remain and lists each one with a link to fix it, enforced in the database. Phase-1 portfolios were backfilled.
+- The four launch templates are restyled as Terminal, Case study, Darkroom, and One page, with self-hosted open-licence fonts (at most two files per page; stores load none) and a print stylesheet for One page.
+- Validation: format check, typecheck, Webpack build, `npm audit` (0 high), migrations applied twice on clean PostgreSQL, and all 11 SQL suites. The backfill was also tested on phase-1 data. Public pages were screenshot at 1440px and 390px (no overflow, no console errors); builder screens were checked in a component harness at both widths.
+- **Phase 2 completed later the same day** (migrations `202611080004`–`202611080007`):
+  - photo uploads for the opening image, the About photo, and project covers, with responsive Cloudinary delivery
+  - colours and look switching, with readability enforced in the database
+  - tap-the-preview editing
+  - the three-step guided start
+  - autosave
+  - undo
+- Text over images now uses a fixed dark scrim, which fixes low contrast on dark themes, stores included.
+- **Verified:** 42 unit tests and all SQL suites, on clean PostgreSQL with migrations applied twice. Visual checks at 390px and 1440px.
+- **Not yet run:** the Supabase integration and browser suites against development, and a real Cloudinary upload, which needs development credentials.
+
+## Stage A stabilization — 2026-11-07
+
+- The project moved from iCloud Drive to local `~/Documents/business`. iCloud had silently dropped 117 tracked files and corrupted Git objects; the repository was re-cloned from `origin/develop` and the uncommitted Phase 10 work was preserved. Keep the repository out of iCloud-synced folders.
+- `src/proxy.ts` now refreshes the Supabase session for `/billing`, `/features`, `/communications`, `/payment-operations`, and `/sms-operations`, which were previously missing from the matcher and did not receive request IDs or `no-store` caching.
+- `next.config.ts` sends baseline security headers on every route (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `nosniff`, referrer policy, HSTS, permissions policy) and drops `X-Powered-By`. A nonce-based `script-src` CSP is deferred to its own tested change. Headers verified against `next start`.
+- Owner actions still required for Stage A: apply migration `202609160001_plan_pricing.sql` and run `npm run db:test`, `npm run test:integration`, and `npm run test:ui` against development; rotate the previously exposed Paystack test secret; push and confirm GitHub Actions passes; delete `.env.local` from the old iCloud copy.
+
+## Stage B merchant gaps — 2026-11-07 (branch `feature/stage-b-merchant-gaps`, stacked on Stage A)
+
+- Unit tests: `npm run test:unit` runs dependency-free `node:test` suites in `tests/unit/` against the TypeScript validators (plan pricing, category/product, cart, checkout, error mapping). Added to CI after typecheck and to the formatter globs. 22 passing.
+- Password reset: `/login/forgot` sends a Supabase recovery email with a neutral reply that never reveals whether an account exists; `/auth/reset` verifies the PKCE `code` or `token_hash` server-side and redirects only to fixed paths on `NEXT_PUBLIC_APP_URL`; `/login/reset` saves the new password (8–128 characters). The sign-in page links to it. `PasswordForm` is now shared with invitation acceptance; `FormNotice` is a shared success message.
+- Customers: `/t/{slug}/customers` lists customers with search, pagination, order count, verified paid spend, and last order, using existing tenant RLS. Linked under Commerce in the tenant sidebar.
+- Dashboard: `/t/{slug}` shows payments to confirm, paid orders to send, orders in the last 30 days, customer count, and the five latest orders via bounded concurrent counts. The launch checklist hides once complete.
+- Verified: format, typecheck, unit tests, Webpack build. Sign-in and forgot-password pages visually checked on desktop and mobile (no overflow). Not verified: the customers page, dashboard, and the "link sent" notice with a real signed-in session or email.
+
+## Owner review list — actions that need your permission or input
+
+Stage A
+1. Apply migration `202609160001_plan_pricing.sql` to development (`npm run db:migrate`), then run `npm run db:test`, `npm run test:integration`, `npm run test:ui`. The agent's attempt to write to the shared development database was blocked.
+2. Enable Dependency graph at GitHub → Settings → Security → Code security for `JeffreyEssien/business`; the "Pull request dependency review" check fails until it is on. Then re-run PR #8 checks.
+3. Rotate the previously exposed Paystack test secret and update `.env.local` and Vercel.
+4. Delete `.env.local` from the old iCloud copy of the project.
+5. Review and merge PR #8 into `develop`.
+
+Stage B
+6. Push `feature/stage-b-merchant-gaps` and open its PR (it is stacked on Stage A; retarget to `develop` after #8 merges).
+7. Supabase Auth → URL Configuration: add `<app URL>/auth/reset` (production, Vercel previews, and `http://localhost:3001/auth/reset`) to the redirect allow list, or reset links will be rejected.
+8. Supabase Auth → SMTP: connect Resend (or another provider). Supabase's built-in sender is heavily rate limited and not meant for real users.
+9. Sign in as a tenant owner and check `/t/{slug}` and `/t/{slug}/customers` on desktop and mobile; send yourself one real reset email end to end.
+10. Decide whether to approve a `tenant_sales_summary` database function so the dashboard can show paid revenue and average order value (needs a migration and SQL tests).
+
+Stage C (branch `feature/stage-c-subdomains`, stacked on Stage B)
+11. Choose and buy the platform domain, then set `PLATFORM_ROOT_DOMAIN`, add a wildcard DNS record, and add the wildcard domain in Vercel.
+12. Set `CRON_SECRET` in Vercel and schedule `/api/jobs/email-delivery` and `/api/jobs/sms-delivery` (Vercel Pro cron or an external scheduler; Hobby runs cron only daily).
+13. Check the development Supabase project: `/api/health/ready` returned 503 from this machine on 2026-11-07, which usually means the free project is paused or unreachable.
+14. Fixed on `fix/store-not-found-status`: `/store/{slug}/robots.txt` and `/sitemap` now return `503` with `Retry-After` on a database failure (unknown stores still 404), and store routes have a shopper-facing error page with `noindex`. Unknown store pages still return HTTP 200 after streaming starts; Next.js adds `noindex`, which keeps them out of search results. A true 404 would need a database lookup in the proxy on every store request, which is deliberately not done.
+
+Deferred from Stage B because they need new migrations: staff invitations and role management UI (must use the `staff_limit` authority), and app-level login rate limiting (Supabase Auth's built-in limits apply today).
+
 ## Current limitations
 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.
@@ -258,7 +331,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 | Email                  | 7          | Implemented; activation gated | Branded queue, templates, settings, logs, retries       |
 | SMS                    | 8          | Implemented; activation gated | Sender review, durable queue, settings, logs, webhooks  |
 | Entitlements/plans     | 9          | Implemented and verified | Central resolution, overrides, kill switches, usage limits |
-| SaaS billing           | 10         | Planned                  | Subscriptions separate from merchant payments              |
+| SaaS billing           | 10         | Plan management shipped; charging deferred | Subscriptions separate from merchant payments  |
 | Domains                | 11         | Planned                  | Verified hostname/TLS lifecycle                            |
 | Observability          | 12         | Planned                  | Audited platform visibility/monitoring                     |
 | Hardening              | 13         | Planned                  | Security, restore, performance, release checks             |
@@ -271,7 +344,7 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - Deployment: configure Paystack callback `/payments/paystack/callback` and webhook `/api/webhooks/paystack` on each environment, then complete one owner-observed test-mode payment before production approval.
 - Email activation: create a Resend sending-only API key, provide the Resend account email for test mode, create a webhook signing secret, and later verify an owned sending domain before live delivery.
 - SMS activation: deploy the Termii variables, register `/api/webhooks/termii`, configure the protected `/api/jobs/sms-delivery` schedule, request and approve one tenant sender name, then observe one test-recipient delivery before live mode.
-- Billing: plan prices/limits, trial length, grace policy.
+- Billing: enter each plan's price, currency, billing cycle, summary, and public visibility at `/billing/plans` (feature limits stay on `/features`). Still needed before charging: trial length, grace policy, and the recurring-charge provider decision.
 - Deployment: host, owned platform domain, DNS access, and deployed application URL. businesscare.ng remains an unverified specification example.
 
 Credentials stay in local environment files, never this tracker. No production deployment, outbound invitations, or real customer transactions have occurred.

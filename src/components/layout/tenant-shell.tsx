@@ -5,11 +5,23 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SignOutForm } from '@/components/auth/sign-out-form';
 import { SkipLink } from '@/components/ui/skip-link';
+import type { SiteKind } from '@/modules/portfolio/types';
 import { useMobileNavigation } from './use-mobile-navigation';
 
+type TenantNavigationLink = {
+  href: string;
+  label: string;
+  /** Portfolio wording for the same destination, where it differs. */
+  portfolioLabel?: string;
+  feature?: string;
+  /** Omitted means the link applies to every site kind. */
+  siteKinds?: ReadonlyArray<SiteKind>;
+};
 type TenantNavigationGroup = {
   label: string;
-  links: ReadonlyArray<{ href: string; label: string; feature?: string }>;
+  /** Omitted means the group applies to every site kind. */
+  siteKinds?: ReadonlyArray<SiteKind>;
+  links: ReadonlyArray<TenantNavigationLink>;
 };
 
 const navigationGroups: ReadonlyArray<TenantNavigationGroup> = [
@@ -19,14 +31,17 @@ const navigationGroups: ReadonlyArray<TenantNavigationGroup> = [
   },
   {
     label: 'Commerce',
+    siteKinds: ['STORE'],
     links: [
       { href: '/catalog', label: 'Products & categories' },
       { href: '/orders', label: 'Orders' },
+      { href: '/customers', label: 'Customers' },
       { href: '/orders/settings', label: 'Checkout & payments' },
     ],
   },
   {
     label: 'Customer updates',
+    siteKinds: ['STORE'],
     links: [
       { href: '/communications/email', label: 'Customer emails' },
       {
@@ -39,39 +54,66 @@ const navigationGroups: ReadonlyArray<TenantNavigationGroup> = [
   {
     label: 'Website',
     links: [
-      { href: '/design', label: 'Store design' },
+      { href: '/design', label: 'Store design', portfolioLabel: 'Your page' },
+      { href: '/portfolio', label: 'Work & experience', siteKinds: ['PORTFOLIO'] },
       { href: '/content/pages', label: 'Website pages' },
-      { href: '/content/navigation', label: 'Store menus' },
+      { href: '/content/navigation', label: 'Store menus', portfolioLabel: 'Menus' },
       { href: '/marketing/search', label: 'Search appearance' },
     ],
   },
 ];
 
-function workspaceTitle(pathname: string, root: string) {
-  const matches = navigationGroups
+/** The navigation for one site kind, with labels resolved. Single source for nav and titles. */
+function groupsFor(siteKind: SiteKind) {
+  return navigationGroups
+    .filter((group) => !group.siteKinds || group.siteKinds.includes(siteKind))
+    .map((group) => ({
+      ...group,
+      links: group.links
+        .filter((link) => !link.siteKinds || link.siteKinds.includes(siteKind))
+        .map((link) => ({
+          ...link,
+          label: siteKind === 'PORTFOLIO' ? (link.portfolioLabel ?? link.label) : link.label,
+        })),
+    }));
+}
+
+function workspaceTitle(
+  groups: ReturnType<typeof groupsFor>,
+  pathname: string,
+  root: string,
+  siteKind: SiteKind,
+) {
+  const matches = groups
     .flatMap((group) => group.links)
     .map((link) => ({ ...link, address: `${root}${link.href}` }))
     .filter((link) => pathname === link.address || pathname.startsWith(`${link.address}/`))
     .sort((first, second) => second.address.length - first.address.length);
-  return matches[0]?.label ?? 'Business workspace';
+  return (
+    matches[0]?.label ?? (siteKind === 'PORTFOLIO' ? 'Portfolio workspace' : 'Business workspace')
+  );
 }
 
 /** Persistent merchant navigation with a compact, dismissible mobile drawer. */
 export function TenantShell({
   slug,
+  siteKind,
   entitlements,
   children,
 }: {
   slug: string;
+  siteKind: SiteKind;
   entitlements: Record<string, unknown>;
   children: React.ReactNode;
 }) {
+  const isPortfolio = siteKind === 'PORTFOLIO';
+  const groups = groupsFor(siteKind);
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const navigationRef = useRef<HTMLElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const root = `/t/${slug}`;
-  const title = workspaceTitle(pathname, root);
+  const title = workspaceTitle(groups, pathname, root, siteKind);
   const closeNavigation = useCallback(() => setOpen(false), []);
 
   useEffect(() => setOpen(false), [pathname]);
@@ -115,11 +157,11 @@ export function TenantShell({
           <span aria-hidden="true">×</span>
         </button>
         <div className="tenant-workspace-identity">
-          <span>Business workspace</span>
+          <span>{isPortfolio ? 'Portfolio workspace' : 'Business workspace'}</span>
           <strong>{slug.replaceAll('-', ' ')}</strong>
         </div>
         <nav>
-          {navigationGroups.map((group) => (
+          {groups.map((group) => (
             <div className="tenant-nav-group" key={group.label}>
               <p className="nav-label">{group.label}</p>
               {group.links.map((link) => {
@@ -152,7 +194,8 @@ export function TenantShell({
         </nav>
         <div className="tenant-sidebar-bottom">
           <Link href={`/store/${slug}`} className="tenant-store-link" target="_blank">
-            View customer store <span aria-hidden="true">↗</span>
+            {isPortfolio ? 'View portfolio' : 'View customer store'}{' '}
+            <span aria-hidden="true">↗</span>
           </Link>
           <Link href="/workspace" className="tenant-switch-link">
             Switch business
@@ -174,12 +217,12 @@ export function TenantShell({
             <span aria-hidden="true">☰</span>
           </button>
           <div className="tenant-breadcrumbs">
-            <span>Your business</span>
+            <span>{isPortfolio ? 'Your portfolio' : 'Your business'}</span>
             <span aria-hidden="true">/</span>
             <strong>{title}</strong>
           </div>
           <Link href={`/store/${slug}`} className="tenant-preview-link" target="_blank">
-            View store <span aria-hidden="true">↗</span>
+            {isPortfolio ? 'View portfolio' : 'View store'} <span aria-hidden="true">↗</span>
           </Link>
         </header>
         <div id="tenant-main" className="tenant-content">

@@ -31,6 +31,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run test:unit
       - run: npm run build -- --webpack
       - run: npm audit --omit=dev --audit-level=high
 
