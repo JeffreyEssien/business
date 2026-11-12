@@ -56,7 +56,15 @@ Register `/api/webhooks/resend` for email sent, delivered, delivery delayed, fai
 
 Invoke `/api/jobs/email-delivery` with `Authorization: Bearer <CRON_SECRET>` from the deployment scheduler. Each invocation claims at most 25 due messages. Change to `EMAIL_DELIVERY_MODE=live` only after `EMAIL_FROM_ADDRESS` belongs to a verified sending domain and a real owner-observed delivery passes.
 
-The worker safely reclaims an email left in `SENDING` for more than 15 minutes and retries it with the same Resend idempotency key. `NEXT_PUBLIC_APP_URL` is required and must be an HTTPS origin outside local development; invalid configuration prevents customer email delivery instead of producing localhost links.
+## ZeptoMail instead of Resend
+
+Set `EMAIL_PROVIDER=zeptomail`, `ZEPTOMAIL_API_TOKEN` (the Agent's Send Mail token, with or without the `Zoho-enczapikey` prefix), and `ZEPTOMAIL_API_URL` when the account is hosted outside the US region (for example `https://api.zeptomail.eu/v1.1/email`; only HTTPS ZeptoMail/Zoho hosts are accepted). `EMAIL_FROM_ADDRESS` must belong to a domain verified in that ZeptoMail Agent; ZeptoMail has no shared test sender like `onboarding@resend.dev`, so test mode still needs a verified domain and `EMAIL_TEST_RECIPIENT`.
+
+In the Agent's Webhooks tab, register `/api/webhooks/zeptomail` for hard bounces, soft bounces, delivered, and feedback-loop (complaint) events, and set an Authentication Key; store that key as `ZEPTOMAIL_WEBHOOK_SECRET`. The handler checks the `producer-signature` HMAC-SHA256 and rejects events more than five minutes old. Opens and clicks are not tracked. Send one Zoho test webhook (hard bounce) after deployment and confirm it returns 200; a 400 means the secret or signature format does not match.
+
+ZeptoMail SMTP can also be Supabase Auth's custom SMTP sender (Supabase → Authentication → SMTP), so password-reset emails leave from the same verified domain. Take the SMTP host, port, and credentials from the Agent's SMTP/API tab.
+
+The worker safely reclaims an email left in `SENDING` for more than 15 minutes and retries it. With Resend the retry reuses the same idempotency key; ZeptoMail has no provider-side deduplication, so a worker crash in that window can deliver one duplicate email. `NEXT_PUBLIC_APP_URL` is required and must be an HTTPS origin outside local development; invalid configuration prevents customer email delivery instead of producing localhost links.
 
 # Transactional SMS delivery
 

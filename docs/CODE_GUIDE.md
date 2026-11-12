@@ -187,10 +187,10 @@ Application website styles are real storefront personality profiles stored in `t
 
 1. `202609120002_email_notifications.sql` owns notification settings, the private durable queue, delivery events, tenant/platform log projections, and the order lifecycle trigger. Order events are queued in the same transaction as their authoritative state change.
 2. `modules/email/templates.ts` is the single tenant-branded HTML/plain-text renderer. The settings preview calls this exact renderer; do not create a second preview-only template.
-3. `modules/email/provider.ts` owns the provider contract, Resend adapter, test-recipient restriction, sender validation, and provider idempotency key. No browser component imports it.
+3. `modules/email/provider.ts` owns the provider contract, the Resend and ZeptoMail adapters (chosen per send by `EMAIL_PROVIDER`), test-recipient restriction, sender validation, and provider idempotency key. No browser component imports it.
 4. `modules/email/service.ts` claims a bounded batch and sends its messages concurrently. Provider failure records a safe code and retry time without changing the order or invitation.
 5. New orders and order transitions attempt due delivery after the database transaction. `/api/jobs/email-delivery` provides the protected retry boundary for a deployment scheduler. Super Admin can also process or retry from `/communications`.
-6. `/api/webhooks/resend` verifies the signature against the untouched raw request body and stores only event ID, type, provider message ID, timestamp, and bounded failure category. It never stores the provider payload.
+6. `/api/webhooks/resend` verifies the signature against the untouched raw request body and stores only event ID, type, provider message ID, timestamp, and bounded failure category. It never stores the provider payload. `/api/webhooks/zeptomail` does the same for ZeptoMail: `modules/email/zeptomail.ts` verifies the `producer-signature` HMAC and maps bounces, complaints, and deliveries to the same `email.*` event names, recorded through the provider-neutral `record_email_webhook` RPC.
 7. Tenant controls live at `/t/{slug}/communications/email`. Direct queue access is unavailable to tenants; authorized log projections mask recipient addresses. Service-only RPCs own claims and provider state writes.
 8. `EMAIL_DELIVERY_MODE=disabled` is the safe default. Test mode permits exactly `EMAIL_TEST_RECIPIENT`; live mode must not be enabled until `EMAIL_FROM_ADDRESS` belongs to a verified domain.
 

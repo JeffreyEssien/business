@@ -18,6 +18,7 @@ export default async function CommunicationsPage() {
         <EmailOperations
           logs={data.logs}
           mode={data.delivery.mode}
+          provider={data.delivery.provider}
           configured={data.delivery.configured}
         />
       </Panel>
