@@ -263,6 +263,20 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - **Verified:** 42 unit tests and all SQL suites, on clean PostgreSQL with migrations applied twice. Visual checks at 390px and 1440px.
 - **Not yet run:** the Supabase integration and browser suites against development, and a real Cloudinary upload, which needs development credentials.
 
+### Portfolio templates, phase 3 (2026-11-12, branch `feature/portfolio-phase-3`)
+
+- All 24 templates from `docs/plans/portfolio-templates.md`, two per kind of work, each with its own style, fonts (10 more self-hosted open-licence families, at most two per page), colour sets, and realistic example content.
+- New parts: writing, services, testimonials, events (past dates move to "Recent"), awards, clients, figures, steps, downloads, people, song/video player, three-length bios with copy buttons, and a call-to-action band, plus two new project layouts.
+- Public gallery at `/templates` with live previews of every template; Super Admin can offer or hide templates at `/portfolio-templates`.
+- Guided start now asks about 12 kinds of work and suggests their two templates first; the builder edits the new parts, single-date entries, and photos of people.
+- Migrations `202611120002_portfolio_parts.sql`, `202611120003_portfolio_template_library.sql`, `202611120004_portfolio_albums_sample_photos.sql`, and `202611120005_portfolio_template_library_photos.sql` (generated) are **applied to the development database**, and every `npm run db:test` suite passes.
+- **Project photo albums:** each project can hold up to 24 photos with their own descriptions. Owners add several at once (shrunk to 2000px in the browser before upload), reorder, describe, and remove them; visitors see thumbnails and a full-screen viewer with arrow keys. Removed and replaced files are deleted from Cloudinary unless the live page still shows them.
+- **Warmer templates:** 86 bundled free-licence Unsplash photos (`public/portfolio-samples/`, 11 MB) fill heroes, About photos, project covers, albums, and team members. Sample copy is rewritten in a first-person voice with believable fictional people and organisations; no more "Sample name" or "Replace this…". Warm paper-toned looks get a faint paper grain.
+- **Sample photos are examples:** they carry the "Example — replace it" badge, and "Make my portfolio live" lists each one (hero, About, cover, album) with a link until the owner replaces or removes it. Sample files are never deleted from storage.
+- **Verified:** format check, typecheck, Webpack build, 51 unit tests (including template/migration sync and that every sample photo exists and is used), all SQL suites. Gallery previews checked at 1440px and 390px. The album editor was exercised end to end with a disposable local account: remove, reorder, upload (real Cloudinary), save, preview, and the publish lock; the account and upload were then deleted.
+- Fixed while checking: overlay heroes left a dark band under tall text; the Agency headline broke "STUDIO" mid-word at desktop width.
+- **Follow-ups (migration `202611120006_portfolio_offline_and_cleanup.sql`, applied):** owners can take a live portfolio offline from the design page (two-step confirm, audited as `SITE_UNPUBLISHED`; visitors see the "being prepared" page until it is made live again). Photos kept only because the live page showed them are deleted after the next publish or on going offline. Client entries take a logo, shown instead of the name (the name stays as its alt text). `scripts/cleanup-ui-fixture.mjs` now removes portfolio rows. Checked in the browser with a disposable local account (offline, holding page, logo upload, make live again), which was then deleted; SQL tests cover offline, cleanup, and permissions.
+
 ## Stage A stabilization — 2026-11-07
 
 - The project moved from iCloud Drive to local `~/Documents/business`. iCloud had silently dropped 117 tracked files and corrupted Git objects; the repository was re-cloned from `origin/develop` and the uncommitted Phase 10 work was preserved. Keep the repository out of iCloud-synced folders.

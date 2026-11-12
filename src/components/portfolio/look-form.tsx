@@ -4,7 +4,7 @@ import { Button, ButtonLink } from '@/components/ui/button';
 import { FormActions, FormError, FormSection, FormStack } from '@/components/ui/form-layout';
 import { accessibleForeground, contrastRatio, isHexColor, readableTextRatio } from '@/lib/color';
 import { saveLook, type BuilderActionState } from '@/modules/portfolio/actions';
-import { lookByStyle, portfolioLooks, type Palette } from '@/modules/portfolio/looks';
+import { lookByStyle, offeredLooks, type Palette } from '@/modules/portfolio/looks';
 import styles from './look.module.css';
 
 const initialState: BuilderActionState = { error: '' };
@@ -41,16 +41,18 @@ export function LookForm({
   slug,
   currentStyle,
   currentPalette,
+  availableStyles,
 }: {
   slug: string;
   currentStyle: string;
   currentPalette: Palette;
+  /** Styles of templates Super Admin offers; null shows every look. */
+  availableStyles: string[] | null;
 }) {
   const [state, action, pending] = useActionState(saveLook.bind(null, slug), initialState);
-  const [style, setStyle] = useState(
-    lookByStyle(currentStyle) ? currentStyle : portfolioLooks[0].style,
-  );
-  const look = lookByStyle(style) ?? portfolioLooks[0];
+  const looks = offeredLooks(availableStyles, currentStyle);
+  const [style, setStyle] = useState(lookByStyle(currentStyle) ? currentStyle : looks[0].style);
+  const look = lookByStyle(style) ?? looks[0];
   const matching = look.palettes.findIndex((option) => samePalette(option.colors, currentPalette));
   const [choice, setChoice] = useState<string>(
     style === currentStyle && matching < 0 ? 'custom' : String(Math.max(matching, 0)),
@@ -76,7 +78,7 @@ export function LookForm({
         description="Changing the look keeps all your words, photos, and entries."
       >
         <div className={styles.lookGrid} role="radiogroup" aria-label="Look">
-          {portfolioLooks.map((option) => (
+          {looks.map((option) => (
             <label className={styles.lookCard} key={option.style}>
               <input
                 type="radio"

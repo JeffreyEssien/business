@@ -66,6 +66,58 @@ function LookPicker({ type, current }: { type: string; current: string }) {
   );
 }
 
+/** Text and destination of a part's main button (opening part and call-to-action band). */
+function ButtonFields({
+  part,
+  destinations,
+}: {
+  part: PortfolioPart;
+  destinations: Array<{ value: string; label: string }>;
+}) {
+  const cta = ctaOf(part);
+  const external = /^https:\/\//.test(cta.href);
+  const [target, setTarget] = useState(
+    external ? 'website' : cta.href || destinations[0]?.value || '',
+  );
+  return (
+    <FormSection title="Main button">
+      <FormGrid>
+        <TextField
+          name="ctaLabel"
+          label="Button text"
+          hint="e.g. Get in touch. Leave empty to hide the button."
+          maxLength={40}
+          defaultValue={cta.label}
+        />
+        <SelectField
+          name="ctaTarget"
+          label="When someone presses it"
+          options={[
+            ...destinations.map((item) => ({
+              value: item.value,
+              label: `Go to ${item.label}`,
+            })),
+            { value: 'website', label: 'Open another website' },
+          ]}
+          value={target}
+          onChange={(event) => setTarget(event.target.value)}
+        />
+      </FormGrid>
+      {target === 'website' && (
+        <TextField
+          name="ctaUrl"
+          label="Website address"
+          hint="Paste the full address, e.g. calendly.com/your-name"
+          inputMode="url"
+          autoCapitalize="none"
+          maxLength={500}
+          defaultValue={external ? cta.href : ''}
+        />
+      )}
+    </FormSection>
+  );
+}
+
 export function PartForm({
   slug,
   part,
@@ -83,11 +135,6 @@ export function PartForm({
     initialState,
   );
   const autosave = useAutosave((form) => autosavePart(slug, part.key, part.type, form));
-  const cta = ctaOf(part);
-  const external = /^https:\/\//.test(cta.href);
-  const [target, setTarget] = useState(
-    external ? 'website' : cta.href || destinations[0]?.value || '',
-  );
   const example = (field: string) =>
     part.exampleFields.includes(field) ? <ExampleBadge /> : undefined;
   const entryType = partEntryType[part.type];
@@ -136,41 +183,7 @@ export function PartForm({
               photo={part.photo}
             />
           </FormSection>
-          <FormSection title="Main button">
-            <FormGrid>
-              <TextField
-                name="ctaLabel"
-                label="Button text"
-                hint="e.g. Get in touch. Leave empty to hide the button."
-                maxLength={40}
-                defaultValue={cta.label}
-              />
-              <SelectField
-                name="ctaTarget"
-                label="When someone presses it"
-                options={[
-                  ...destinations.map((item) => ({
-                    value: item.value,
-                    label: `Go to ${item.label}`,
-                  })),
-                  { value: 'website', label: 'Open another website' },
-                ]}
-                value={target}
-                onChange={(event) => setTarget(event.target.value)}
-              />
-            </FormGrid>
-            {target === 'website' && (
-              <TextField
-                name="ctaUrl"
-                label="Website address"
-                hint="Paste the full address, e.g. calendly.com/your-name"
-                inputMode="url"
-                autoCapitalize="none"
-                maxLength={500}
-                defaultValue={external ? cta.href : ''}
-              />
-            )}
-          </FormSection>
+          <ButtonFields part={part} destinations={destinations} />
         </>
       )}
 
@@ -204,6 +217,102 @@ export function PartForm({
               photo={part.photo}
             />
           )}
+        </FormSection>
+      )}
+
+      {part.type === 'cta' && (
+        <>
+          <FormSection title={partName}>
+            <TextField
+              name="heading"
+              label="Heading"
+              hint="e.g. Ready to start your project?"
+              maxLength={80}
+              defaultValue={text(part, 'heading')}
+              labelAddon={example('heading')}
+            />
+            <TextAreaField
+              name="body"
+              label="Text (optional)"
+              rows={3}
+              maxLength={600}
+              defaultValue={text(part, 'body')}
+              labelAddon={example('body')}
+            />
+          </FormSection>
+          <ButtonFields part={part} destinations={destinations} />
+        </>
+      )}
+
+      {part.type === 'embed' && (
+        <FormSection title={partName}>
+          <TextField
+            name="heading"
+            label="Heading"
+            maxLength={80}
+            defaultValue={text(part, 'heading')}
+            labelAddon={example('heading')}
+          />
+          <TextField
+            name="url"
+            label="Link to your song, album, or video"
+            hint="Paste a link from YouTube, Vimeo, Spotify, Apple Music, SoundCloud, Audiomack, or Boomplay. Boomplay shows as a button."
+            inputMode="url"
+            autoCapitalize="none"
+            maxLength={500}
+            defaultValue={text(part, 'url')}
+            labelAddon={example('url')}
+          />
+          <TextAreaField
+            name="intro"
+            label="Short introduction (optional)"
+            rows={2}
+            maxLength={300}
+            defaultValue={text(part, 'intro')}
+            labelAddon={example('intro')}
+          />
+        </FormSection>
+      )}
+
+      {part.type === 'bios' && (
+        <FormSection
+          title={partName}
+          description="Write your bio in three lengths so journalists and organisers can copy the one they need."
+        >
+          <TextField
+            name="heading"
+            label="Heading"
+            maxLength={80}
+            defaultValue={text(part, 'heading')}
+            labelAddon={example('heading')}
+          />
+          <TextAreaField
+            name="oneLiner"
+            label="One line"
+            hint="A single sentence."
+            rows={2}
+            maxLength={200}
+            defaultValue={text(part, 'oneLiner')}
+            labelAddon={example('oneLiner')}
+          />
+          <TextAreaField
+            name="short"
+            label="Short bio"
+            hint="About 50 to 100 words."
+            rows={4}
+            maxLength={1200}
+            defaultValue={text(part, 'short')}
+            labelAddon={example('short')}
+          />
+          <TextAreaField
+            name="long"
+            label="Full bio"
+            hint="Leave an empty line between paragraphs."
+            rows={8}
+            maxLength={3000}
+            defaultValue={text(part, 'long')}
+            labelAddon={example('long')}
+          />
         </FormSection>
       )}
 

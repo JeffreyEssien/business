@@ -1,9 +1,17 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { normalizeEmbedUrl } from './embeds';
 import { entryCopy, isEntryType, type EntryType } from './entries';
 import { requirePortfolioWorkspace } from './guards';
-import { applyPhoto, readPhoto, releaseReplaced, type PhotoSlot } from './photos';
+import {
+  applyAlbum,
+  applyPhoto,
+  readAlbum,
+  readPhoto,
+  releaseReplaced,
+  type PhotoSlot,
+} from './photos';
 
 export type BuilderActionState = { error: string };
 
@@ -25,6 +33,11 @@ function builderError(code?: string, message?: string): BuilderActionState {
     return {
       error:
         'One of the links is not a web address. Copy the full address from your browser and paste it again.',
+    };
+  if (message?.includes('INVALID_EMBED'))
+    return {
+      error:
+        'That link is not from a site we can play here. Use a YouTube, Vimeo, Spotify, Apple Music, SoundCloud, Audiomack, or Boomplay link.',
     };
   if (message?.includes('INVALID_DATE')) return { error: 'Please check the dates and try again.' };
   if (code === '23514' || message?.includes('USAGE_LIMIT_EXCEEDED'))
@@ -51,8 +64,12 @@ function normalizeLink(value: string) {
   return `https://${value}`;
 }
 
-/** <input type="month"> gives YYYY-MM; entries store the first day of that month. */
+/**
+ * <input type="month"> gives YYYY-MM (stored as the first of the month); events use
+ * <input type="date">, which already gives YYYY-MM-DD.
+ */
 function monthToDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   return /^\d{4}-\d{2}$/.test(value) ? `${value}-01` : '';
 }
 
@@ -105,26 +122,28 @@ export async function saveEntry(
   if (!workspace) return noPermission;
   const title = read(form, 'title');
   if (!title) return { error: `Give this ${entryCopy[entryType].singular} a name first.` };
-  // Only projects have a cover photo; check it before saving anything.
-  const photo = entryType === 'PROJECT' ? readPhoto(form, 'cover') : null;
+  // Only entry kinds with a photo field (projects, people) carry one, and only projects
+  // have an album; check both before saving anything.
+  const photo = entryCopy[entryType].photo ? readPhoto(form, 'cover') : null;
   if (photo && 'error' in photo) return photo;
+  const album = entryType === 'PROJECT' ? readAlbum(form) : null;
+  if (album && 'error' in album) return album;
   const { data: savedId, error } = await workspace.supabase.rpc('save_portfolio_item', {
     target_tenant: workspace.tenant.id,
     target_item: entryId,
     payload: entryPayload(entryType, form),
   });
   if (error) return builderError(error.code, error.message);
-  if (photo && typeof savedId === 'string') {
-    const photoError = await applyPhoto(
-      workspace.supabase,
-      workspace.tenant.id,
-      'cover',
-      savedId,
-      photo,
-    );
-    if (photoError) {
+  if (typeof savedId === 'string') {
+    // Cover and album uploads run together inside this one authorized operation.
+    const problems = await Promise.all([
+      photo ? applyPhoto(workspace.supabase, workspace.tenant.id, 'cover', savedId, photo) : null,
+      album ? applyAlbum(workspace.supabase, workspace.tenant.id, savedId, album) : null,
+    ]);
+    const problem = problems.find(Boolean);
+    if (problem) {
       refresh(slug);
-      return { error: `Your words were saved. ${photoError}` };
+      return { error: `Your words were saved. ${problem}` };
     }
   }
   refresh(slug);
@@ -157,20 +176,42 @@ export async function moveEntries(slug: string, entryType: EntryType, orderedIds
 
 /** Builds the stored content for one page part from its form, by part type. */
 function partPayload(type: string, form: FormData) {
+  const target = read(form, 'ctaTarget');
+  const primaryCta = {
+    label: read(form, 'ctaLabel'),
+    href: target === 'website' ? normalizeLink(read(form, 'ctaUrl')) : target,
+  };
   if (type === 'hero') {
-    const target = read(form, 'ctaTarget');
     return {
       eyebrow: read(form, 'eyebrow'),
       headline: read(form, 'headline'),
       subheadline: read(form, 'subheadline'),
-      primaryCta: {
-        label: read(form, 'ctaLabel'),
-        href: target === 'website' ? normalizeLink(read(form, 'ctaUrl')) : target,
-      },
+      primaryCta,
     };
   }
   if (type === 'about' || type === 'contact') {
     return { heading: read(form, 'heading'), body: read(form, 'body') };
+  }
+  if (type === 'cta') {
+    return { heading: read(form, 'heading'), body: read(form, 'body'), primaryCta };
+  }
+  if (type === 'embed') {
+    // Tidy known players (e.g. drop tracking parameters). Anything else is sent as typed
+    // so the database refuses it with INVALID_EMBED instead of it silently vanishing.
+    const raw = read(form, 'url');
+    return {
+      heading: read(form, 'heading'),
+      intro: read(form, 'intro'),
+      url: raw ? normalizeEmbedUrl(raw) || normalizeLink(raw) : '',
+    };
+  }
+  if (type === 'bios') {
+    return {
+      heading: read(form, 'heading'),
+      oneLiner: read(form, 'oneLiner'),
+      short: read(form, 'short'),
+      long: read(form, 'long'),
+    };
   }
   return { heading: read(form, 'heading'), intro: read(form, 'intro') };
 }
@@ -376,4 +417,21 @@ export async function undoChange(slug: string, kind: 'part' | 'entry', ref: stri
   });
   refresh(slug);
   redirect(`${back}?notice=${error ? 'not-undone' : data ? 'undone' : 'nothing-to-undo'}`);
+}
+
+/**
+ * Takes the live portfolio offline. Visitors see the "not live yet" page; the draft is
+ * untouched, and "Make my portfolio live" publishes it again. Photos only the live page
+ * was holding on to are released and their Cloudinary files deleted.
+ */
+export async function takePortfolioOffline(slug: string) {
+  const workspace = await editableWorkspace(slug);
+  if (!workspace) redirect(`/t/${slug}/design?notice=not-allowed`);
+  const { data, error } = await workspace.supabase.rpc('take_portfolio_offline', {
+    target_tenant: workspace.tenant.id,
+  });
+  if (!error) await releaseReplaced(data);
+  refresh(slug);
+  revalidatePath(`/store/${slug}`);
+  redirect(`/t/${slug}/design?notice=${error ? 'not-offline' : 'offline'}`);
 }

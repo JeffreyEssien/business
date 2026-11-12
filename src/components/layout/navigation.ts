@@ -2,6 +2,7 @@ export const platformNavigation = [
   { href: '/', label: 'Overview', group: 'Platform' },
   { href: '/businesses', label: 'Businesses', group: 'Platform' },
   { href: '/businesses/applications', label: 'Applications', group: 'Platform' },
+  { href: '/portfolio-templates', label: 'Portfolio templates', group: 'Platform' },
   { href: '/payment-operations', label: 'Payments', group: 'Operations' },
   { href: '/communications', label: 'Email delivery', group: 'Operations' },
   { href: '/sms-operations', label: 'SMS delivery', group: 'Operations' },

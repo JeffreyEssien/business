@@ -3,41 +3,66 @@ import { useActionState, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FormError, FormStack } from '@/components/ui/form-layout';
 import { completeSetup, type BuilderActionState } from '@/modules/portfolio/actions';
-import { lookByStyle, portfolioLooks } from '@/modules/portfolio/looks';
+import {
+  lookByStyle,
+  offeredLooks,
+  stylesForAudience,
+  type PortfolioLook,
+} from '@/modules/portfolio/looks';
+import { audienceGroups } from '@/modules/portfolio/template-library';
 import styles from './guided-start.module.css';
 
 const initialState: BuilderActionState = { error: '' };
 
-/** "What do you do?" answers, each suggesting the look made for that kind of work. */
+/** "What do you do?" answers: one per kind of work in the template library, then "other". */
 const occupations = [
-  {
-    value: 'software',
-    label: 'I build software',
-    style: 'pf-terminal',
-    example: 'Software engineer',
-  },
-  {
-    value: 'design',
-    label: 'I design products or brands',
-    style: 'pf-case-study',
-    example: 'Product designer',
-  },
-  {
-    value: 'visual',
-    label: 'I take photos or make visual work',
-    style: 'pf-darkroom',
-    example: 'Photographer',
-  },
-  {
-    value: 'job',
-    label: 'I am looking for a job',
-    style: 'pf-one-page',
-    example: 'Operations associate',
-  },
-  { value: 'other', label: 'Something else', style: '', example: 'Consultant' },
-] as const;
+  ...audienceGroups.map((group) => ({ ...group, styles: stylesForAudience(group.value) })),
+  { value: 'other', label: 'Something else', example: 'Consultant', styles: [] as string[] },
+];
 
 const steps = ['What you do', 'Your look', 'Your details'] as const;
+
+/** One radio card per look. All groups share the "lookChoice" name, so only one is chosen. */
+function LookChoices({
+  looks,
+  style,
+  onPick,
+  label,
+}: {
+  looks: PortfolioLook[];
+  style: string;
+  onPick: (style: string) => void;
+  label: string;
+}) {
+  return (
+    <div className={styles.looks} role="radiogroup" aria-label={label}>
+      {looks.map((option) => (
+        <label className={styles.look} key={option.style}>
+          <input
+            type="radio"
+            name="lookChoice"
+            value={option.style}
+            checked={style === option.style}
+            onChange={() => onPick(option.style)}
+          />
+          <span
+            className={styles.lookSample}
+            style={{
+              background: option.palettes[0].colors.background,
+              color: option.palettes[0].colors.text,
+            }}
+            aria-hidden="true"
+          >
+            <i style={{ background: option.palettes[0].colors.primary }} />
+            Aa
+          </span>
+          <strong>{option.name}</strong>
+          <small>{option.description}</small>
+        </label>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Three short steps for a brand-new portfolio. Everything chosen here can be changed later,
@@ -50,6 +75,7 @@ export function GuidedStart({
   email,
   whatsapp,
   skipAction,
+  availableStyles,
 }: {
   slug: string;
   currentStyle: string;
@@ -57,16 +83,21 @@ export function GuidedStart({
   email: string;
   whatsapp: string;
   skipAction: () => Promise<void>;
+  /** Styles of templates Super Admin offers; null shows every look. */
+  availableStyles: string[] | null;
 }) {
+  const looks = offeredLooks(availableStyles, currentStyle);
   const [state, action, pending] = useActionState(completeSetup.bind(null, slug), initialState);
   const [step, setStep] = useState(0);
   const [occupation, setOccupation] = useState<string>('');
-  const [style, setStyle] = useState(
-    lookByStyle(currentStyle) ? currentStyle : portfolioLooks[0].style,
-  );
+  const [style, setStyle] = useState(lookByStyle(currentStyle) ? currentStyle : looks[0].style);
   const [withWhatsapp, setWithWhatsapp] = useState(Boolean(whatsapp));
   const suggested = occupations.find((option) => option.value === occupation);
-  const look = lookByStyle(style) ?? portfolioLooks[0];
+  const look = lookByStyle(style) ?? looks[0];
+  // Looks made for the chosen kind of work come first; the rest wait behind "See all".
+  const suggestedStyles = suggested?.styles ?? [];
+  const suggestedLooks = looks.filter((option) => suggestedStyles.includes(option.style));
+  const otherLooks = looks.filter((option) => !suggestedStyles.includes(option.style));
 
   return (
     <section className={styles.wizard} aria-labelledby="guided-start-title">
@@ -114,7 +145,8 @@ export function GuidedStart({
                   checked={occupation === option.value}
                   onChange={() => {
                     setOccupation(option.value);
-                    if (option.style) setStyle(option.style);
+                    const first = looks.find((item) => option.styles.includes(item.style));
+                    if (first) setStyle(first.style);
                   }}
                 />
                 <span>{option.label}</span>
@@ -134,35 +166,27 @@ export function GuidedStart({
         <div hidden={step !== 1} className={styles.step}>
           <h1>Pick a look</h1>
           <p>Your words and photos stay the same whichever you choose.</p>
-          <div className={styles.looks} role="radiogroup" aria-label="Look">
-            {portfolioLooks.map((option) => (
-              <label className={styles.look} key={option.style}>
-                <input
-                  type="radio"
-                  name="lookChoice"
-                  value={option.style}
-                  checked={style === option.style}
-                  onChange={() => setStyle(option.style)}
+          {suggestedLooks.length > 0 ? (
+            <>
+              <LookChoices
+                looks={suggestedLooks}
+                style={style}
+                onPick={setStyle}
+                label="Suggested looks"
+              />
+              <details className={styles.moreLooks} open={!suggestedStyles.includes(style)}>
+                <summary>See all {looks.length} looks</summary>
+                <LookChoices
+                  looks={otherLooks}
+                  style={style}
+                  onPick={setStyle}
+                  label="More looks"
                 />
-                <span
-                  className={styles.lookSample}
-                  style={{
-                    background: option.palettes[0].colors.background,
-                    color: option.palettes[0].colors.text,
-                  }}
-                  aria-hidden="true"
-                >
-                  <i style={{ background: option.palettes[0].colors.primary }} />
-                  Aa
-                </span>
-                <strong>
-                  {option.name}
-                  {suggested?.style === option.style && <em> · Suggested</em>}
-                </strong>
-                <small>{option.description}</small>
-              </label>
-            ))}
-          </div>
+              </details>
+            </>
+          ) : (
+            <LookChoices looks={looks} style={style} onPick={setStyle} label="Look" />
+          )}
         </div>
 
         <div hidden={step !== 2} className={styles.step}>

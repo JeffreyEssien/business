@@ -40,6 +40,10 @@ try {
       'shipping_zones',
       'tenant_bank_accounts',
       'tenant_site_versions',
+      // Portfolio rows reference media_assets, so they go before it (album links first).
+      'portfolio_item_media',
+      'portfolio_items',
+      'portfolio_revisions',
       'seo_entries',
       'product_media',
       'product_categories',

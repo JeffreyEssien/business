@@ -13,6 +13,7 @@ import { autosaveEntry, saveEntry, type BuilderActionState } from '@/modules/por
 import { entryCopy, type EntryField, type EntryType } from '@/modules/portfolio/entries';
 import type { PortfolioEntry } from '@/modules/portfolio/types';
 import { ExampleBadge } from './example-badge';
+import { AlbumField } from './album-field';
 import { PhotoField } from './photo-field';
 import { autosaveLabel, useAutosave } from './use-autosave';
 import styles from './builder.module.css';
@@ -36,6 +37,7 @@ export function EntryForm({
   entry?: PortfolioEntry;
 }) {
   const copy = entryCopy[type];
+  const dateStyle = copy.dateStyle ?? 'range';
   const [state, action, pending] = useActionState(
     saveEntry.bind(null, slug, entry?.id ?? null, type),
     initialState,
@@ -87,14 +89,15 @@ export function EntryForm({
         {text('summary', true)}
         {has('role') && text('role', true)}
         {has('outcome') && text('outcome')}
-        {type === 'PROJECT' && (
+        {copy.photo && (
           <PhotoField
             prefix="cover"
-            label="Cover picture (optional)"
-            hint="A screenshot, photo, or design that shows this project at a glance."
+            label={copy.photo.label}
+            hint={copy.photo.hint}
             photo={entry?.cover ?? null}
           />
         )}
+        {type === 'PROJECT' && <AlbumField photos={entry?.gallery ?? []} />}
         {has('tags') && (
           <TextField
             name="tags"
@@ -105,7 +108,7 @@ export function EntryForm({
           />
         )}
       </FormSection>
-      {has('dates') && (
+      {has('dates') && dateStyle === 'range' && (
         <FormSection title={copy.fields.dates!.label} description={copy.fields.dates!.hint}>
           <div className={styles.dateGrid}>
             <TextField
@@ -126,6 +129,21 @@ export function EntryForm({
             <input type="checkbox" name="isCurrent" defaultChecked={entry?.isCurrent ?? false} />
             {copy.currentLabel}
           </label>
+        </FormSection>
+      )}
+      {has('dates') && dateStyle !== 'range' && (
+        // Writing, awards, and events have one date: a month, or (events) an exact day.
+        <FormSection title={copy.fields.dates!.label} description={copy.fields.dates!.hint}>
+          <TextField
+            name="startsOn"
+            type={dateStyle === 'day' ? 'date' : 'month'}
+            label={dateStyle === 'day' ? 'Day' : 'Month'}
+            defaultValue={
+              dateStyle === 'day'
+                ? (entry?.startsOn ?? '').slice(0, 10)
+                : toMonth(entry?.startsOn ?? '')
+            }
+          />
         </FormSection>
       )}
       {(has('linkUrl') || has('sourceUrl')) && (

@@ -137,17 +137,34 @@ export async function getSiteEditor(
   // Portfolio previews show every visible entry, examples included, exactly as the
   // published snapshot would (minus the publish lock, which only applies to going live).
   if (configuration.siteKind === 'PORTFOLIO') {
-    const { data: items, error: itemError } = await workspace.supabase
-      .from('portfolio_items')
-      .select(
-        'id,item_type,title,subtitle,summary,body,role,outcome,link_url,source_url,starts_on,ends_on,is_current,tags,cover_asset_id',
-      )
-      .eq('tenant_id', tenantId)
-      .eq('status', 'ACTIVE')
-      .order('item_type')
-      .order('sort_order');
-    if (itemError) throw new Error('Portfolio entries could not be loaded.');
-    const coverIds = [...new Set((items ?? []).map((item) => item.cover_asset_id).filter(Boolean))];
+    // Entries and album links load together; then every photo they use in one query.
+    const [{ data: items, error: itemError }, { data: album, error: albumError }] =
+      await Promise.all([
+        workspace.supabase
+          .from('portfolio_items')
+          .select(
+            'id,item_type,title,subtitle,summary,body,role,outcome,link_url,source_url,starts_on,ends_on,is_current,tags,cover_asset_id',
+          )
+          .eq('tenant_id', tenantId)
+          .eq('status', 'ACTIVE')
+          .order('item_type')
+          .order('sort_order'),
+        workspace.supabase
+          .from('portfolio_item_media')
+          .select('item_id,asset_id')
+          .eq('tenant_id', tenantId)
+          .order('sort_order')
+          .order('created_at'),
+      ]);
+    if (itemError || albumError) throw new Error('Portfolio entries could not be loaded.');
+    const coverIds = [
+      ...new Set(
+        [
+          ...(items ?? []).map((item) => item.cover_asset_id),
+          ...(album ?? []).map((row) => row.asset_id),
+        ].filter(Boolean),
+      ),
+    ];
     const { data: covers, error: coverError } = coverIds.length
       ? await workspace.supabase
           .from('media_assets')
@@ -176,6 +193,10 @@ export async function getSiteEditor(
       isCurrent: item.is_current,
       tags: item.tags ?? [],
       cover: coverOf(item.cover_asset_id),
+      gallery: (album ?? [])
+        .filter((row) => row.item_id === item.id)
+        .map((row) => coverOf(row.asset_id))
+        .filter((photo) => photo !== null),
     }));
   }
   const storefront = productResult.data as { products?: PublicProduct[] } | null;

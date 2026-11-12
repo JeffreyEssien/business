@@ -368,6 +368,25 @@
   list-style: none;
 }
 
+.moreParts {
+  margin-top: 14px;
+}
+
+.moreParts > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 10px;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.moreParts > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .addGrid form {
   height: 100%;
   margin: 0;
@@ -567,6 +586,113 @@
   }
 }
 
+/* Project album: a grid of photo cards, each with its own description and order controls. */
+.album {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.album > label.smallButton {
+  justify-self: start;
+}
+
+.album > label.smallButton[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.album:has(.fileInput:focus-visible) > label.smallButton {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.albumGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.albumItem {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+}
+
+.albumItem img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: calc(var(--radius-medium) - 4px);
+  object-fit: cover;
+  background: var(--surface-muted);
+}
+
+.albumItem > span:first-of-type {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+}
+
+.albumItem[data-removed='true'] img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.albumItem[data-new='true'] {
+  border-style: dashed;
+  border-color: var(--primary);
+}
+
+.albumAlt {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.albumAlt input {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  font: inherit;
+  font-weight: 400;
+}
+
+.albumAlt input:focus {
+  border-color: var(--primary);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.albumActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.albumActions .smallButton {
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+@media (max-width: 520px) {
+  .albumGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Autosave status: quiet, but colour-independent wording when something goes wrong. */
 .autosave {
   margin: 0;
@@ -584,5 +710,14 @@
 }
 
 .undo {
+  margin: 0 0 16px;
+}
+
+/* Page-level actions under the design header: look, and taking the portfolio offline. */
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   margin: 0 0 16px;
 }

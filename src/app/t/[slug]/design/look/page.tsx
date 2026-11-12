@@ -5,11 +5,15 @@ import { PageHeader } from '@/components/ui/page-header';
 import { isHexColor } from '@/lib/color';
 import { getSiteEditor } from '@/modules/content/queries';
 import { lookByStyle, portfolioLooks, type Palette } from '@/modules/portfolio/looks';
+import { activePortfolioStyles } from '@/modules/portfolio/queries';
 
 export const metadata = { title: 'Colours & look' };
 export default async function PortfolioLookPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const editor = await getSiteEditor(slug);
+  const [editor, availableStyles] = await Promise.all([
+    getSiteEditor(slug),
+    activePortfolioStyles(),
+  ]);
   if (editor.configuration.siteKind !== 'PORTFOLIO') notFound();
   const tokens = editor.configuration.theme.tokens;
   const fallback = (lookByStyle(tokens.templateStyle) ?? portfolioLooks[0]).palettes[0].colors;
@@ -41,6 +45,7 @@ export default async function PortfolioLookPage({ params }: { params: Promise<{ 
         slug={slug}
         currentStyle={tokens.templateStyle ?? ''}
         currentPalette={currentPalette}
+        availableStyles={availableStyles}
       />
     </main>
   );

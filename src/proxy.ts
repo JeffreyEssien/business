@@ -10,6 +10,7 @@ const SESSION_PATHS = [
   '/communications',
   '/payment-operations',
   '/sms-operations',
+  '/portfolio-templates',
   '/setup',
   '/login',
   '/auth',

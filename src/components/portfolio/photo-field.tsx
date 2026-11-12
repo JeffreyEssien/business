@@ -2,6 +2,7 @@
 import { useEffect, useId, useState } from 'react';
 import { cloudinaryImage } from '@/lib/cloudinary/delivery';
 import type { PortfolioPhoto } from '@/modules/portfolio/types';
+import { ExampleBadge } from './example-badge';
 import styles from './builder.module.css';
 
 /** "my-studio_portrait.jpg" → "My studio portrait": a starting point, not a requirement. */
@@ -52,7 +53,14 @@ export function PhotoField({
     <div className={styles.photoField}>
       <p className={styles.photoLabel} id={`${id}-label`}>
         {label}
+        {photo?.isSample && !preview && !remove && <ExampleBadge />}
       </p>
+      {photo?.isSample && !preview && !remove && (
+        <p className={`${styles.notice} ${styles.noticeExample}`}>
+          This is a sample photo from your template. Choose your own photo, or remove it, before
+          your portfolio goes live.
+        </p>
+      )}
       <div className={styles.photoRow}>
         <div className={styles.photoFrame} aria-hidden="true">
           {shown ? (

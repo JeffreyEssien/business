@@ -3,6 +3,9 @@
  * text at WCAG AA contrast against its background (tests/unit/portfolio-looks.test.mjs);
  * the database repeats that check for custom colours.
  */
+// The .ts extension lets Node's test runner load this module without a bundler.
+import { portfolioTemplateLibrary } from './template-library.ts';
+
 export type Palette = {
   background: string;
   text: string;
@@ -18,7 +21,7 @@ export type PortfolioLook = {
   palettes: Array<{ name: string; colors: Palette }>;
 };
 
-export const portfolioLooks: PortfolioLook[] = [
+const handMadeLooks: PortfolioLook[] = [
   {
     style: 'pf-terminal',
     name: 'Terminal',
@@ -209,6 +212,47 @@ export const portfolioLooks: PortfolioLook[] = [
   },
 ];
 
+/**
+ * Every other template's look comes from the template library: its own colours first,
+ * then its extra ready-made sets. Contrast for all of them is checked by unit tests.
+ */
+const libraryLooks: PortfolioLook[] = portfolioTemplateLibrary
+  .filter((template) => !handMadeLooks.some((look) => look.style === template.tokens.templateStyle))
+  .map((template) => {
+    const { background, text, primary, accent, secondary } = template.tokens;
+    return {
+      style: template.tokens.templateStyle,
+      name: template.name,
+      description: template.description,
+      palettes: [
+        { name: 'Original', colors: { background, text, primary, accent, secondary } },
+        ...template.palettes,
+      ],
+    };
+  });
+
+export const portfolioLooks: PortfolioLook[] = [...handMadeLooks, ...libraryLooks];
+
 export function lookByStyle(style: string | undefined) {
   return portfolioLooks.find((look) => look.style === style);
+}
+
+/**
+ * The looks an owner may pick: those whose template Super Admin offers, plus the owner's
+ * current look so it never disappears from under them. A null list means the offer could
+ * not be read, so every look is shown rather than none.
+ */
+export function offeredLooks(activeStyles: readonly string[] | null, currentStyle = '') {
+  if (!activeStyles) return portfolioLooks;
+  const looks = portfolioLooks.filter(
+    (look) => activeStyles.includes(look.style) || look.style === currentStyle,
+  );
+  return looks.length > 0 ? looks : portfolioLooks;
+}
+
+/** Template styles suggested for one kind of work (an audience group). */
+export function stylesForAudience(group: string) {
+  return portfolioTemplateLibrary
+    .filter((template) => template.audienceGroup === group)
+    .map((template) => template.tokens.templateStyle);
 }
