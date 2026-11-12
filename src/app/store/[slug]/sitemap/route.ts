@@ -1,5 +1,5 @@
 import { getPublicSitemapRecords } from '@/modules/catalog/queries';
-import { storefrontUrl } from '@/modules/seo/public';
+import { crawlerResponse, storefrontUrl } from '@/modules/seo/public';
 
 function xml(value: string) {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
@@ -7,18 +7,20 @@ function xml(value: string) {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const store = await getPublicSitemapRecords(slug);
-  const paths = [
-    '',
-    ...(store.site?.pages ?? []).map((page) => `/${page.slug}`),
-    ...store.categorySlugs.map((categorySlug) => `/categories/${categorySlug}`),
-    ...store.productSlugs.map((productSlug) => `/products/${productSlug}`),
-  ].slice(0, 50_000);
-  const urls = paths
-    .map((path) => `<url><loc>${xml(storefrontUrl(store, path).toString())}</loc></url>`)
-    .join('');
-  return new Response(
-    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`,
-    { headers: { 'content-type': 'application/xml; charset=utf-8' } },
-  );
+  return crawlerResponse(async () => {
+    const store = await getPublicSitemapRecords(slug);
+    const paths = [
+      '',
+      ...(store.site?.pages ?? []).map((page) => `/${page.slug}`),
+      ...store.categorySlugs.map((categorySlug) => `/categories/${categorySlug}`),
+      ...store.productSlugs.map((productSlug) => `/products/${productSlug}`),
+    ].slice(0, 50_000);
+    const urls = paths
+      .map((path) => `<url><loc>${xml(storefrontUrl(store, path).toString())}</loc></url>`)
+      .join('');
+    return new Response(
+      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`,
+      { headers: { 'content-type': 'application/xml; charset=utf-8' } },
+    );
+  });
 }

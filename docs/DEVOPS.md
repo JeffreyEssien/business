@@ -93,3 +93,14 @@ https://business-psi-umber.vercel.app/api/jobs/sms-delivery
 Each run claims at most 25 messages. Keep delivery disabled while deploying and registering the webhook. Then use `test` mode with one canonical international `SMS_TEST_RECIPIENT`, submit a disposable tenant sender request, review it in `/sms-operations`, and wait for Termii approval. Send and observe one order update before switching to `live`. A tenant request alone never contacts Termii; the Super-Admin “Approve & send to Termii” action is the explicit provider side effect.
 
 An SMS left in `SENDING` for more than 15 minutes is quarantined as `DELIVERY_UNKNOWN`; it is never reclaimed automatically. Wait for a provider delivery report or investigate the provider message before using a controlled retry, because Termii's send endpoint does not accept BusinessCare's local idempotency key.
+
+# Store subdomains
+
+Set `PLATFORM_ROOT_DOMAIN` (for example `businesscare.ng`) to serve each store at `{slug}.businesscare.ng`. `src/proxy.ts` rewrites clean paths such as `/products` into the existing `/store/{slug}` routes, keeps that store's own `/store/{slug}/…` links working, never serves another store's `/store/…` path on the host, and redirects `/admin` to `/t/{slug}` on `NEXT_PUBLIC_APP_URL`. `www`, `app`, `admin`, `api`, and `mail` are reserved. The host label is untrusted exactly like the path slug; storefront pages still resolve it against published tenant data.
+
+Deployment needs a wildcard DNS record (`*.businesscare.ng`) pointing to the host, and the wildcard domain added to the Vercel project. Canonical URLs still use `NEXT_PUBLIC_APP_URL` or a verified custom domain until storefront link generation is made host-aware.
+
+# Delivery job scheduling
+
+`/api/jobs/email-delivery` and `/api/jobs/sms-delivery` accept `GET` with `Authorization: Bearer <CRON_SECRET>`, which is the header Vercel Cron sends when `CRON_SECRET` is set on the project. Vercel Hobby only runs cron jobs once per day; frequent delivery (every 1–5 minutes) needs Vercel Pro or an external scheduler calling the same endpoints with the same header.
+

@@ -12,9 +12,10 @@
     "owner:bootstrap": "node scripts/bootstrap-owner.mjs",
     "test:integration": "node scripts/test-onboarding-integration.mjs",
     "test:applications-ui": "node scripts/test-application-ui.mjs",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
-    "test:ui": "node scripts/test-ui.mjs"
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\" \"tests/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\" \"tests/**/*.mjs\"",
+    "test:ui": "node scripts/test-ui.mjs",
+    "test:unit": "node --no-warnings --test \"tests/unit/**/*.test.mjs\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

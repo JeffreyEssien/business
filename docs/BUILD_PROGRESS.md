@@ -244,6 +244,38 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - `next.config.ts` sends baseline security headers on every route (`frame-ancestors 'self'`, `X-Frame-Options: SAMEORIGIN`, `nosniff`, referrer policy, HSTS, permissions policy) and drops `X-Powered-By`. A nonce-based `script-src` CSP is deferred to its own tested change. Headers verified against `next start`.
 - Owner actions still required for Stage A: apply migration `202609160001_plan_pricing.sql` and run `npm run db:test`, `npm run test:integration`, and `npm run test:ui` against development; rotate the previously exposed Paystack test secret; push and confirm GitHub Actions passes; delete `.env.local` from the old iCloud copy.
 
+## Stage B merchant gaps — 2026-11-07 (branch `feature/stage-b-merchant-gaps`, stacked on Stage A)
+
+- Unit tests: `npm run test:unit` runs dependency-free `node:test` suites in `tests/unit/` against the TypeScript validators (plan pricing, category/product, cart, checkout, error mapping). Added to CI after typecheck and to the formatter globs. 22 passing.
+- Password reset: `/login/forgot` sends a Supabase recovery email with a neutral reply that never reveals whether an account exists; `/auth/reset` verifies the PKCE `code` or `token_hash` server-side and redirects only to fixed paths on `NEXT_PUBLIC_APP_URL`; `/login/reset` saves the new password (8–128 characters). The sign-in page links to it. `PasswordForm` is now shared with invitation acceptance; `FormNotice` is a shared success message.
+- Customers: `/t/{slug}/customers` lists customers with search, pagination, order count, verified paid spend, and last order, using existing tenant RLS. Linked under Commerce in the tenant sidebar.
+- Dashboard: `/t/{slug}` shows payments to confirm, paid orders to send, orders in the last 30 days, customer count, and the five latest orders via bounded concurrent counts. The launch checklist hides once complete.
+- Verified: format, typecheck, unit tests, Webpack build. Sign-in and forgot-password pages visually checked on desktop and mobile (no overflow). Not verified: the customers page, dashboard, and the "link sent" notice with a real signed-in session or email.
+
+## Owner review list — actions that need your permission or input
+
+Stage A
+1. Apply migration `202609160001_plan_pricing.sql` to development (`npm run db:migrate`), then run `npm run db:test`, `npm run test:integration`, `npm run test:ui`. The agent's attempt to write to the shared development database was blocked.
+2. Enable Dependency graph at GitHub → Settings → Security → Code security for `JeffreyEssien/business`; the "Pull request dependency review" check fails until it is on. Then re-run PR #8 checks.
+3. Rotate the previously exposed Paystack test secret and update `.env.local` and Vercel.
+4. Delete `.env.local` from the old iCloud copy of the project.
+5. Review and merge PR #8 into `develop`.
+
+Stage B
+6. Push `feature/stage-b-merchant-gaps` and open its PR (it is stacked on Stage A; retarget to `develop` after #8 merges).
+7. Supabase Auth → URL Configuration: add `<app URL>/auth/reset` (production, Vercel previews, and `http://localhost:3001/auth/reset`) to the redirect allow list, or reset links will be rejected.
+8. Supabase Auth → SMTP: connect Resend (or another provider). Supabase's built-in sender is heavily rate limited and not meant for real users.
+9. Sign in as a tenant owner and check `/t/{slug}` and `/t/{slug}/customers` on desktop and mobile; send yourself one real reset email end to end.
+10. Decide whether to approve a `tenant_sales_summary` database function so the dashboard can show paid revenue and average order value (needs a migration and SQL tests).
+
+Stage C (branch `feature/stage-c-subdomains`, stacked on Stage B)
+11. Choose and buy the platform domain, then set `PLATFORM_ROOT_DOMAIN`, add a wildcard DNS record, and add the wildcard domain in Vercel.
+12. Set `CRON_SECRET` in Vercel and schedule `/api/jobs/email-delivery` and `/api/jobs/sms-delivery` (Vercel Pro cron or an external scheduler; Hobby runs cron only daily).
+13. Check the development Supabase project: `/api/health/ready` returned 503 from this machine on 2026-11-07, which usually means the free project is paused or unreachable.
+14. Fixed on `fix/store-not-found-status`: `/store/{slug}/robots.txt` and `/sitemap` now return `503` with `Retry-After` on a database failure (unknown stores still 404), and store routes have a shopper-facing error page with `noindex`. Unknown store pages still return HTTP 200 after streaming starts; Next.js adds `noindex`, which keeps them out of search results. A true 404 would need a database lookup in the proxy on every store request, which is deliberately not done.
+
+Deferred from Stage B because they need new migrations: staff invitations and role management UI (must use the `staff_limit` authority), and app-level login rate limiting (Supabase Auth's built-in limits apply today).
+
 ## Current limitations
 
 - The `/store/{slug}` catalog, theme, content pages, and global search appearance are functional. Reserved handles are not active DNS domains, and custom domains still require the Phase 11 verification/TLS lifecycle before they can become canonical.

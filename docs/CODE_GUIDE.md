@@ -222,3 +222,14 @@ Application website styles are real storefront personality profiles stored in `t
 3. `modules/billing/validation.ts` owns the billing-cycle choices and normalizes untrusted form values at the boundary. `modules/billing/queries.ts` coerces PostgREST numerics to numbers once so the `Plan` type holds for every consumer.
 4. `modules/billing/actions.ts` re-resolves Super-Admin access and calls `save_plan`. `save_plan` is a Super-Admin-only security-definer RPC that re-validates every field and audits the previous and new values; browser roles cannot write `plans` directly.
 5. Pricing is owner-entered data only. `save_plan` collects no money, and merchant customer payments remain separate. Recurring SaaS charging, subscription-lifecycle transitions, and trial/grace policy are the remaining Phase 10 work.
+
+## Follow a password reset
+
+1. `app/login/forgot/page.tsx` renders `components/auth/forgot-password-form.tsx`, which calls `requestPasswordReset` in `modules/auth/actions.ts`. The reply is identical whether or not the email has an account.
+2. The email link targets `/auth/reset` on `NEXT_PUBLIC_APP_URL` (never the request host). `app/auth/reset/route.ts` verifies the PKCE `code` or recovery `token_hash`, then redirects to a fixed path.
+3. `app/login/reset/page.tsx` requires the verified session and reuses `PasswordForm` with `updatePassword`.
+
+## Unit tests
+
+`tests/unit/*.test.mjs` run with `npm run test:unit` (Node's built-in runner, TypeScript type stripping, no extra dependencies). Only import modules whose runtime imports are relative files or packages; `@/` aliases and `server-only` modules are not resolvable outside Next.js.
+
