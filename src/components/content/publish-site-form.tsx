@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useActionState, useEffect } from 'react';
 import { publishSite, type ContentActionState } from '@/modules/content/actions';
 import { Button } from '@/components/ui/button';
 import { FormError } from '@/components/ui/form-layout';
@@ -15,6 +16,21 @@ export function PublishSiteForm({
   audience?: 'customers' | 'visitors';
 }) {
   const [state, action, pending] = useActionState(publishSite.bind(null, slug), initialState);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Notices such as "Your portfolio is offline" come from a one-time ?notice= in the URL.
+  // Publishing keeps the page in place, so drop that notice once the new version is live
+  // instead of leaving an out-of-date message on screen (or in a reload).
+  useEffect(() => {
+    if (!state.message || !searchParams.has('notice')) return;
+    const rest = new URLSearchParams(searchParams);
+    rest.delete('notice');
+    const query = rest.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [state.message, pathname, router, searchParams]);
+
   const live =
     audience === 'visitors' ? 'Make my portfolio live' : 'Make saved changes visible to customers';
   return (
