@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
 import {
   migrationJson,
@@ -8,6 +8,7 @@ import {
 } from '../../scripts/generate-portfolio-templates.mjs';
 import { embedFromUrl, normalizeEmbedUrl } from '../../src/modules/portfolio/embeds.ts';
 import { entryTypes, partEntryType, partLooks } from '../../src/modules/portfolio/entries.ts';
+import { samplePhotos } from '../../src/modules/portfolio/sample-photos.ts';
 import { portfolioTemplateLibrary } from '../../src/modules/portfolio/template-library.ts';
 
 const PARTS_MIGRATION = 'supabase/migrations/202611120002_portfolio_parts.sql';
@@ -93,6 +94,42 @@ describe('portfolio template library', () => {
           );
       }
     }
+  });
+
+  test('sample photos exist, have descriptions, and only sit where they are shown', async () => {
+    // The database accepts only this path shape for bundled sample photos.
+    const shape = /^\/portfolio-samples\/[a-z0-9]+(-[a-z0-9]+)*\.webp$/;
+    const used = new Set();
+    for (const t of portfolioTemplateLibrary) {
+      const photos = [
+        ...t.sections.flatMap((section) => {
+          if (!section.photo) return [];
+          if (section.type === 'hero')
+            assert.ok(['split', 'image-overlay'].includes(section.variant), `${t.key} hero`);
+          else assert.match(section.variant, /^photo-/, `${t.key} ${section.key} photo layout`);
+          return [section.photo];
+        }),
+        ...t.items.flatMap((item) => [
+          ...(item.cover ? [item.cover] : []),
+          ...(item.gallery ?? []),
+        ]),
+      ];
+      for (const photo of photos) {
+        assert.match(photo.src, shape, t.key);
+        assert.ok(photo.alt.length > 0 && photo.alt.length <= 300, `${t.key} ${photo.src} alt`);
+        used.add(photo.src);
+      }
+      for (const item of t.items)
+        if (item.gallery) assert.equal(item.type, 'PROJECT', `${t.key} album on ${item.type}`);
+    }
+    await Promise.all([...used].map((src) => access(`public${src}`)));
+    // Every bundled photo is used somewhere, so the repository carries no dead weight.
+    const bundled = Object.keys(samplePhotos).map((name) => `/portfolio-samples/${name}.webp`);
+    assert.deepEqual(
+      bundled.filter((src) => !used.has(src)),
+      [],
+      'remove unused sample photos',
+    );
   });
 
   test('every list part has example entries, and every entry is a known kind', () => {

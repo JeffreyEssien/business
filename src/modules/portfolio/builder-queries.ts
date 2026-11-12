@@ -1,7 +1,7 @@
 import 'server-only';
 import { sampleColumnToField, type EntryField, type EntryType } from './entries';
 import { requirePortfolioWorkspace } from './guards';
-import type { PortfolioEntry, PortfolioPart, PortfolioPhoto } from './types';
+import type { AlbumPhoto, PortfolioEntry, PortfolioPart, PortfolioPhoto } from './types';
 
 type ItemRow = {
   id: string;
@@ -22,18 +22,34 @@ type ItemRow = {
   cover_asset_id: string | null;
 };
 
-type AssetRow = { id: string; public_url_or_resolvable_key: string; alt_text: string | null };
+type AssetRow = {
+  id: string;
+  public_url_or_resolvable_key: string;
+  alt_text: string | null;
+  is_sample: boolean;
+};
 
 function photoOf(assets: AssetRow[], id: string | null | undefined): PortfolioPhoto | null {
   const asset = id ? assets.find((item) => item.id === id) : undefined;
-  return asset ? { url: asset.public_url_or_resolvable_key, alt: asset.alt_text ?? '' } : null;
+  return asset
+    ? {
+        url: asset.public_url_or_resolvable_key,
+        alt: asset.alt_text ?? '',
+        isSample: asset.is_sample,
+      }
+    : null;
 }
 
 /** About photos are stored on the part itself (settings.photo) by set_portfolio_photo. */
 function settingsPhoto(settings: unknown): PortfolioPhoto | null {
   const photo = (settings as { photo?: { url?: unknown; alt?: unknown } } | null)?.photo;
+  // Sample photos live in the app's own folder; the database flags them the same way.
   return photo && typeof photo.url === 'string'
-    ? { url: photo.url, alt: typeof photo.alt === 'string' ? photo.alt : '' }
+    ? {
+        url: photo.url,
+        alt: typeof photo.alt === 'string' ? photo.alt : '',
+        isSample: photo.url.startsWith('/portfolio-samples/'),
+      }
     : null;
 }
 
@@ -66,6 +82,7 @@ function toEntry(row: ItemRow, assets: AssetRow[] = []): PortfolioEntry {
     tags: row.tags ?? [],
     hidden: row.status === 'HIDDEN',
     cover: photoOf(assets, row.cover_asset_id),
+    gallery: [],
     exampleFields: exampleFieldsOf(row),
   };
 }
@@ -82,7 +99,7 @@ async function loadAssets(
   if (!wanted.length) return [];
   const { data, error } = await supabase
     .from('media_assets')
-    .select('id,public_url_or_resolvable_key,alt_text')
+    .select('id,public_url_or_resolvable_key,alt_text,is_sample')
     .eq('tenant_id', tenantId)
     .in('id', wanted)
     .returns<AssetRow[]>();
@@ -151,20 +168,42 @@ export async function getPortfolioBuilder(slug: string) {
   };
 }
 
-/** One entry, or null when it does not belong to this portfolio. */
+/** One entry with its album, or null when it does not belong to this portfolio. */
 export async function getPortfolioEntry(slug: string, id: string) {
   const workspace = await requirePortfolioWorkspace(slug);
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const { data, error } = await workspace.supabase
-    .from('portfolio_items')
-    .select(itemColumns)
-    .eq('tenant_id', workspace.tenant.id)
-    .eq('id', id)
-    .maybeSingle<ItemRow>();
-  if (error) throw new Error('This entry could not be loaded.');
-  if (!data) return null;
-  const assets = await loadAssets(workspace.supabase, workspace.tenant.id, [data.cover_asset_id]);
-  return toEntry(data, assets);
+  const tenantId = workspace.tenant.id;
+  const [item, album] = await Promise.all([
+    workspace.supabase
+      .from('portfolio_items')
+      .select(itemColumns)
+      .eq('tenant_id', tenantId)
+      .eq('id', id)
+      .maybeSingle<ItemRow>(),
+    workspace.supabase
+      .from('portfolio_item_media')
+      .select('id,asset_id')
+      .eq('tenant_id', tenantId)
+      .eq('item_id', id)
+      .order('sort_order')
+      .order('created_at')
+      .returns<Array<{ id: string; asset_id: string }>>(),
+  ]);
+  if (item.error || album.error) throw new Error('This entry could not be loaded.');
+  if (!item.data) return null;
+  const albumRows = album.data ?? [];
+  const assets = await loadAssets(workspace.supabase, tenantId, [
+    item.data.cover_asset_id,
+    ...albumRows.map((row) => row.asset_id),
+  ]);
+  const entry = toEntry(item.data, assets);
+  entry.gallery = albumRows
+    .map((row) => {
+      const photo = photoOf(assets, row.asset_id);
+      return photo ? ({ ...photo, id: row.id } satisfies AlbumPhoto) : null;
+    })
+    .filter((photo): photo is AlbumPhoto => photo !== null);
+  return entry;
 }
 
 /** Whether "Undo last change" has anything to restore for one part or entry. */

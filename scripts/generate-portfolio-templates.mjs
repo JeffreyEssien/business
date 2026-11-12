@@ -5,7 +5,8 @@
 import { writeFile } from 'node:fs/promises';
 import { portfolioTemplateLibrary } from '../src/modules/portfolio/template-library.ts';
 
-export const TEMPLATE_MIGRATION = 'supabase/migrations/202611120003_portfolio_template_library.sql';
+export const TEMPLATE_MIGRATION =
+  'supabase/migrations/202611120005_portfolio_template_library_photos.sql';
 const MARKER = '$templates$';
 
 /** The database row shape for each template, in library order. */

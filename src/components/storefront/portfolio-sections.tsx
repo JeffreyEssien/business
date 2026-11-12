@@ -5,6 +5,7 @@ import { entryCopy, partEntryType } from '@/modules/portfolio/entries';
 import { portfolioSectionLanguage } from '@/modules/portfolio/sections';
 import type { PublishedPortfolioEntry } from '@/modules/portfolio/types';
 import { renderPortfolioPart } from './portfolio-parts';
+import { ProjectAlbum } from './project-album';
 import styles from './portfolio-sections.module.css';
 
 export function text(section: SiteSection, key: string) {
@@ -107,6 +108,9 @@ export function ProjectCard({
         {entry.subtitle && <p className={styles.kicker}>{entry.subtitle}</p>}
         <h3>{entry.title}</h3>
         {entry.summary && <p>{entry.summary}</p>}
+        {(entry.gallery?.length ?? 0) > 0 && (
+          <ProjectAlbum title={entry.title} cover={entry.cover} photos={entry.gallery ?? []} />
+        )}
         {(entry.role || entry.outcome) && (
           <dl className={styles.facts}>
             {entry.role && (

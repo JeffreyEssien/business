@@ -147,6 +147,8 @@ begin
     'split', null);
   perform public.save_portfolio_section(portfolio, 'about', '{"heading":"About","body":"Ten years of shipping."}', null, null);
   perform public.save_portfolio_section(portfolio, 'contact', '{"heading":"Contact","body":"Email is best."}', null, null);
+  -- The template's sample About photo is an example too; the owner removes it.
+  perform public.set_portfolio_photo(portfolio, 'about', 'about', null, '', true);
   hidden_item := (select id from public.portfolio_items where tenant_id = portfolio and title = 'Community events app');
   perform public.save_portfolio_item(portfolio, hidden_item, jsonb_build_object(
     'title', 'Community events app', 'summary', 'Lets neighbourhood groups publish events and take RSVPs from their phones.', 'status', 'HIDDEN'));

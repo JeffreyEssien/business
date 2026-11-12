@@ -146,3 +146,103 @@ begin
   end;
 end $$;
 reset role;
+
+-- Sample photos: templates seed bundled photos as examples, and they block going live.
+select set_config('request.jwt.claim.sub', (select id::text from parts_fixture where k = 'admin'), true);
+set local role authenticated;
+insert into parts_fixture (k, id)
+select 'photographer', public.provision_portfolio_tenant(
+  'Emeka Photo', 'emeka-' || gen_random_uuid()::text, 'Emeka',
+  (select email from parts_fixture where k = 'owner'), 'photographer');
+do $$
+declare studio uuid := (select id from parts_fixture where k = 'photographer');
+begin
+  if (select count(*) from public.portfolio_item_media where tenant_id = studio) <> 12 then
+    raise exception 'Template album photos were not seeded';
+  end if;
+  if exists (select 1 from public.portfolio_item_media m join public.media_assets a on a.id = m.asset_id
+      where m.tenant_id = studio and not (a.is_sample and a.storage_provider = 'sample')) then
+    raise exception 'Seeded album photos are not marked as samples';
+  end if;
+  if (select settings #>> '{photo,url}' from public.content_blocks
+      where tenant_id = studio and block_type = 'about') <> '/portfolio-samples/emeka-portrait.webp' then
+    raise exception 'The template about photo was not placed';
+  end if;
+end $$;
+reset role;
+
+select set_config('request.jwt.claim.sub', (select id::text from parts_fixture where k = 'owner'), true);
+set local role authenticated;
+do $$
+declare portfolio uuid := (select id from parts_fixture where k = 'portfolio');
+declare folder text := 'businesscare/tenants/' || (select id from parts_fixture where k = 'portfolio')::text || '/portfolio/';
+declare project uuid;
+declare first_photo uuid;
+declare second_photo uuid;
+declare result jsonb;
+declare detail text;
+declare file jsonb;
+begin
+  if not exists (select 1 from public.tenant_business_settings b
+      join public.media_assets a on a.id = b.hero_asset_id
+      where b.tenant_id = portfolio and a.is_sample
+        and a.public_url_or_resolvable_key = '/portfolio-samples/strings-stage.webp') then
+    raise exception 'The template hero photo was not seeded as a sample';
+  end if;
+  begin
+    perform public.publish_site(portfolio);
+    raise exception 'Published while a sample photo was showing';
+  exception when others then
+    if sqlerrm not like '%STARTER_CONTENT_PRESENT%' then raise; end if;
+    get stacked diagnostics detail = pg_exception_detail;
+    if detail not like '%"slot": "hero"%' then
+      raise exception 'The sample hero photo was not listed: %', detail;
+    end if;
+  end;
+
+  -- Albums: add, describe, reorder, remove (reported for cleanup), and a size limit.
+  project := public.save_portfolio_item(portfolio, null, '{"itemType":"PROJECT","title":"Tour film"}');
+  perform public.save_portfolio_item_photos(portfolio, project, '[]', jsonb_build_array(
+    jsonb_build_object('storageKey', folder || 'a', 'publicUrl', 'https://res.cloudinary.com/a.jpg',
+      'mimeType', 'image/jpeg', 'fileSize', 1000, 'alt', 'Backstage'),
+    jsonb_build_object('storageKey', folder || 'b', 'publicUrl', 'https://res.cloudinary.com/b.jpg',
+      'mimeType', 'image/jpeg', 'fileSize', 1000, 'alt', 'Encore')));
+  select id into first_photo from public.portfolio_item_media where item_id = project order by sort_order limit 1;
+  select id into second_photo from public.portfolio_item_media where item_id = project order by sort_order desc limit 1;
+  if first_photo = second_photo then raise exception 'Album photos were not added'; end if;
+  begin
+    perform public.save_portfolio_item_photos(portfolio, project, '[]', jsonb_build_array(
+      jsonb_build_object('storageKey', 'businesscare/tenants/' || gen_random_uuid()::text || '/x',
+        'publicUrl', 'https://res.cloudinary.com/x.jpg', 'mimeType', 'image/jpeg', 'fileSize', 1000)));
+    raise exception 'An album accepted another tenant''s file';
+  exception when invalid_parameter_value then null; end;
+
+  result := public.save_portfolio_item_photos(portfolio, project, jsonb_build_array(
+    jsonb_build_object('id', second_photo, 'alt', 'The encore, from the balcony'),
+    jsonb_build_object('id', first_photo, 'remove', true)), '[]');
+  if (select count(*) from public.portfolio_item_media where item_id = project) <> 1 then
+    raise exception 'A removed album photo is still in the album';
+  end if;
+  if (select a.alt_text from public.portfolio_item_media m join public.media_assets a on a.id = m.asset_id
+      where m.id = second_photo) <> 'The encore, from the balcony' then
+    raise exception 'An album description was not saved';
+  end if;
+  if not (result @> jsonb_build_array(jsonb_build_object('storageKey', folder || 'a'))) then
+    raise exception 'A removed album photo was not reported for cleanup: %', result;
+  end if;
+
+  select jsonb_agg(jsonb_build_object('storageKey', folder || 'many' || n,
+    'publicUrl', 'https://res.cloudinary.com/m.jpg', 'mimeType', 'image/jpeg', 'fileSize', 1000))
+  into file from generate_series(1, 24) n;
+  begin
+    perform public.save_portfolio_item_photos(portfolio, project, '[]', file);
+    raise exception 'An album grew past 24 photos';
+  exception when others then
+    if sqlerrm not like '%TOO_MANY_PHOTOS%' then raise; end if;
+  end;
+
+  -- Deleting the entry releases its album photos too.
+  result := public.delete_portfolio_item(portfolio, project);
+  if jsonb_array_length(result) < 1 then raise exception 'Deleting an entry kept its album files'; end if;
+end $$;
+reset role;

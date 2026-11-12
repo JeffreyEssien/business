@@ -9,6 +9,8 @@ type DetailRow = {
   id?: string;
   type?: string;
   label?: string;
+  /** Sample photos: which photo slot still shows a template picture. */
+  slot?: 'hero' | 'about' | 'cover' | 'album';
   fields?: string[];
 };
 
@@ -36,6 +38,20 @@ export function describeRemainingExamples(slug: string, detail: string | undefin
     } else if (row.kind === 'item' && row.id && isEntryType(row.type)) {
       remaining.push({
         label: `Example ${entryCopy[row.type].singular}: “${row.label ?? ''}”`,
+        href: `/t/${slug}/portfolio/${row.id}`,
+      });
+    } else if (row.kind === 'photo' && (row.slot === 'hero' || row.slot === 'about') && row.key) {
+      remaining.push({
+        label:
+          row.slot === 'hero'
+            ? 'Introduction: choose your own big picture'
+            : 'About: choose your own photo',
+        href: `/t/${slug}/design/parts/${encodeURIComponent(row.key)}`,
+      });
+    } else if (row.kind === 'photo' && row.id && isEntryType(row.type)) {
+      const what = row.slot === 'album' ? 'album photos' : 'main photo';
+      remaining.push({
+        label: `“${row.label ?? entryCopy[row.type].singular}”: replace the sample ${what}`,
         href: `/t/${slug}/portfolio/${row.id}`,
       });
     }

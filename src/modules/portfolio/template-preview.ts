@@ -22,8 +22,10 @@ export function templatePreviewConfiguration(template: LibraryTemplate): SiteCon
     endsOn: item.endsOn ?? null,
     isCurrent: item.isCurrent ?? false,
     tags: item.tags ?? [],
-    cover: null,
+    cover: item.cover ? { url: item.cover.src, alt: item.cover.alt } : null,
+    gallery: (item.gallery ?? []).map((photo) => ({ url: photo.src, alt: photo.alt })),
   }));
+  const heroPhoto = template.sections.find((section) => section.type === 'hero')?.photo;
   return {
     siteKind: 'PORTFOLIO',
     portfolioItems,
@@ -34,7 +36,7 @@ export function templatePreviewConfiguration(template: LibraryTemplate): SiteCon
       address: '',
       contactEmail: 'hello@example.com',
       logo: null,
-      heroMedia: null,
+      heroMedia: heroPhoto ? { url: heroPhoto.src, alt: heroPhoto.alt } : null,
     },
     theme: { presetKey: template.defaultPreset, tokens: template.tokens },
     sections: template.sections.map((section) => ({
@@ -46,7 +48,10 @@ export function templatePreviewConfiguration(template: LibraryTemplate): SiteCon
         section.type === 'hero'
           ? { ...section.content, headline: template.preview.name }
           : section.content,
-      settings: {},
+      settings:
+        section.type === 'about' && section.photo
+          ? { photo: { url: section.photo.src, alt: section.photo.alt } }
+          : {},
     })),
     pages: [],
     navigation: [],

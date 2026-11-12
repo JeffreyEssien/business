@@ -268,6 +268,8 @@
   z-index: -2;
   width: 100%;
   height: 100%;
+  /* Fill the whole hero, however tall its text makes it. */
+  max-height: none;
 }
 .hero.image-overlay::after {
   content: '';
@@ -1263,7 +1265,7 @@
   align-items: end;
 }
 .storefront[data-template-style='pf-agency'] .hero h1 {
-  font-size: clamp(56px, 11vw, 160px);
+  font-size: clamp(56px, 8.5vw, 128px);
   font-weight: 800;
   line-height: 0.9;
   letter-spacing: -0.04em;
@@ -1693,6 +1695,16 @@
   .storefront[data-template-style='pf-agency'] .hero h1 {
     font-size: clamp(32px, 9.5vw, 56px);
   }
+}
+
+/* Paper grain for the warm, paper-toned looks: a faint texture so the page feels printed
+   rather than flat. The noise is a tiny inline SVG, multiplied over the theme colour. */
+.storefront[data-template-style='pf-notebook'],
+.storefront[data-template-style='pf-atelier'],
+.storefront[data-template-style='pf-material'],
+.storefront[data-template-style='pf-warm-coach'] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.18 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
 }
 
 /* The colour block only stands in for a picture beside the text; on phones it would be a wall. */

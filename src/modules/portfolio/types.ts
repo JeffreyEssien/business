@@ -39,7 +39,15 @@ export type PortfolioPart = {
   photo: PortfolioPhoto | null;
 };
 
-export type PortfolioPhoto = { url: string; alt: string };
+export type PortfolioPhoto = {
+  url: string;
+  alt: string;
+  /** A template's bundled sample photo, which must be replaced before going live. */
+  isSample?: boolean;
+};
+
+/** One photo in a project's album, as the builder edits it. */
+export type AlbumPhoto = PortfolioPhoto & { id: string };
 
 /** One portfolio entry as the builder edits it. */
 export type PortfolioEntry = {
@@ -58,6 +66,8 @@ export type PortfolioEntry = {
   tags: string[];
   hidden: boolean;
   cover: PortfolioPhoto | null;
+  /** Project album, in display order. Loaded only where the album is edited. */
+  gallery: AlbumPhoto[];
   /** Form fields that still hold the template's example value. */
   exampleFields: import('./entries').EntryField[];
 };
@@ -79,4 +89,6 @@ export type PublishedPortfolioEntry = {
   isCurrent: boolean;
   tags: string[];
   cover: { url: string; alt: string | null } | null;
+  /** Project album photos, in the owner's order (absent in snapshots before albums). */
+  gallery?: Array<{ url: string; alt: string | null }>;
 };

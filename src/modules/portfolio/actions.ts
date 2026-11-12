@@ -4,7 +4,14 @@ import { redirect } from 'next/navigation';
 import { normalizeEmbedUrl } from './embeds';
 import { entryCopy, isEntryType, type EntryType } from './entries';
 import { requirePortfolioWorkspace } from './guards';
-import { applyPhoto, readPhoto, releaseReplaced, type PhotoSlot } from './photos';
+import {
+  applyAlbum,
+  applyPhoto,
+  readAlbum,
+  readPhoto,
+  releaseReplaced,
+  type PhotoSlot,
+} from './photos';
 
 export type BuilderActionState = { error: string };
 
@@ -115,26 +122,28 @@ export async function saveEntry(
   if (!workspace) return noPermission;
   const title = read(form, 'title');
   if (!title) return { error: `Give this ${entryCopy[entryType].singular} a name first.` };
-  // Only entry kinds with a photo field (projects, people) carry one; check it before saving.
+  // Only entry kinds with a photo field (projects, people) carry one, and only projects
+  // have an album; check both before saving anything.
   const photo = entryCopy[entryType].photo ? readPhoto(form, 'cover') : null;
   if (photo && 'error' in photo) return photo;
+  const album = entryType === 'PROJECT' ? readAlbum(form) : null;
+  if (album && 'error' in album) return album;
   const { data: savedId, error } = await workspace.supabase.rpc('save_portfolio_item', {
     target_tenant: workspace.tenant.id,
     target_item: entryId,
     payload: entryPayload(entryType, form),
   });
   if (error) return builderError(error.code, error.message);
-  if (photo && typeof savedId === 'string') {
-    const photoError = await applyPhoto(
-      workspace.supabase,
-      workspace.tenant.id,
-      'cover',
-      savedId,
-      photo,
-    );
-    if (photoError) {
+  if (typeof savedId === 'string') {
+    // Cover and album uploads run together inside this one authorized operation.
+    const problems = await Promise.all([
+      photo ? applyPhoto(workspace.supabase, workspace.tenant.id, 'cover', savedId, photo) : null,
+      album ? applyAlbum(workspace.supabase, workspace.tenant.id, savedId, album) : null,
+    ]);
+    const problem = problems.find(Boolean);
+    if (problem) {
       refresh(slug);
-      return { error: `Your words were saved. ${photoError}` };
+      return { error: `Your words were saved. ${problem}` };
     }
   }
   refresh(slug);

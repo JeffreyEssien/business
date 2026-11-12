@@ -13,6 +13,7 @@ import { autosaveEntry, saveEntry, type BuilderActionState } from '@/modules/por
 import { entryCopy, type EntryField, type EntryType } from '@/modules/portfolio/entries';
 import type { PortfolioEntry } from '@/modules/portfolio/types';
 import { ExampleBadge } from './example-badge';
+import { AlbumField } from './album-field';
 import { PhotoField } from './photo-field';
 import { autosaveLabel, useAutosave } from './use-autosave';
 import styles from './builder.module.css';
@@ -96,6 +97,7 @@ export function EntryForm({
             photo={entry?.cover ?? null}
           />
         )}
+        {type === 'PROJECT' && <AlbumField photos={entry?.gallery ?? []} />}
         {has('tags') && (
           <TextField
             name="tags"
