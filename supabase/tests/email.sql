@@ -124,6 +124,27 @@ do $$ begin
   raise exception 'Stale email claim was not safely reclaimed with its idempotency key';
  end if;
 end $$;
+-- ZeptoMail: provider recorded on completion, neutral webhook marks a hard bounce.
+select public.complete_email_notification(
+ (select id from email_fixture where k='stale_claim'),'zeptomail-request-1','zeptomail');
+select public.record_email_webhook(
+ 'zeptomail:hook-1','email.bounced','zeptomail-request-1',now(),'Mailbox does not exist');
+do $$ begin
+ if (select row(provider,status,last_error_code) from private.email_notifications
+   where id=(select id from email_fixture where k='stale_claim'))
+   <>row('zeptomail'::text,'BOUNCED'::text,'Mailbox does not exist'::text) then
+  raise exception 'ZeptoMail completion or bounce webhook was not recorded';
+ end if;
+ if public.record_email_webhook('zeptomail:hook-1','email.bounced','zeptomail-request-1',now(),'')
+   <>'ALREADY_PROCESSED' then
+  raise exception 'Duplicate ZeptoMail webhook was not idempotent';
+ end if;
+ begin
+  perform public.complete_email_notification(gen_random_uuid(),'x','mailchimp');
+  raise exception 'Unknown email provider was accepted';
+ exception when sqlstate '22023' then null;
+ end;
+end $$;
 reset role;
 do $$ begin
  if (select status from private.email_notifications where id=(select id from email_fixture where k='claimed'))<>'DELIVERED' then

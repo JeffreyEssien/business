@@ -54,7 +54,7 @@ export async function processEmailQueue(
     const result = await dispatchQueuedEmails({ limit: 25 });
     revalidatePath('/communications');
     return result.disabled
-      ? { error: '', message: 'Delivery is disabled until the Resend settings are configured.' }
+      ? { error: '', message: 'Delivery is disabled until an email provider is configured.' }
       : {
           error: '',
           message: `${result.sent} of ${result.processed} queued emails were accepted for delivery.`,
@@ -79,7 +79,7 @@ export async function retryEmailNotification(
     return result.disabled
       ? {
           error: '',
-          message: 'Email queued. Delivery remains disabled until Resend is configured.',
+          message: 'Email queued. Delivery remains disabled until an email provider is configured.',
         }
       : { error: '', message: 'Email retry processed.' };
   } catch {

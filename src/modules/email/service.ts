@@ -1,7 +1,12 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logServerEvent } from '@/lib/observability/server';
-import { emailDeliveryConfiguration, emailProvider, EmailProviderError } from './provider';
+import {
+  configuredEmailProvider,
+  emailDeliveryConfiguration,
+  emailProvider,
+  EmailProviderError,
+} from './provider';
 import { EmailTemplateError, renderTransactionalEmail } from './templates';
 import type { EmailNotificationContext } from './types';
 
@@ -30,6 +35,7 @@ async function deliverOne(id: string) {
     const { error: completeError } = await admin.rpc('complete_email_notification', {
       target_notification: id,
       provider_id: result.providerMessageId,
+      provider_name: configuredEmailProvider(),
     });
     if (completeError) throw new EmailProviderError('EMAIL_STATE_WRITE_FAILED');
     return true;
@@ -49,7 +55,7 @@ async function deliverOne(id: string) {
       tenantId: context.tenantId,
       resourceType: 'email_notification',
       resourceId: context.id,
-      provider: 'resend',
+      provider: configuredEmailProvider(),
       success: false,
       errorCode: failureWriteError ? 'EMAIL_FAILURE_STATE_WRITE_FAILED' : code,
       errorDetails: failureWriteError ? `original=${code}` : undefined,
@@ -92,7 +98,8 @@ export async function queueOwnerInvitationEmail(invitationId: string, invitation
   return data;
 }
 
-export async function recordResendWebhook(input: {
+/** Records a verified delivery event already normalised to the email.* names. */
+export async function recordEmailWebhook(input: {
   eventId: string;
   eventType: string;
   providerMessageId: string;
@@ -100,7 +107,7 @@ export async function recordResendWebhook(input: {
   errorCode: string;
 }) {
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc('record_resend_webhook', {
+  const { data, error } = await admin.rpc('record_email_webhook', {
     webhook_event_id: input.eventId,
     webhook_event_type: input.eventType,
     provider_id: input.providerMessageId,

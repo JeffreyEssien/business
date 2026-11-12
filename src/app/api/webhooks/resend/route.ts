@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { logServerEvent } from '@/lib/observability/server';
-import { recordResendWebhook } from '@/modules/email/service';
+import { recordEmailWebhook } from '@/modules/email/service';
 
 export const runtime = 'nodejs';
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     (typeof bounce?.type === 'string' && bounce.type) ||
     '';
   try {
-    await recordResendWebhook({
+    await recordEmailWebhook({
       eventId,
       eventType: event.type,
       providerMessageId,
