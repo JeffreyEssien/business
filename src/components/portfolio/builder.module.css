@@ -368,6 +368,25 @@
   list-style: none;
 }
 
+.moreParts {
+  margin-top: 14px;
+}
+
+.moreParts > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 10px;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.moreParts > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .addGrid form {
   height: 100%;
   margin: 0;

@@ -12,6 +12,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { siteKindOf } from '@/modules/portfolio/types';
 import { getPortfolioBuilder } from '@/modules/portfolio/builder-queries';
 import { skipSetup } from '@/modules/portfolio/actions';
+import { activePortfolioStyles } from '@/modules/portfolio/queries';
 import { GuidedStart } from '@/components/portfolio/guided-start';
 export const metadata = { title: 'Business workspace' };
 export default async function TenantWorkspacePage({
@@ -39,11 +40,14 @@ export default async function TenantWorkspacePage({
     const { parts, entries } = builder;
     // First visit: three short questions before the dashboard (completing or skipping ends it).
     if (!setup.portfolio_setup_completed) {
-      const themeResult = await workspace.supabase
-        .from('tenant_theme_settings')
-        .select('tokens')
-        .eq('tenant_id', tenant.id)
-        .single();
+      const [themeResult, availableStyles] = await Promise.all([
+        workspace.supabase
+          .from('tenant_theme_settings')
+          .select('tokens')
+          .eq('tenant_id', tenant.id)
+          .single(),
+        activePortfolioStyles(),
+      ]);
       return (
         <main className="tenant-home">
           <GuidedStart
@@ -55,6 +59,7 @@ export default async function TenantWorkspacePage({
             email={builder.contactEmail}
             whatsapp={builder.whatsapp}
             skipAction={skipSetup.bind(null, slug)}
+            availableStyles={availableStyles}
           />
         </main>
       );

@@ -211,3 +211,23 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* "See all looks" below the looks suggested for the owner's kind of work. */
+.moreLooks {
+  margin-top: 16px;
+}
+
+.moreLooks > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 12px;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.moreLooks > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

@@ -1,6 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { normalizeEmbedUrl } from './embeds';
 import { entryCopy, isEntryType, type EntryType } from './entries';
 import { requirePortfolioWorkspace } from './guards';
 import { applyPhoto, readPhoto, releaseReplaced, type PhotoSlot } from './photos';
@@ -25,6 +26,11 @@ function builderError(code?: string, message?: string): BuilderActionState {
     return {
       error:
         'One of the links is not a web address. Copy the full address from your browser and paste it again.',
+    };
+  if (message?.includes('INVALID_EMBED'))
+    return {
+      error:
+        'That link is not from a site we can play here. Use a YouTube, Vimeo, Spotify, Apple Music, SoundCloud, Audiomack, or Boomplay link.',
     };
   if (message?.includes('INVALID_DATE')) return { error: 'Please check the dates and try again.' };
   if (code === '23514' || message?.includes('USAGE_LIMIT_EXCEEDED'))
@@ -51,8 +57,12 @@ function normalizeLink(value: string) {
   return `https://${value}`;
 }
 
-/** <input type="month"> gives YYYY-MM; entries store the first day of that month. */
+/**
+ * <input type="month"> gives YYYY-MM (stored as the first of the month); events use
+ * <input type="date">, which already gives YYYY-MM-DD.
+ */
 function monthToDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   return /^\d{4}-\d{2}$/.test(value) ? `${value}-01` : '';
 }
 
@@ -105,8 +115,8 @@ export async function saveEntry(
   if (!workspace) return noPermission;
   const title = read(form, 'title');
   if (!title) return { error: `Give this ${entryCopy[entryType].singular} a name first.` };
-  // Only projects have a cover photo; check it before saving anything.
-  const photo = entryType === 'PROJECT' ? readPhoto(form, 'cover') : null;
+  // Only entry kinds with a photo field (projects, people) carry one; check it before saving.
+  const photo = entryCopy[entryType].photo ? readPhoto(form, 'cover') : null;
   if (photo && 'error' in photo) return photo;
   const { data: savedId, error } = await workspace.supabase.rpc('save_portfolio_item', {
     target_tenant: workspace.tenant.id,
@@ -157,20 +167,42 @@ export async function moveEntries(slug: string, entryType: EntryType, orderedIds
 
 /** Builds the stored content for one page part from its form, by part type. */
 function partPayload(type: string, form: FormData) {
+  const target = read(form, 'ctaTarget');
+  const primaryCta = {
+    label: read(form, 'ctaLabel'),
+    href: target === 'website' ? normalizeLink(read(form, 'ctaUrl')) : target,
+  };
   if (type === 'hero') {
-    const target = read(form, 'ctaTarget');
     return {
       eyebrow: read(form, 'eyebrow'),
       headline: read(form, 'headline'),
       subheadline: read(form, 'subheadline'),
-      primaryCta: {
-        label: read(form, 'ctaLabel'),
-        href: target === 'website' ? normalizeLink(read(form, 'ctaUrl')) : target,
-      },
+      primaryCta,
     };
   }
   if (type === 'about' || type === 'contact') {
     return { heading: read(form, 'heading'), body: read(form, 'body') };
+  }
+  if (type === 'cta') {
+    return { heading: read(form, 'heading'), body: read(form, 'body'), primaryCta };
+  }
+  if (type === 'embed') {
+    // Tidy known players (e.g. drop tracking parameters). Anything else is sent as typed
+    // so the database refuses it with INVALID_EMBED instead of it silently vanishing.
+    const raw = read(form, 'url');
+    return {
+      heading: read(form, 'heading'),
+      intro: read(form, 'intro'),
+      url: raw ? normalizeEmbedUrl(raw) || normalizeLink(raw) : '',
+    };
+  }
+  if (type === 'bios') {
+    return {
+      heading: read(form, 'heading'),
+      oneLiner: read(form, 'oneLiner'),
+      short: read(form, 'short'),
+      long: read(form, 'long'),
+    };
   }
   return { heading: read(form, 'heading'), intro: read(form, 'intro') };
 }

@@ -169,6 +169,38 @@
   break-inside: avoid;
 }
 
+/* Story-first cards: what it was, my role, and the result are the point, not the image. */
+.projectsCaseStudy {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 24px;
+}
+
+.projectsCaseStudy .facts {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  padding-top: 16px;
+  border-top: 1px solid var(--store-border);
+}
+
+.projectsCaseStudy .facts dd {
+  color: var(--store-text);
+  font-weight: 600;
+}
+
+/* Mixed-size tiles: every third tile runs twice as wide on larger screens. */
+.projectsModular {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  grid-auto-flow: dense;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .projectsModular > :nth-child(3n + 1) {
+    grid-column: span 2;
+  }
+}
+
 .project {
   display: grid;
   overflow: hidden;
@@ -613,4 +645,87 @@
   align-items: center;
   color: var(--store-link);
   font-weight: 700;
+}
+
+/* Phase-3 template section tweaks. Section bodies stay shared; only headings and rules change. */
+:global([data-template-style='pf-bold']) .section + .section {
+  border-top: 3px solid var(--store-text);
+}
+:global([data-template-style='pf-bold']) .section h2,
+:global([data-template-style='pf-agency']) .section h2,
+:global([data-template-style='pf-stage']) .section h2 {
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+:global([data-template-style='pf-editorial']) .section + .section,
+:global([data-template-style='pf-scholar']) .section + .section {
+  border-top-color: var(--store-text);
+}
+:global([data-template-style='pf-editorial']) .section h2 {
+  font-size: clamp(32px, 4.4vw, 56px);
+  font-weight: 800;
+}
+
+:global([data-template-style='pf-white-wall']) .section + .section,
+:global([data-template-style='pf-notebook']) .section + .section,
+:global([data-template-style='pf-salon']) .section + .section,
+:global([data-template-style='pf-warm-coach']) .section + .section {
+  border-top-color: transparent;
+}
+:global([data-template-style='pf-white-wall']) .section h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+:global([data-template-style='pf-white-wall']) .section {
+  padding-block: 40px;
+}
+
+:global([data-template-style='pf-notebook']) .section {
+  width: min(760px, calc(100% - 40px));
+}
+:global([data-template-style='pf-notebook']) .section h2,
+:global([data-template-style='pf-atelier']) .section h2 {
+  font-weight: 400;
+  font-style: italic;
+}
+
+:global([data-template-style='pf-monograph']) .section h2 {
+  font-weight: 200;
+  font-size: clamp(36px, 6vw, 80px);
+  letter-spacing: -0.05em;
+}
+:global([data-template-style='pf-results']) .section h2,
+:global([data-template-style='pf-keynote']) .section h2 {
+  font-size: clamp(32px, 5vw, 60px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+/* Sidebar CV: the contact part sits in a narrow column, so its two halves stack. */
+:global([data-template-style='pf-sidebar']) .section[data-part='contact'] .contact {
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+:global([data-template-style='pf-sidebar']) .section[data-part='contact'] .contact p {
+  font-size: 16px;
+}
+@media (min-width: 960px) {
+  :global([data-template-style='pf-sidebar']) .section[data-part='contact'] {
+    padding: 28px;
+    border: 1px solid var(--store-border);
+    border-radius: var(--store-media-radius);
+    background: var(--store-surface);
+  }
+  :global([data-template-style='pf-sidebar']) .section[data-part='contact'] h2 {
+    font-size: 24px;
+  }
+  :global([data-template-style='pf-sidebar']) .section + .section {
+    border-top-color: var(--store-border);
+  }
 }

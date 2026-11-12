@@ -4,15 +4,16 @@ import type { SiteConfiguration, SiteSection } from '@/modules/content/types';
 import { entryCopy, partEntryType } from '@/modules/portfolio/entries';
 import { portfolioSectionLanguage } from '@/modules/portfolio/sections';
 import type { PublishedPortfolioEntry } from '@/modules/portfolio/types';
+import { renderPortfolioPart } from './portfolio-parts';
 import styles from './portfolio-sections.module.css';
 
-function text(section: SiteSection, key: string) {
+export function text(section: SiteSection, key: string) {
   const value = section.content[key];
   return typeof value === 'string' ? value : '';
 }
 
 /** Body copy is plain text; paragraphs are split on blank lines and rendered escaped. */
-function Paragraphs({ value }: { value: string }) {
+export function Paragraphs({ value }: { value: string }) {
   return value
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
@@ -20,7 +21,7 @@ function Paragraphs({ value }: { value: string }) {
     .map((paragraph, index) => <p key={index}>{paragraph}</p>);
 }
 
-function formatMonth(value: string | null) {
+export function formatMonth(value: string | null) {
   if (!value) return '';
   return new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric' }).format(
     new Date(`${value.slice(0, 10)}T00:00:00`),
@@ -33,7 +34,7 @@ function dateRange(entry: PublishedPortfolioEntry) {
 }
 
 /** Only https links reach the snapshot (database check); external links open safely. */
-function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
+export function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer">
       {children}
@@ -43,7 +44,7 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
   );
 }
 
-function SectionShell({
+export function SectionShell({
   section,
   children,
   wide = false,
@@ -69,7 +70,7 @@ function SectionShell({
   );
 }
 
-function ProjectCard({
+export function ProjectCard({
   entry,
   large = false,
   keepShape = false,
@@ -180,7 +181,11 @@ function Projects({
       ? styles.projectsFeatured
       : section.variant === 'masonry'
         ? styles.projectsMasonry
-        : styles.projectsGrid;
+        : section.variant === 'case-study'
+          ? styles.projectsCaseStudy
+          : section.variant === 'modular'
+            ? styles.projectsModular
+            : styles.projectsGrid;
   return (
     <SectionShell section={section} wide>
       <div className={layout}>
@@ -270,7 +275,12 @@ function ContactSection({
   const whatsapp = business.whatsapp?.replace(/\D/g, '');
   const phone = business.phone?.replace(/[^\d+]/g, '');
   return (
-    <section className={styles.section} id={section.key} aria-labelledby={`${section.key}-title`}>
+    <section
+      className={styles.section}
+      id={section.key}
+      aria-labelledby={`${section.key}-title`}
+      data-part="contact"
+    >
       <div className={styles.contact}>
         <div>
           <h2 id={`${section.key}-title`}>{text(section, 'heading')}</h2>
@@ -318,6 +328,8 @@ export function renderPortfolioSection(
     );
     // A list part with no visible entries is omitted rather than showing an empty heading.
     if (!entries.length) return null;
+    const part = renderPortfolioPart(section, entries);
+    if (part !== undefined) return part;
     if (section.type === 'projects')
       return <Projects section={section} entries={entries} key={section.key} />;
     if (section.type === 'skills')
@@ -332,6 +344,7 @@ export function renderPortfolioSection(
         className={styles.section}
         id={section.key}
         aria-labelledby={`${section.key}-title`}
+        data-part="about"
         data-look={section.variant}
         key={section.key}
       >
@@ -373,7 +386,7 @@ export function renderPortfolioSection(
   if (section.type === 'contact') {
     return <ContactSection section={section} business={configuration.business} key={section.key} />;
   }
-  return undefined;
+  return renderPortfolioPart(section, []);
 }
 
 /**
@@ -400,7 +413,19 @@ export function EditablePart({
         ✎ Edit {name.toLowerCase()}
       </a>
       {children ??
-        (entryType ? (
+        (section.type === 'embed' || section.type === 'bios' ? (
+          <div className={styles.emptyPart}>
+            <strong>{text(section, 'heading') || name}</strong>
+            <p>
+              {section.type === 'embed'
+                ? 'Paste a link to a song or video. This part stays hidden from visitors until you do.'
+                : 'Write your bios. This part stays hidden from visitors until you do.'}
+            </p>
+            <a href={href} target="_top">
+              {section.type === 'embed' ? 'Add a song or video' : 'Write your bios'}
+            </a>
+          </div>
+        ) : entryType ? (
           <div className={styles.emptyPart}>
             <strong>{text(section, 'heading') || name}</strong>
             <p>

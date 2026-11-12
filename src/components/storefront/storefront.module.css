@@ -956,3 +956,748 @@
     padding-block: 0 12pt;
   }
 }
+
+/*
+ * Phase-3 template styles. Each keeps at most two font files per page. A split opening
+ * without a picture shows a colour block in its place, so the layout never looks broken.
+ */
+.storefront[data-site-kind='portfolio'] .hero.split:not(:has(.heroImage))::after {
+  content: '';
+  align-self: stretch;
+  min-height: 320px;
+  border-radius: var(--store-media-radius);
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      color-mix(in srgb, var(--store-accent) 70%, transparent),
+      transparent 60%
+    ),
+    color-mix(in srgb, var(--store-primary) 85%, var(--store-background));
+}
+
+/* Product engineer — warm white, soft cards, indigo. */
+.storefront[data-template-style='pf-product'] {
+  --store-heading-font: var(--pf-font-manrope), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 12px;
+  --store-media-radius: 16px;
+  font-family:
+    var(--pf-font-manrope),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-product'] .hero h1 {
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+.storefront[data-template-style='pf-product'] .eyebrow {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--store-primary) 12%, transparent);
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-size: 13px;
+}
+
+/* Bold canvas — brutalist black, white, and yellow. */
+.storefront[data-template-style='pf-bold'] {
+  --store-heading-font: var(--pf-font-archivo), 'Arial Black', sans-serif;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  --store-border: var(--store-text);
+  font-family:
+    var(--pf-font-archivo),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-bold'] .header {
+  border-bottom: 3px solid var(--store-text);
+}
+.storefront[data-template-style='pf-bold'] .brand {
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.storefront[data-template-style='pf-bold'] .hero {
+  min-height: auto;
+  padding-block: clamp(56px, 9vw, 120px);
+  border-bottom: 3px solid var(--store-text);
+}
+.storefront[data-template-style='pf-bold'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-bold'] .hero.centered .heroCopy {
+  max-width: none;
+  margin: 0;
+}
+.storefront[data-template-style='pf-bold'] .hero h1 {
+  font-size: clamp(56px, 13vw, 176px);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+.storefront[data-template-style='pf-bold'] .eyebrow {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--store-accent);
+  color: #0a0a0a !important;
+}
+.storefront[data-template-style='pf-bold'] .cta {
+  border: 3px solid var(--store-text);
+  box-shadow: 6px 6px 0 var(--store-accent);
+  text-transform: uppercase;
+}
+
+/* White wall — pure, quiet gallery chrome. */
+.storefront[data-template-style='pf-white-wall'] {
+  --store-heading-font: var(--pf-font-inter), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 15px;
+}
+.storefront[data-template-style='pf-white-wall'] .header {
+  border-bottom-color: transparent;
+}
+.storefront[data-template-style='pf-white-wall'] .brand {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.storefront[data-template-style='pf-white-wall'] .hero {
+  min-height: auto;
+  padding-block: 48px 24px;
+}
+.storefront[data-template-style='pf-white-wall'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-white-wall'] .hero.centered .heroCopy {
+  margin: 0;
+  max-width: 560px;
+}
+.storefront[data-template-style='pf-white-wall'] .hero h1 {
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.storefront[data-template-style='pf-white-wall'] .eyebrow {
+  color: var(--store-secondary) !important;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.storefront[data-template-style='pf-white-wall'] .heroCopy > p:not(.eyebrow) {
+  font-size: 15px;
+}
+.storefront[data-template-style='pf-white-wall'] .cta {
+  padding: 0;
+  min-height: 44px;
+  background: transparent;
+  color: var(--store-text);
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+
+/* Editorial — newspaper masthead. */
+.storefront[data-template-style='pf-editorial'] {
+  --store-heading-font: var(--pf-font-playfair), Georgia, 'Times New Roman', serif;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  font-family: var(--pf-font-baskerville), Georgia, 'Times New Roman', serif;
+}
+.storefront[data-template-style='pf-editorial'] .header {
+  border-bottom: 3px double var(--store-text);
+}
+.storefront[data-template-style='pf-editorial'] .brand {
+  font-family: var(--store-heading-font);
+  font-weight: 800;
+}
+.storefront[data-template-style='pf-editorial'] .hero {
+  min-height: auto;
+  padding-block: 56px 40px;
+  border-bottom: 1px solid var(--store-text);
+}
+.storefront[data-template-style='pf-editorial'] .hero.centered {
+  max-width: none;
+}
+.storefront[data-template-style='pf-editorial'] .hero.centered .heroCopy {
+  max-width: 900px;
+}
+.storefront[data-template-style='pf-editorial'] .hero h1 {
+  font-size: clamp(48px, 9vw, 120px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+.storefront[data-template-style='pf-editorial'] .eyebrow {
+  margin-bottom: 20px;
+  padding-block: 8px;
+  border-block: 1px solid var(--store-text);
+  color: var(--store-text) !important;
+  font-family: var(--pf-font-baskerville), Georgia, serif;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+/* Notebook — calm paper and large reading type. */
+.storefront[data-template-style='pf-notebook'] {
+  --store-heading-font: var(--pf-font-fraunces), Georgia, serif;
+  --store-control-radius: 4px;
+  --store-media-radius: 4px;
+  font-family: var(--pf-font-fraunces), Georgia, serif;
+  font-size: 18px;
+}
+.storefront[data-template-style='pf-notebook'] .header {
+  border-bottom-color: transparent;
+}
+.storefront[data-template-style='pf-notebook'] .brand {
+  font-style: italic;
+}
+.storefront[data-template-style='pf-notebook'] .hero {
+  min-height: auto;
+  padding-block: clamp(64px, 10vw, 128px) 32px;
+}
+.storefront[data-template-style='pf-notebook'] .hero.centered {
+  max-width: 760px;
+  text-align: left;
+}
+.storefront[data-template-style='pf-notebook'] .hero.centered .heroCopy {
+  margin: 0;
+}
+.storefront[data-template-style='pf-notebook'] .hero h1 {
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+.storefront[data-template-style='pf-notebook'] .heroCopy > p:not(.eyebrow) {
+  font-size: clamp(20px, 2.4vw, 26px);
+  line-height: 1.55;
+  color: var(--store-text);
+}
+.storefront[data-template-style='pf-notebook'] .eyebrow {
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+/* Studio of one — confident teal and sand. */
+.storefront[data-template-style='pf-studio-one'] {
+  --store-heading-font: var(--pf-font-manrope), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 10px;
+  --store-media-radius: 18px;
+  font-family:
+    var(--pf-font-manrope),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-studio-one'] .hero h1 {
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+.storefront[data-template-style='pf-studio-one'] .heroCopy > p:not(.eyebrow) {
+  color: var(--store-text);
+  font-size: 20px;
+}
+.storefront[data-template-style='pf-studio-one'] .cta {
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--store-primary) 30%, transparent);
+}
+
+/* Results — dark navy, lime, big numerals. */
+.storefront[data-template-style='pf-results'] {
+  --store-heading-font: var(--pf-font-space), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 4px;
+  --store-media-radius: 6px;
+  font-family:
+    var(--pf-font-space),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-results'] .hero {
+  min-height: auto;
+  padding-block: clamp(64px, 10vw, 128px) 48px;
+}
+.storefront[data-template-style='pf-results'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-results'] .hero.centered .heroCopy {
+  margin: 0;
+  max-width: 900px;
+}
+.storefront[data-template-style='pf-results'] .hero h1 {
+  font-size: clamp(48px, 8vw, 104px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+}
+
+/* Agency — black, Syne, full-bleed. */
+.storefront[data-template-style='pf-agency'] {
+  --store-heading-font: var(--pf-font-syne), 'Arial Black', sans-serif;
+  --store-control-radius: 999px;
+  --store-media-radius: 0;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-agency'] .brand {
+  font-family: var(--store-heading-font);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.storefront[data-template-style='pf-agency'] .hero {
+  min-height: clamp(480px, 80vh, 760px);
+  align-items: end;
+}
+.storefront[data-template-style='pf-agency'] .hero h1 {
+  font-size: clamp(56px, 11vw, 160px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+.storefront[data-template-style='pf-agency'] .heroCopy {
+  max-width: 1000px;
+}
+
+/* Atelier — warm, crafted, split colour blocks. */
+.storefront[data-template-style='pf-atelier'] {
+  --store-heading-font: var(--pf-font-fraunces), Georgia, serif;
+  --store-control-radius: 999px;
+  --store-media-radius: 200px 200px 24px 24px;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-atelier'] .hero h1 {
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -0.02em;
+}
+.storefront[data-template-style='pf-atelier'] .hero.split:not(:has(.heroImage))::after {
+  background:
+    radial-gradient(circle at 50% 120%, var(--store-accent) 0 38%, transparent 39%),
+    var(--store-primary);
+}
+.storefront[data-template-style='pf-atelier'] .eyebrow {
+  color: var(--store-accent) !important;
+}
+
+/* Scholar — calm, citation-first, two colours. */
+.storefront[data-template-style='pf-scholar'] {
+  --store-heading-font: var(--pf-font-baskerville), Georgia, 'Times New Roman', serif;
+  --store-control-radius: 2px;
+  --store-media-radius: 2px;
+  font-family: var(--pf-font-baskerville), Georgia, 'Times New Roman', serif;
+  font-size: 17px;
+}
+.storefront[data-template-style='pf-scholar'] .hero {
+  min-height: auto;
+  padding-block: 56px;
+}
+.storefront[data-template-style='pf-scholar'] .hero h1 {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.storefront[data-template-style='pf-scholar'] .eyebrow {
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+.storefront[data-template-style='pf-scholar'] .hero.split:not(:has(.heroImage))::after {
+  min-height: 260px;
+  max-width: 260px;
+  aspect-ratio: 4 / 5;
+  justify-self: end;
+  background: var(--store-surface-muted);
+}
+
+/* Lab — modern sans, teal, card-based. */
+.storefront[data-template-style='pf-lab'] {
+  --store-heading-font: var(--pf-font-plex), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 8px;
+  --store-media-radius: 12px;
+  font-family:
+    var(--pf-font-plex),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-lab'] .hero {
+  min-height: auto;
+  padding-block: clamp(64px, 9vw, 112px);
+}
+.storefront[data-template-style='pf-lab'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-lab'] .hero.centered .heroCopy {
+  margin: 0;
+  max-width: 820px;
+}
+.storefront[data-template-style='pf-lab'] .hero h1 {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.storefront[data-template-style='pf-lab'] .heroCopy > p:not(.eyebrow) {
+  font-size: 21px;
+  color: var(--store-text);
+}
+
+/* Salon — gallery walls, serif titles, generous mats. */
+.storefront[data-template-style='pf-salon'] {
+  --store-heading-font: var(--pf-font-dm-serif), Georgia, 'Times New Roman', serif;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-salon'] .header {
+  border-bottom-color: transparent;
+}
+.storefront[data-template-style='pf-salon'] .brand {
+  font-family: var(--store-heading-font);
+  font-size: 22px;
+}
+.storefront[data-template-style='pf-salon'] .hero h1 {
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.storefront[data-template-style='pf-salon'] .hero.split:not(:has(.heroImage))::after {
+  border: 24px solid #ffffff;
+  outline: 1px solid var(--store-border);
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--store-text) 16%, transparent);
+}
+.storefront[data-template-style='pf-salon'] .cta {
+  background: transparent;
+  color: var(--store-link);
+  border-bottom: 1px solid currentColor;
+  padding-inline: 0;
+}
+
+/* Sketchbook — playful colour and rounded shapes. */
+.storefront[data-template-style='pf-sketchbook'] {
+  --store-heading-font: var(--pf-font-bricolage), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 999px;
+  --store-media-radius: 24px;
+  font-family:
+    var(--pf-font-bricolage),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-sketchbook'] .hero h1 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-decoration: underline wavy var(--store-accent);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 14px;
+}
+.storefront[data-template-style='pf-sketchbook'] .eyebrow {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--store-accent);
+  color: #ffffff !important;
+  transform: rotate(-2deg);
+}
+.storefront[data-template-style='pf-sketchbook'] .cta {
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--store-primary) 60%, #000000);
+}
+
+/* Stage — dark, neon, poster type. */
+.storefront[data-template-style='pf-stage'] {
+  --store-heading-font: var(--pf-font-archivo), 'Arial Narrow', sans-serif;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-stage'] .brand {
+  font-family: var(--store-heading-font);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.storefront[data-template-style='pf-stage'] .hero {
+  min-height: clamp(480px, 82vh, 760px);
+}
+.storefront[data-template-style='pf-stage'] .hero.image-overlay:not(:has(.heroImage)) {
+  background:
+    radial-gradient(
+      circle at 80% 20%,
+      color-mix(in srgb, var(--store-primary) 45%, transparent),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 10% 90%,
+      color-mix(in srgb, var(--store-accent) 35%, transparent),
+      transparent 40%
+    );
+}
+.storefront[data-template-style='pf-stage'] .hero h1 {
+  font-size: clamp(64px, 14vw, 184px);
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  font-stretch: 75%;
+}
+.storefront[data-template-style='pf-stage'] .cta {
+  box-shadow: 0 0 32px color-mix(in srgb, var(--store-primary) 60%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Press kit — clean editorial blocks. */
+.storefront[data-template-style='pf-press-kit'] {
+  --store-heading-font: var(--pf-font-fraunces), Georgia, serif;
+  --store-control-radius: 6px;
+  --store-media-radius: 6px;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-press-kit'] .hero {
+  min-height: auto;
+  padding-block: clamp(56px, 8vw, 96px);
+}
+.storefront[data-template-style='pf-press-kit'] .hero h1 {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* Monograph — black and white, strict grid, thin giant type. */
+.storefront[data-template-style='pf-monograph'] {
+  --store-heading-font: var(--pf-font-inter), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 0;
+  --store-media-radius: 0;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-monograph'] .brand {
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+.storefront[data-template-style='pf-monograph'] .hero {
+  min-height: auto;
+  padding-block: clamp(80px, 14vw, 200px) 48px;
+}
+.storefront[data-template-style='pf-monograph'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-monograph'] .hero.centered .heroCopy {
+  margin: 0;
+  max-width: none;
+}
+.storefront[data-template-style='pf-monograph'] .hero h1 {
+  font-size: clamp(56px, 11vw, 168px);
+  font-weight: 200;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+}
+.storefront[data-template-style='pf-monograph'] .heroCopy > p:not(.eyebrow) {
+  max-width: 520px;
+}
+.storefront[data-template-style='pf-monograph'] .eyebrow {
+  color: var(--store-accent) !important;
+}
+
+/* Material — stone, clay, and oak; homely and tactile. */
+.storefront[data-template-style='pf-material'] {
+  --store-heading-font: var(--pf-font-cormorant), Georgia, 'Times New Roman', serif;
+  --store-control-radius: 2px;
+  --store-media-radius: 4px;
+  font-family:
+    var(--pf-font-inter),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-material'] .hero {
+  min-height: clamp(460px, 74vh, 720px);
+}
+.storefront[data-template-style='pf-material'] .hero.image-overlay:not(:has(.heroImage)) {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--store-primary) 18%, var(--store-background)),
+    color-mix(in srgb, var(--store-accent) 22%, var(--store-background))
+  );
+}
+.storefront[data-template-style='pf-material'] .hero h1 {
+  font-size: clamp(56px, 9vw, 120px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Sidebar CV — contact details stay in view beside the CV on wide screens. */
+.storefront[data-template-style='pf-sidebar'] {
+  --store-heading-font: var(--pf-font-plex), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 6px;
+  --store-media-radius: 8px;
+  font-family:
+    var(--pf-font-plex),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-sidebar'] .hero {
+  min-height: auto;
+  padding-block: 56px 32px;
+}
+.storefront[data-template-style='pf-sidebar'] .hero.centered {
+  max-width: none;
+  text-align: left;
+}
+.storefront[data-template-style='pf-sidebar'] .hero.centered .heroCopy {
+  margin: 0;
+  max-width: 760px;
+}
+.storefront[data-template-style='pf-sidebar'] .hero h1 {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 600;
+}
+@media (min-width: 960px) {
+  .storefront[data-template-style='pf-sidebar'] [id='store-main'] {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    column-gap: 48px;
+    row-gap: 0;
+    width: min(1120px, calc(100% - 40px));
+    margin-inline: auto;
+  }
+  .storefront[data-template-style='pf-sidebar'] [id='store-main'] > * {
+    grid-column: 2;
+    width: auto;
+    margin-inline: 0;
+  }
+  .storefront[data-template-style='pf-sidebar'] [id='store-main'] > .hero {
+    grid-column: 1 / -1;
+  }
+  .storefront[data-template-style='pf-sidebar']
+    [id='store-main']
+    > :is([data-part='contact'], :has(> [data-part='contact'])) {
+    grid-column: 1;
+    grid-row: 2 / span 40;
+    align-self: start;
+    position: sticky;
+    top: 96px;
+  }
+}
+
+/* Keynote — bold purple, warm orange, stage energy. */
+.storefront[data-template-style='pf-keynote'] {
+  --store-heading-font: var(--pf-font-space), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 999px;
+  --store-media-radius: 20px;
+  font-family:
+    var(--pf-font-space),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-keynote'] .hero h1 {
+  font-size: clamp(48px, 8vw, 96px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.storefront[data-template-style='pf-keynote'] .cta {
+  padding-inline: 28px;
+  font-size: 17px;
+}
+
+/* Warm coach — sage and cream, soft rounded shapes. */
+.storefront[data-template-style='pf-warm-coach'] {
+  --store-heading-font: var(--pf-font-manrope), -apple-system, 'Segoe UI', sans-serif;
+  --store-control-radius: 999px;
+  --store-media-radius: 28px;
+  font-family:
+    var(--pf-font-manrope),
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.storefront[data-template-style='pf-warm-coach'] .hero h1 {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+.storefront[data-template-style='pf-warm-coach'] .hero.split:not(:has(.heroImage))::after {
+  aspect-ratio: 1;
+  min-height: 0;
+  border-radius: 50% 50% 40% 60% / 55% 45% 55% 45%;
+  background: color-mix(in srgb, var(--store-primary) 30%, var(--store-background));
+}
+
+/* Template decorations never animate for people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .storefront[data-site-kind='portfolio'] * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Poster-size headlines must still fit a small phone, even with a long single word. */
+@media (max-width: 520px) {
+  .storefront:is(
+      [data-template-style='pf-agency'],
+      [data-template-style='pf-bold'],
+      [data-template-style='pf-stage'],
+      [data-template-style='pf-monograph']
+    )
+    .hero
+    h1 {
+    font-size: clamp(40px, 13vw, 64px);
+  }
+}
+.storefront[data-site-kind='portfolio'] .heroCopy {
+  min-width: 0;
+}
+.storefront[data-site-kind='portfolio'] .hero h1 {
+  overflow-wrap: break-word;
+}
+
+/* Syne is very wide in capitals, so the agency headline needs a smaller phone size. */
+@media (max-width: 520px) {
+  .storefront[data-template-style='pf-agency'] .hero h1 {
+    font-size: clamp(32px, 9.5vw, 56px);
+  }
+}
+
+/* The colour block only stands in for a picture beside the text; on phones it would be a wall. */
+@media (max-width: 760px) {
+  .storefront[data-site-kind='portfolio'] .hero.split:not(:has(.heroImage))::after {
+    display: none;
+  }
+}

@@ -263,6 +263,16 @@ Responsive platform shell, overview, directory, checklist, page metadata, focus 
 - **Verified:** 42 unit tests and all SQL suites, on clean PostgreSQL with migrations applied twice. Visual checks at 390px and 1440px.
 - **Not yet run:** the Supabase integration and browser suites against development, and a real Cloudinary upload, which needs development credentials.
 
+### Portfolio templates, phase 3 (2026-11-12, branch `feature/portfolio-phase-3`)
+
+- All 24 templates from `docs/plans/portfolio-templates.md`, two per kind of work, each with its own style, fonts (10 more self-hosted open-licence families, at most two per page), colour sets, and realistic example content.
+- New parts: writing, services, testimonials, events (past dates move to "Recent"), awards, clients, figures, steps, downloads, people, song/video player, three-length bios with copy buttons, and a call-to-action band, plus two new project layouts.
+- Public gallery at `/templates` with live previews of every template; Super Admin can offer or hide templates at `/portfolio-templates`.
+- Guided start now asks about 12 kinds of work and suggests their two templates first; the builder edits the new parts, single-date entries, and photos of people.
+- Migrations `202611120002_portfolio_parts.sql` and `202611120003_portfolio_template_library.sql` (generated) — **not yet applied or SQL-tested**; local Postgres was unavailable in this session.
+- **Verified:** format check, typecheck, Webpack build, 50 unit tests (including template/migration sync and embed parsing). All 24 previews checked for overflow at 390px; several checked visually at 1440px and 390px.
+- **Not yet run:** `npm run db:test` with the new migrations, and the builder screens against real data (the development database is needed).
+
 ## Stage A stabilization — 2026-11-07
 
 - The project moved from iCloud Drive to local `~/Documents/business`. iCloud had silently dropped 117 tracked files and corrupted Git objects; the repository was re-cloned from `origin/develop` and the uncommitted Phase 10 work was preserved. Keep the repository out of iCloud-synced folders.
