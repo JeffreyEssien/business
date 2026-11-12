@@ -1,4 +1,5 @@
 import { TenantShell } from '@/components/layout/tenant-shell';
+import { siteKindOf } from '@/modules/portfolio/types';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 
 export default async function TenantLayout({
@@ -15,7 +16,11 @@ export default async function TenantLayout({
   });
   if (error) throw new Error('Business features could not be loaded.');
   return (
-    <TenantShell slug={slug} entitlements={(data ?? {}) as Record<string, unknown>}>
+    <TenantShell
+      slug={slug}
+      siteKind={siteKindOf(workspace.tenant.site_kind)}
+      entitlements={(data ?? {}) as Record<string, unknown>}
+    >
       {children}
     </TenantShell>
   );

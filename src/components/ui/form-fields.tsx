@@ -6,14 +6,29 @@ import type {
 } from 'react';
 import styles from './ui.module.css';
 
-type FieldProps = { name: string; label: string; hint?: string; error?: string };
+type FieldProps = {
+  name: string;
+  label: string;
+  hint?: string;
+  error?: string;
+  /** Optional status shown beside the label, e.g. an "Example text" badge. */
+  labelAddon?: ReactNode;
+};
 
 /** A field owns its label and description IDs, including screen-reader associations. */
-function Field({ name, label, hint, error, children }: FieldProps & { children: ReactNode }) {
+function Field({
+  name,
+  label,
+  hint,
+  error,
+  labelAddon,
+  children,
+}: FieldProps & { children: ReactNode }) {
   return (
     <div className={styles.field}>
       <label className={styles.label} htmlFor={name}>
         {label}
+        {labelAddon && <> {labelAddon}</>}
       </label>
       {children}
       {hint && (
@@ -37,11 +52,12 @@ export function TextField({
   label,
   hint,
   error,
+  labelAddon,
   className = '',
   ...props
 }: FieldProps & Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'name'>) {
   return (
-    <Field name={name} label={label} hint={hint} error={error}>
+    <Field name={name} label={label} hint={hint} error={error} labelAddon={labelAddon}>
       <input
         {...props}
         name={name}
@@ -59,6 +75,7 @@ export function SelectField({
   label,
   hint,
   error,
+  labelAddon,
   options,
   className = '',
   ...props
@@ -67,7 +84,7 @@ export function SelectField({
     options: readonly SelectOption[];
   }) {
   return (
-    <Field name={name} label={label} hint={hint} error={error}>
+    <Field name={name} label={label} hint={hint} error={error} labelAddon={labelAddon}>
       <select
         {...props}
         name={name}
@@ -91,11 +108,12 @@ export function TextAreaField({
   label,
   hint,
   error,
+  labelAddon,
   className = '',
   ...props
 }: FieldProps & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id' | 'name'>) {
   return (
-    <Field name={name} label={label} hint={hint} error={error}>
+    <Field name={name} label={label} hint={hint} error={error} labelAddon={labelAddon}>
       <textarea
         {...props}
         name={name}

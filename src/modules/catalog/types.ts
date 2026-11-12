@@ -54,7 +54,8 @@ export type PublicCategory = {
 };
 
 export type PublicStorefront = {
-  tenant: { name: string; slug: string };
+  // siteKind is present on storefront reads; product-detail reads omit it.
+  tenant: { name: string; slug: string; siteKind?: import('@/modules/portfolio/types').SiteKind };
   site: import('@/modules/content/types').SiteConfiguration | null;
   categories: PublicCategory[];
   products: PublicProduct[];

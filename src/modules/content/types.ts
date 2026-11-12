@@ -60,6 +60,10 @@ export type PublishedSeoSettings = {
   socialImage: string | null;
 };
 export type SiteConfiguration = {
+  /** Stamped onto every published snapshot by the database; absent on older versions (STORE). */
+  siteKind?: import('@/modules/portfolio/types').SiteKind;
+  /** Portfolio only: visible entries, in display order. */
+  portfolioItems?: import('@/modules/portfolio/types').PublishedPortfolioEntry[];
   business: {
     name: string;
     description: string;
@@ -82,6 +86,8 @@ export type SiteConfiguration = {
       primary: string;
       secondary?: string;
       styleKey?: string;
+      /** Portfolio template style, e.g. "pf-terminal"; selects fonts and layout details. */
+      templateStyle?: string;
       accent: string;
       background: string;
       text: string;

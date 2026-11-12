@@ -2,9 +2,36 @@ import type { Metadata } from 'next';
 import { StorefrontRenderer } from '@/components/storefront/storefront-renderer';
 import { getPublicStorefront } from '@/modules/catalog/queries';
 import type { SiteConfiguration } from '@/modules/content/types';
+import type { SiteKind } from '@/modules/portfolio/types';
 import { storefrontUrl } from '@/modules/seo/public';
 
-function unpublishedConfiguration(name: string): SiteConfiguration {
+/** Shown before the first publish. Portfolios get a holding hero, never a product list. */
+function unpublishedConfiguration(name: string, siteKind: SiteKind = 'STORE'): SiteConfiguration {
+  if (siteKind === 'PORTFOLIO') {
+    return {
+      siteKind,
+      business: { name, description: '', phone: '', address: '', logo: null, heroMedia: null },
+      theme: {
+        presetKey: 'general',
+        tokens: { primary: '#2b4c7e', accent: '#c08a2e', background: '#ffffff', text: '#1d2733' },
+      },
+      sections: [
+        {
+          key: 'hero',
+          type: 'hero',
+          variant: 'centered',
+          enabled: true,
+          content: {
+            headline: name,
+            subheadline: 'This portfolio is being prepared. Check back soon.',
+          },
+          settings: {},
+        },
+      ],
+      pages: [],
+      navigation: [],
+    };
+  }
   return {
     business: { name, description: '', phone: '', address: '', logo: null, heroMedia: null },
     theme: {
@@ -76,7 +103,9 @@ export default async function StorefrontPage({ params }: { params: Promise<{ slu
   return (
     <StorefrontRenderer
       slug={slug}
-      configuration={store.site ?? unpublishedConfiguration(store.tenant.name)}
+      configuration={
+        store.site ?? unpublishedConfiguration(store.tenant.name, store.tenant.siteKind)
+      }
       products={store.products}
     />
   );

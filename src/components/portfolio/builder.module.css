@@ -1,0 +1,588 @@
+/* Portfolio builder screens (owner workspace). Uses platform tokens from base.css. */
+
+.notice {
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-medium);
+  background: var(--success-surface);
+  color: var(--success-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Example content still to replace: amber, matching the example badge. */
+.noticeExample {
+  border-color: #f0d9a8;
+  background: #fff8e8;
+  color: #6b4400;
+  font-weight: 500;
+}
+
+.noticeWarning {
+  border-color: var(--danger-border);
+  background: var(--danger-surface);
+  color: var(--danger-text);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Amber tones meet 4.5:1 text contrast on their tinted background. */
+.badgeExample {
+  background: #fff4dc;
+  color: #7a4d00;
+}
+
+.badgeHidden {
+  background: var(--surface-muted);
+  color: #545866;
+}
+
+/* Tabs for entry types: real links, so each tab has its own address. */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tabs a[aria-current='page'] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.tabCount {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.toolbar p {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.entryList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.entryText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.entryTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--foreground);
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.entryMeta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.entryActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.entryActions form {
+  margin: 0;
+}
+
+.smallButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.smallButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.smallButton:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--primary));
+  outline-offset: 2px;
+}
+
+.dangerButton {
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+
+.confirmGroup {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.confirmGroup span {
+  color: var(--danger-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* "Look" choices: each option shows a small sketch of the layout, never a code name. */
+.lookGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.look {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.look:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 2px #6655d71a;
+}
+
+.look:has(input:focus-visible) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.look input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.look strong {
+  font-size: 13px;
+}
+
+.sketch {
+  display: grid;
+  gap: 4px;
+  height: 56px;
+  padding: 6px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+}
+
+.sketch i {
+  display: block;
+  border-radius: 3px;
+  background: #c9cbd6;
+}
+
+.sketch[data-look='centered'] {
+  grid-template-rows: 6px 10px 6px;
+  justify-items: center;
+  align-content: center;
+}
+.sketch[data-look='centered'] i:nth-child(1) {
+  width: 30%;
+}
+.sketch[data-look='centered'] i:nth-child(2) {
+  width: 70%;
+  background: #8f92a3;
+}
+.sketch[data-look='centered'] i:nth-child(3) {
+  width: 50%;
+}
+
+.sketch[data-look='split'],
+.sketch[data-look='photo-left'],
+.sketch[data-look='photo-right'] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+}
+.sketch[data-look='split'] i:nth-child(4),
+.sketch[data-look='photo-right'] i:nth-child(4) {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  background: #8f92a3;
+}
+.sketch[data-look='photo-left'] i:nth-child(4) {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  background: #8f92a3;
+}
+.sketch[data-look='photo-left'] i:not(:nth-child(4)) {
+  grid-column: 2;
+}
+
+.sketch[data-look='image-overlay'] {
+  background: #8f92a3;
+  align-content: center;
+  justify-items: center;
+}
+.sketch[data-look='image-overlay'] i {
+  width: 60%;
+  height: 8px;
+  background: #ffffff;
+}
+
+.sketch[data-look='text'] i {
+  height: 6px;
+}
+.sketch[data-look='text'] i:nth-child(1) {
+  width: 40%;
+  background: #8f92a3;
+}
+
+.sketch[data-look='grid'] {
+  grid-template-columns: repeat(3, 1fr);
+}
+.sketch[data-look='masonry'] {
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 10px;
+}
+.sketch[data-look='masonry'] i:nth-child(odd) {
+  grid-row: span 2;
+}
+.sketch[data-look='featured'] {
+  grid-template-rows: 2fr 1fr;
+}
+.sketch[data-look='featured'] i:nth-child(1) {
+  background: #8f92a3;
+}
+.sketch[data-look='list'] i,
+.sketch[data-look='compact'] i {
+  height: 6px;
+}
+.sketch[data-look='timeline'] {
+  grid-template-columns: 6px 1fr;
+  column-gap: 6px;
+}
+.sketch[data-look='timeline'] i:nth-child(odd) {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #8f92a3;
+}
+.sketch[data-look='tags'],
+.sketch[data-look='grouped'] {
+  grid-template-columns: repeat(4, 1fr);
+  align-content: center;
+}
+.sketch[data-look='tags'] i,
+.sketch[data-look='grouped'] i {
+  height: 10px;
+  border-radius: 99px;
+}
+.sketch[data-look='grouped'] i:nth-child(1) {
+  grid-column: 1 / -1;
+  height: 5px;
+  width: 40%;
+  border-radius: 3px;
+  background: #8f92a3;
+}
+.sketch[data-look='details'] i {
+  height: 8px;
+}
+
+/* "Add a part" menu. */
+.addGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.addGrid form {
+  height: 100%;
+  margin: 0;
+}
+
+.addCard {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  min-height: 88px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.addCard:hover {
+  border-color: var(--primary);
+}
+
+.addCard:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.addCard strong {
+  font-size: 14px;
+}
+
+.addCard span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.checkboxRow input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+
+.dateGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dangerZone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+}
+
+.dangerZone p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .entry {
+    grid-template-columns: 1fr;
+  }
+
+  .entryActions {
+    justify-content: flex-start;
+  }
+
+  .dateGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Photo picker: a preview frame beside a large, labelled button. */
+.photoField {
+  display: grid;
+  gap: 12px;
+}
+
+.photoLabel {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.photoRow {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.photoFrame {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-medium);
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.photoFrame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoControls {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+/* The real file input stays focusable and announced; its label is the visible button. */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.fileInput:focus-visible + .photoHint,
+.photoControls:has(.fileInput:focus-visible) > label:first-child {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.photoHint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.photoProblem {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.photoAlt {
+  display: grid;
+  gap: 8px;
+}
+
+.photoAlt label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.photoAlt input {
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  font: inherit;
+}
+
+.photoAlt input:focus {
+  border-color: var(--primary);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .photoRow {
+    grid-template-columns: 1fr;
+  }
+
+  .photoFrame {
+    max-width: 260px;
+  }
+}
+
+/* Autosave status: quiet, but colour-independent wording when something goes wrong. */
+.autosave {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.autosave[data-state='saved'] {
+  color: var(--success-text);
+}
+
+.autosave[data-state='error'] {
+  color: var(--danger-text);
+}
+
+.undo {
+  margin: 0 0 16px;
+}
