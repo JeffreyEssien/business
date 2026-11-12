@@ -313,6 +313,53 @@ begin
     raise exception 'A photo used by the live page was deleted';
   end if;
 end $$;
+
+-- Kept photos are cleaned up once the live page lets go of them; going offline does that.
+do $$
+declare portfolio uuid := (select id from portfolio_fixture where k = 'portfolio');
+declare folder text := 'businesscare/tenants/' || (select id from portfolio_fixture where k = 'portfolio')::text || '/portfolio/';
+declare released jsonb;
+begin
+  released := public.clean_up_portfolio_photos(portfolio);
+  if released @> jsonb_build_array(jsonb_build_object('storageKey', folder || 'b')) then
+    raise exception 'Cleanup removed a photo the live page still shows';
+  end if;
+  released := public.take_portfolio_offline(portfolio);
+  if exists (select 1 from public.tenant_site_versions where tenant_id = portfolio and status = 'PUBLISHED') then
+    raise exception 'The portfolio is still live after going offline';
+  end if;
+  if not (released @> jsonb_build_array(jsonb_build_object('provider', 'cloudinary', 'storageKey', folder || 'b'))) then
+    raise exception 'The photo kept for the live page was not released after going offline: %', released;
+  end if;
+  if exists (select 1 from public.media_assets where tenant_id = portfolio and storage_key = folder || 'b') then
+    raise exception 'The released photo is still recorded';
+  end if;
+  if not exists (select 1 from public.media_assets where tenant_id = portfolio and storage_key = folder || 'c') then
+    raise exception 'Cleanup removed the About photo, which the draft still uses';
+  end if;
+  begin
+    perform public.take_portfolio_offline(portfolio);
+    raise exception 'An offline portfolio was taken offline again';
+  exception when others then
+    if sqlerrm not like '%NOT_LIVE%' then raise; end if;
+  end;
+end $$;
+reset role;
+
+do $$ begin
+  if not exists (select 1 from public.audit_logs
+      where tenant_id = (select id from portfolio_fixture where k = 'portfolio') and action = 'SITE_UNPUBLISHED') then
+    raise exception 'Going offline was not audited';
+  end if;
+end $$;
+
+-- Only the portfolio's own editors can take it offline.
+select set_config('request.jwt.claim.sub', (select id::text from portfolio_fixture where k = 'outsider'), true);
+set local role authenticated;
+do $$ begin
+  perform public.take_portfolio_offline((select id from portfolio_fixture where k = 'portfolio'));
+  raise exception 'An outsider took a portfolio offline';
+exception when insufficient_privilege then null; end $$;
 reset role;
 
 -- Looks and colours: switching keeps content, and unreadable colours are refused.

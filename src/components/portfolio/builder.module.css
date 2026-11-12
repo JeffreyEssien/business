@@ -712,3 +712,12 @@
 .undo {
   margin: 0 0 16px;
 }
+
+/* Page-level actions under the design header: look, and taking the portfolio offline. */
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+}

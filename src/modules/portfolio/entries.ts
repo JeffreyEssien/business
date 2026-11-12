@@ -215,7 +215,11 @@ export const entryCopy: Record<
     plural: 'Clients',
     singular: 'client',
     addLabel: 'Add a client',
-    emptyHint: 'Add the organisations or events you have worked with, by name.',
+    emptyHint: 'Add the organisations or events you have worked with, by name or logo.',
+    photo: {
+      label: 'Logo (optional)',
+      hint: 'Shown instead of the name. A PNG with a see-through background looks best.',
+    },
     fields: {
       title: { label: 'Name', hint: 'e.g. Flutterwave, or TEDxLagos', required: true },
       linkUrl: { label: 'Their website (optional)', hint: 'Paste the web address.' },

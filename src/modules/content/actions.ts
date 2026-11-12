@@ -9,6 +9,7 @@ import {
 } from '@/lib/cloudinary/server';
 import { getTenantWorkspace } from '@/modules/tenants/workspace-query';
 import { describeRemainingExamples, type RemainingExample } from '@/modules/portfolio/examples';
+import { releaseReplaced } from '@/modules/portfolio/photos';
 import {
   contentErrorMessage,
   validateNavigation,
@@ -246,6 +247,14 @@ export async function publishSite(
         : contentErrorMessage(error.code, error.message),
       message: '',
     };
+  if (workspace.tenant.site_kind === 'PORTFOLIO') {
+    // Photos replaced while the old live page still showed them can go now. Best effort:
+    // a failure leaves them for the next publish and never undoes this one.
+    const { data: released } = await workspace.supabase.rpc('clean_up_portfolio_photos', {
+      target_tenant: workspace.tenant.id,
+    });
+    await releaseReplaced(released);
+  }
   revalidatePath(`/t/${slug}`);
   revalidatePath(`/t/${slug}/design`);
   revalidatePath(`/store/${slug}`);

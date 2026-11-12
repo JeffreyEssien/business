@@ -232,17 +232,32 @@ function Clients({ section, entries }: { section: SiteSection; entries: Entries 
   return (
     <SectionShell section={section} wide>
       <ul className={section.variant === 'grid' ? styles.clientGrid : styles.clientStrip}>
-        {entries.map((entry) => (
-          <li key={entry.id}>
-            {entry.linkUrl ? (
-              <a href={entry.linkUrl} target="_blank" rel="noopener noreferrer">
-                {entry.title}
-              </a>
-            ) : (
-              entry.title
-            )}
-          </li>
-        ))}
+        {entries.map((entry) => {
+          // A logo replaces the name; the name becomes its alt text so it is still read out.
+          // Not lazy: with an automatic width it has no size until loaded, so it never would.
+          const label = entry.cover ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Cloudinary URL is tenant data.
+            <img
+              className={styles.clientLogo}
+              src={cloudinaryImage(entry.cover.url, { width: 320 })}
+              alt={entry.title}
+              decoding="async"
+            />
+          ) : (
+            entry.title
+          );
+          return (
+            <li key={entry.id}>
+              {entry.linkUrl ? (
+                <a href={entry.linkUrl} target="_blank" rel="noopener noreferrer">
+                  {label}
+                </a>
+              ) : (
+                label
+              )}
+            </li>
+          );
+        })}
       </ul>
     </SectionShell>
   );

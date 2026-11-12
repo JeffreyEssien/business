@@ -418,3 +418,20 @@ export async function undoChange(slug: string, kind: 'part' | 'entry', ref: stri
   refresh(slug);
   redirect(`${back}?notice=${error ? 'not-undone' : data ? 'undone' : 'nothing-to-undo'}`);
 }
+
+/**
+ * Takes the live portfolio offline. Visitors see the "not live yet" page; the draft is
+ * untouched, and "Make my portfolio live" publishes it again. Photos only the live page
+ * was holding on to are released and their Cloudinary files deleted.
+ */
+export async function takePortfolioOffline(slug: string) {
+  const workspace = await editableWorkspace(slug);
+  if (!workspace) redirect(`/t/${slug}/design?notice=not-allowed`);
+  const { data, error } = await workspace.supabase.rpc('take_portfolio_offline', {
+    target_tenant: workspace.tenant.id,
+  });
+  if (!error) await releaseReplaced(data);
+  refresh(slug);
+  revalidatePath(`/store/${slug}`);
+  redirect(`/t/${slug}/design?notice=${error ? 'not-offline' : 'offline'}`);
+}

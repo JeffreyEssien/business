@@ -22,6 +22,13 @@ const notices: Record<string, { text: string; warning?: boolean }> = {
   'not-moved': { text: 'The order could not be changed. Please try again.', warning: true },
   'not-added': { text: 'That part could not be added. Please try again.', warning: true },
   'not-removed': { text: 'That part could not be removed. Please try again.', warning: true },
+  offline: {
+    text: 'Your portfolio is offline. Visitors now see a “not live yet” page. Make it live again whenever you are ready.',
+  },
+  'not-offline': {
+    text: 'Your portfolio could not be taken offline. Please try again.',
+    warning: true,
+  },
 };
 
 export function BuilderNotice({ notice }: { notice?: string }) {

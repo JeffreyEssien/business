@@ -5,12 +5,15 @@ import { SectionOrderManager } from '@/components/content/section-order-manager'
 import styles from '@/components/content/site-editor.module.css';
 import { AddPartMenu } from '@/components/portfolio/add-part-menu';
 import { BuilderNotice } from '@/components/portfolio/builder-notice';
+import { ConfirmButton } from '@/components/portfolio/confirm-button';
+import builderStyles from '@/components/portfolio/builder.module.css';
 import { PageHeader } from '@/components/ui/page-header';
 import { ButtonLink } from '@/components/ui/button';
 import { getSiteEditor } from '@/modules/content/queries';
 import { getPortfolioBuilder } from '@/modules/portfolio/builder-queries';
 import { partEntryType } from '@/modules/portfolio/entries';
 import { portfolioSectionLanguage } from '@/modules/portfolio/sections';
+import { takePortfolioOffline } from '@/modules/portfolio/actions';
 
 export const metadata = { title: 'Website design' };
 export default async function StorefrontDesignPage({
@@ -58,12 +61,22 @@ export default async function StorefrontDesignPage({
           description={`Edit each part of your page, put them in order, and preview the result. Visitors only see changes after you make your portfolio live.${published ? ` Version ${published} is live now.` : ' Your portfolio is not live yet.'}`}
           action={<PublishSiteForm slug={slug} audience="visitors" />}
         />
-        <BuilderNotice notice={notice} />
-        <p>
+        {/* "Offline" stops being true as soon as it is live again (same address, new state). */}
+        <BuilderNotice notice={notice === 'offline' && published ? undefined : notice} />
+        <div className={builderStyles.pageActions}>
           <ButtonLink variant="secondary" href={`/t/${slug}/design/look`}>
             Change colours &amp; look
           </ButtonLink>
-        </p>
+          {published && (
+            <form action={takePortfolioOffline.bind(null, slug)}>
+              <ConfirmButton
+                label="Take portfolio offline"
+                confirmLabel="Yes, take it offline"
+                question="Visitors will see a “not live yet” page until you make it live again."
+              />
+            </form>
+          )}
+        </div>
         <SectionOrderManager
           slug={slug}
           sections={editor.configuration.sections}
